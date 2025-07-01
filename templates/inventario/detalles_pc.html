@@ -1,0 +1,118 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="card shadow-lg border-0 rounded-4">
+        <div class="card-header bg-primary text-white d-flex align-items-center rounded-top-4">
+            <i class="fas fa-desktop me-2"></i>
+            <h5 class="mb-0">Detalle de PC: {{ terminal.nombre }}</h5>
+        </div>
+        <div class="card-body px-4 py-4">
+
+            <div class="row g-3">
+                <div class="col-md-4">
+                    <div class="bg-light p-2 px-3 rounded-3 border small">
+                        <div class="text-muted d-flex align-items-center mb-1">
+                            <i class="fas fa-font me-2"></i> Nombre
+                        </div>
+                        <strong>{{ terminal.nombre }}</strong>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="bg-light p-2 px-3 rounded-3 border small">
+                        <div class="text-muted d-flex align-items-center mb-1">
+                            <i class="fas fa-network-wired me-2"></i> MAC
+                        </div>
+                        <strong>{{ terminal.mac }}</strong>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="bg-light p-2 px-3 rounded-3 border small">
+                        <div class="text-muted d-flex align-items-center mb-1">
+                            <i class="fas fa-map-marker-alt me-2"></i> Ubicación
+                        </div>
+                        <strong>{{ terminal.ubicacion.nombre }}</strong>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="bg-light p-2 px-3 rounded-3 border small">
+                        <div class="text-muted d-flex align-items-center mb-1">
+                            <i class="fas fa-user-tie me-2"></i> Responsable
+                        </div>
+                        <strong>{{ terminal.ubicacion.responsable }}</strong>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="bg-light p-2 px-3 rounded-3 border small">
+                        <div class="text-muted d-flex align-items-center mb-1">
+                            <i class="fas fa-check-circle me-2"></i> Estado
+                        </div>
+                        <span class="badge 
+                            {% if terminal.estado == 'BUENA' %} bg-success
+                            {% elif terminal.estado == 'NUEVA' %} bg-info
+                            {% else %} bg-danger
+                            {% endif %}">
+                            {{ terminal.get_estado_display }}
+                        </span>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="bg-light p-2 px-3 rounded-3 border small">
+                        <div class="text-muted d-flex align-items-center mb-1">
+                            <i class="fas fa-align-left me-2"></i> Descripción
+                        </div>
+                        <small class="fw-bold">{{ terminal.descripcion|default:"-" }}</small>
+                    </div>
+                </div>
+            </div>
+
+            <hr class="my-4">
+
+            <h5 class="mb-3 d-flex align-items-center">
+                <i class="fas fa-cogs me-2 text-secondary"></i> Componentes Asociados
+            </h5>
+
+            {% if componentes %}
+            <div class="table-responsive mt-3">
+                <table class="table table-sm table-bordered align-middle small">
+                    <thead class="table-light">
+                        <tr>
+                            <th>Tipo</th>
+                            <th>Marca</th> 
+                            <th>Estado</th>
+                            <th>Descripción</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for componente in componentes %}
+                        <tr>
+                            <td>{{ componente.get_tipo_display }}</td>
+                            <td>{{ componente.marca }}</td> 
+                            <td>
+                                <span class="badge 
+                                    {% if componente.estado == 'BUENO' %} bg-success 
+                                    {% elif componente.estado == 'NUEVO' %} bg-info 
+                                    {% else %} bg-danger 
+                                    {% endif %}">
+                                    {{ componente.get_estado_display }}
+                                </span>
+                            </td>
+                            <td>{{ componente.descripcion }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% else %}
+                <div class="alert alert-info">No hay componentes asociados a esta terminal.</div>
+            {% endif %}
+        </div>
+        <div class="card-footer text-end bg-light border-top-0 rounded-bottom-4">
+            <a href="{% url 'inventario:lista_pc' %}" class="btn btn-outline-secondary">
+                <i class="fas fa-arrow-left me-1"></i>Volver
+            </a>
+        </div>
+    </div>
+</div>
+{% endblock %}

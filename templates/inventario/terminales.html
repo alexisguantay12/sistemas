@@ -1,0 +1,155 @@
+{% extends 'base.html' %}
+{% load static %}
+{% block content %}
+<div class="px-3 px-md-5">
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <h3 class="text-primary"><i class="fas fa-desktop"></i> Lista de PCs</h3>
+        <a href="{% url 'inventario:pc_agregar' %}" class="btn btn-success">
+            <i class="fas fa-plus"></i> Agregar PC
+        </a>
+    </div>
+
+    <div class="card shadow-sm">
+        <div class="card-body">
+            {% if pcs %}
+                <div class="table-responsive">
+                    <table id="tabla-pcs" class="table table-hover align-middle">
+                        <thead class="table-light">
+                            <tr> 
+                                <th>Nombre</th>
+                                <th>Ubicación</th>
+                                <th>Responsable</th>
+                                <th>Estado</th>
+                                <th class="sin-redireccion">Acciones</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for pc in pcs %}
+                            <tr id="pc-{{ pc.id }}" class="clickable-row" data-url="{% url 'inventario:pc_detalle' pc.id %}" style="cursor:pointer;">
+                                <td>{{ pc.nombre }}</td>
+                                <td>{{ pc.ubicacion.nombre }}</td>
+                                <td>{{ pc.ubicacion.responsable }}</td>
+                                <td>{{ pc.get_estado_display }}</td>
+                                <td class="sin-redireccion">
+                                    <a href="{% url 'inventario:pc_editar' pc.id %}" class="btn btn-sm btn-warning"><i class="fas fa-edit"></i></a>
+                                    <button class="btn btn-sm btn-danger" title="Eliminar" 
+                                            data-pc="{{ pc.id }}" 
+                                            data-bs-toggle="modal" 
+                                            data-bs-target="#modalEliminar">
+                                        <i class="fas fa-trash"></i>
+                                    </button>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>                        
+                    </table>
+                </div>
+            {% else %}
+                <p class="text-muted">No hay PCs cargadas aún.</p>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<!-- Modal Confirmación Eliminar -->
+<div class="modal fade" id="modalEliminar" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-danger">
+            <div class="modal-header bg-danger-subtle">
+                <h6 class="modal-title text-danger"><i class="fas fa-exclamation-triangle"></i> Confirmar Eliminación</h6>
+                <button type="button" class="btn-close btn-sm" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <p class="mb-0">¿Estás seguro de que querés eliminar esta PC?</p>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Cancelar</button>
+                <button class="btn btn-danger btn-sm" id="btnConfirmarEliminar"><i class="fas fa-trash"></i> Eliminar</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Toast de mensaje de éxito -->
+<div id="toastAccionExitosa" class="toast align-items-center text-white bg-success border-0 position-fixed bottom-0 end-0 m-3" role="alert" aria-live="assertive" aria-atomic="true" data-bs-delay="2000">
+    <div class="d-flex">
+        <div class="toast-body">
+            Acción realizada con éxito.
+        </div>
+        <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
+    </div>
+</div>
+
+<style>
+    tr.clickable-row:hover td:not(.sin-redireccion) {
+        background-color: #f2f2f2 !important;
+    }
+    td.sin-redireccion {
+        cursor: default !important;
+        background-color: white !important;
+    }
+</style>
+
+<script>
+    let idPcAEliminar = null;
+    const modalEliminar = new bootstrap.Modal(document.getElementById('modalEliminar'));
+
+    document.querySelectorAll('[data-bs-target="#modalEliminar"]').forEach(button => {
+        button.addEventListener('click', function () {
+            idPcAEliminar = this.getAttribute('data-pc');
+        });
+    });
+
+    document.getElementById("btnConfirmarEliminar").addEventListener("click", function () {
+        if (!idPcAEliminar) return;
+
+        fetch(`/inventario/pc/eliminar/${idPcAEliminar}/`, {
+            method: "POST",
+            headers: {
+                "X-CSRFToken": "{{ csrf_token }}"
+            }
+        })
+        .then(res => res.json())
+        .then(data => {
+            if (data.success) {
+                document.getElementById(`pc-${idPcAEliminar}`).remove();
+                modalEliminar.hide();
+                var toast = new bootstrap.Toast(document.getElementById('toastAccionExitosa'));
+                toast.show();
+            } else {
+                alert(data.error || "Error al eliminar la PC.");
+            }
+        })
+        .catch(() => alert("Error de red al intentar eliminar."));
+    });
+
+    document.querySelectorAll(".clickable-row").forEach(row => {
+        row.addEventListener("click", function (e) {
+            if (!e.target.closest('.sin-redireccion')) {
+                window.location.href = this.dataset.url;
+            }
+        });
+    });
+
+    $(document).ready(function() {
+        $('#tabla-pcs').DataTable({
+            language: {
+                lengthMenu: "Mostrar _MENU_ registros",
+                zeroRecords: "No se encontraron resultados",
+                info: "Mostrando _START_ a _END_ de _TOTAL_ registros",
+                infoEmpty: "Mostrando 0 a 0 de 0 registros",
+                infoFiltered: "(filtrado de _MAX_ registros totales)",
+                search: "Buscar:",
+                paginate: {
+                    first: "Primero",
+                    last: "Último",
+                    next: "Siguiente",
+                    previous: "Anterior"
+                }
+            },
+            pageLength: 25,
+            order: [[0, 'asc']]
+        });
+    });
+</script>
+{% endblock %}

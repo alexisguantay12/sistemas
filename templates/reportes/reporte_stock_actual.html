@@ -1,0 +1,65 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="card shadow-sm">
+        <div class="card-header bg-primary text-white">
+            <h5 class="mb-0"><i class="fas fa-boxes me-2"></i> Reporte de Stock Actual por Local</h5>
+        </div>
+        <div class="card-body">
+
+            <form method="get" class="row g-3 mb-3">
+                <div class="col-md-6">
+                    <label for="orden" class="form-label">Ordenar por</label>
+                    <select name="orden" id="orden" class="form-select">
+                        <option value="nombre" {% if orden == "nombre" %}selected{% endif %}>Nombre del producto</option>
+                        <option value="stock_asc" {% if orden == "stock_asc" %}selected{% endif %}>Stock total (menor a mayor)</option>
+                        <option value="stock_desc" {% if orden == "stock_desc" %}selected{% endif %}>Stock total (mayor a menor)</option>
+                    </select>
+                </div>
+                <div class="col-md-6 d-grid align-items-end">
+                    <button class="btn btn-primary"><i class="fas fa-search"></i> Generar</button>
+                </div>
+            </form>
+
+            {% if resultados %}
+                <div class="d-flex justify-content-end mb-2">
+                    <a href="?export=excel" class="btn btn-success btn-sm">
+                        <i class="fas fa-file-excel"></i> Descargar Excel
+                    </a>
+                </div>
+
+                <div style="max-height: 400px; overflow-y: auto;">
+                    <table class="table table-bordered table-sm small align-middle">
+                        <thead class="table-light sticky-top">
+                            <tr>
+                                <th>Producto</th>
+                                <th>Stock Central</th>
+                                <th>Stock Joyería 1</th>
+                                <th>Stock Joyería 2</th>
+                                <th>Total</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for item in resultados %}
+                            <tr>
+                                <td>{{ item.producto.nombre }}</td>
+                                <td>{{ item.central }}</td>
+                                <td>{{ item.joyeria1 }}</td>
+                                <td>{{ item.joyeria2 }}</td>
+                                <td><strong>{{ item.total }}</strong></td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            {% else %}
+                <div class="alert alert-warning mt-3">
+                    No hay datos de stock para mostrar.
+                </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}

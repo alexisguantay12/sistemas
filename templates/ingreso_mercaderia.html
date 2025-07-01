@@ -1,0 +1,224 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block content %}
+<div class="container mt-1">
+    <div class="card shadow-sm">
+        <div class="card-body p-3">
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <h5 class="text-primary mb-0">
+                    <i class="fas fa-boxes"></i> Transferir Mercadería
+                </h5>
+                <a href="{% url 'products_app:lista_ingresos' %}" class="btn btn-outline-secondary btn-sm">
+                    <i class="fas fa-arrow-left"></i> Cancelar
+                </a>
+            </div>
+
+            <p class="text-muted mb-3">Fecha: {{ fecha_actual }}</p>
+
+            <div class="row mb-3">
+                <div class="col-md-6">
+                    <label for="tipo-operacion" class="form-label">Tipo de Operación</label>
+                    <select id="tipo-operacion" class="form-select form-select-sm">
+                        <option value="entrada">Entrada (Central ➔ Local)</option>
+                        <option value="salida">Salida (Local ➔ Central)</option>
+                    </select>
+                </div>
+                <div class="col-md-6">
+                    <label for="local" class="form-label">Local Involucrado</label>
+                    <select id="local" class="form-select form-select-sm">
+                        <option value="">Seleccione un Local</option>
+                        {% for local in locales %}
+                        <option value="{{ local.id }}">{{ local.nombre }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+            </div>
+
+            <input
+                type="text"
+                id="scanner"
+                class="form-control form-control-sm mb-3"
+                placeholder="Escaneá el código de barras..."
+                autofocus
+            />
+
+            <div class="table-responsive mb-3">
+                <table class="table table-bordered table-sm align-middle">
+                    <thead class="table-light">
+                        <tr>
+                            <th>Producto</th>
+                            <th>Nombre</th>
+                            <th>Cantidad</th> 
+                            <th class="text-center">Acción</th>
+                        </tr>
+                    </thead>
+                    <tbody id="detalle-ingreso"></tbody>
+                </table>
+            </div>
+
+            <div class="text-end">
+                <button class="btn btn-success btn-sm" id="confirmarTransferenciaBtn">
+                    <i class="fas fa-check-circle"></i> Confirmar Transferencia
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal de mensaje -->
+<div class="modal fade" id="modalMensaje" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+      <div class="modal-content border-warning">
+        <div class="modal-header bg-warning-subtle">
+            <h6 class="modal-title text-warning"><i class="fas fa-exclamation-circle"></i> Aviso</h6>
+            <button type="button" class="btn-close btn-sm" data-bs-dismiss="modal"></button>
+        </div>
+        <div class="modal-body">
+            <p id="modalMensajeTexto" class="mb-0 text-dark"></p>
+        </div>
+      </div>
+    </div>
+</div>
+
+<!-- Scripts -->
+<script>
+let productoActual = null;
+const productosIngresados = new Map();
+
+// Guardaremos detalles de productos para actualizar stock
+const detallesProductos = {};
+const scanner = document.getElementById("scanner");
+const detalles = document.getElementById("detalle-ingreso");
+const tipoOperacion = document.getElementById("tipo-operacion");
+const localSelect = document.getElementById("local");
+const modalMensaje = new bootstrap.Modal(document.getElementById("modalMensaje"));
+const modalMensajeTexto = document.getElementById("modalMensajeTexto");
+
+scanner.addEventListener("change", async function() {
+    const codigo = this.value.trim();
+    if (!codigo) return;
+
+    if (localSelect.value==="") {
+        mostrarMensaje("Debe seleccionar un local para continuar.");
+        this.value = ""; 
+        return;
+    }
+
+    const local = (tipoOperacion.value === 'entrada') ? 1 : localSelect.value;
+
+    const res = await fetch(`/productos/buscar_producto_por_codigo/?codigo=${codigo}&local_id=${local}`);
+    const data = await res.json();
+
+    if (!data.success) {
+        mostrarMensaje(data.error || "Artículo no encontrado.");
+        this.value = ""; 
+        return;
+    }
+
+    productoActual = data.producto;
+
+    if (!detallesProductos[productoActual.id]) {
+        detallesProductos[productoActual.id] = {
+            producto: productoActual,
+            cantidad: 0,
+            stockOriginal: productoActual.stock,
+            stockRestante: productoActual.stock,
+        };
+    }
+
+    const item = detallesProductos[productoActual.id];
+    if (item.stockRestante <= 0) {
+        mostrarMensaje("No hay más stock para agregar.");
+        this.value = ""; 
+        return;
+    }
+
+    item.cantidad += 1;
+    item.stockRestante -= 1;
+
+    actualizarTabla();
+    this.value = ""; 
+
+    // Desactivar selects al escanear el primer producto
+    if (Object.keys(detallesProductos).length === 1) {
+        tipoOperacion.disabled = true;
+        localSelect.disabled = true;
+    }
+});
+
+function actualizarTabla() {
+    detalles.innerHTML = '';
+    for (const id in detallesProductos) {
+        const item = detallesProductos[id];
+        detalles.innerHTML += `
+            <tr data-producto-id="${item.producto.id}">
+                <td><img src="${item.producto.foto}" alt="Imagen" style="height: 60px;" class="rounded shadow-sm"></td>
+                <td>${item.producto.nombre}</td>
+                <td class="cantidad">${item.cantidad}</td> 
+                <td class="text-center">
+                    <button class="btn btn-sm btn-outline-danger" 
+                        onClick="eliminarProducto(${item.producto.id})">
+                        <i class="fas fa-trash-alt"></i>
+                    </button>
+                </td>
+            </tr>`;
+    }
+}
+
+function eliminarProducto(productoId) {
+    if (!detallesProductos[productoId]) return;
+
+    delete detallesProductos[productoId];
+    actualizarTabla();
+
+    // Habilitar nuevamente selects si no quedan productos
+    if (Object.keys(detallesProductos).length === 0) {
+        tipoOperacion.disabled = false;
+        localSelect.disabled = false;
+    }
+}
+
+function mostrarMensaje(texto) {
+    modalMensajeTexto.textContent = texto;
+    modalMensaje.show();
+}
+
+document.getElementById("confirmarTransferenciaBtn").addEventListener("click", async function() {
+    const localId = localSelect.value;
+    const tipo = tipoOperacion.value; 
+    if (localSelect.value==="") {
+        mostrarMensaje("Debe seleccionar un local para continuar.");
+        this.value = ""; 
+        return;
+    } 
+    console.log('Detalles de productos',detallesProductos)
+    const productos = [];
+    for (const id in detallesProductos) {
+        productos.push({ id: id, cantidad: detallesProductos[id].cantidad });
+    }
+
+    if (productos.length === 0) {
+        alert("No hay productos para procesar.");
+        return;
+    }
+
+    const res = await fetch("{% url 'products_app:registrar_ingreso' %}", {
+        method: "POST",
+        headers: {
+            "Content-Type": "application/json",
+            "X-CSRFToken": "{{ csrf_token }}"
+        },
+        body: JSON.stringify({ productos, local_id: localId, tipo })
+    });
+    const data = await res.json();
+
+    if (data.success) {
+        alert("Transferencia confirmada.");
+        window.location.href = "{% url 'products_app:lista_ingresos' %}";
+    } else {
+        alert(data.error || "Error al procesar la transferencia.");
+    }
+});
+</script>
+{% endblock %}

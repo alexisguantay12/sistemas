@@ -1,0 +1,189 @@
+{% extends 'base.html' %}
+{% load group_tags %}
+{% load static %}
+{% block content %}
+<div class="px-3 px-md-5">
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <h3 class="text-primary"><i class="fas fa-boxes"></i> Lista de Productos</h3>
+        {% if request.user|is_in_group:"administrador" %}
+        <a href="{% url 'products_app:agregar_producto'%}" class="btn btn-success">
+            <i class="fas fa-plus"></i> Agregar Producto
+        </a>
+        {% endif %}
+    </div>
+
+    <div class="card shadow-sm">
+        <div class="card-body">
+            {% if productos %}
+                <div class="table-responsive">
+                    <table id="tabla-productos" class="table table-hover align-middle">
+                        <thead class="table-light">
+                            <tr> 
+                                <th>Codigo</th>
+                                <th>Imagen</th>
+                                <th>Nombre</th>
+                                <th>Descripción</th>
+                                <th>Categoría</th>
+                                <th>Acciones</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for producto in productos %}
+                            <tr id="producto-{{ producto.id }}" class="clickable-row" data-url="{% url 'products_app:detalle_producto' producto.id %}" style="cursor:pointer;">
+                                <td>{{ producto.id }}</td>
+                                <td>
+                                    {% if producto.imagenes.all %}
+                                        {% with primera_imagen=producto.imagenes.first %}
+                                            {% if primera_imagen %}
+                                                <img src="{{ primera_imagen.imagen.url }}" alt="{{ producto.nombre }}" class="img-thumbnail" style="width: 60px; height: 60px; object-fit: cover;">
+                                            {% else %}
+                                                <span class="text-muted">Sin imagen</span>
+                                            {% endif %}
+                                        {% endwith %}
+                                    {% else %}
+                                        <span class="text-muted">Sin imagen</span>
+                                    {% endif %}
+                                </td>
+                                <td>{{ producto.nombre }}</td>
+                                <td>{{ producto.descripcion|truncatechars:50 }}</td>
+                                <td>{{ producto.categoria }}</td>
+                                <td class="sin-redireccion">
+                                    <a href="#" class="btn btn-sm btn-warning"><i class="fas fa-edit"></i></a>
+                                    <button class="btn btn-sm btn-danger" title="Eliminar" 
+                                            data-producto="{{ producto.id }}" 
+                                            data-bs-toggle="modal" 
+                                            data-bs-target="#modalEliminar">
+                                        <i class="fas fa-trash"></i>
+                                    </button>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>                        
+                    </table>
+                </div>
+            {% else %}
+                <p class="text-muted">No hay productos cargados aún.</p>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<!-- Modal Confirmación Eliminar -->
+<div class="modal fade" id="modalEliminar" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-danger">
+            <div class="modal-header bg-danger-subtle">
+                <h6 class="modal-title text-danger"><i class="fas fa-exclamation-triangle"></i> Confirmar Eliminación</h6>
+                <button type="button" class="btn-close btn-sm" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <p class="mb-0">¿Estás seguro de que querés eliminar este producto?</p>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Cancelar</button>
+                <button class="btn btn-danger btn-sm" id="btnConfirmarEliminar"><i class="fas fa-trash"></i> Eliminar</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Toast de mensaje de éxito -->
+<div id="toastAccionExitosa" class="toast align-items-center text-white bg-success border-0 position-fixed bottom-0 end-0 m-3" role="alert" aria-live="assertive" aria-atomic="true" data-bs-delay="2000">
+    <div class="d-flex">
+        <div class="toast-body">
+            Acción realizada con éxito.
+        </div>
+        <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
+    </div>
+</div>
+
+
+<!-- Estilos para hover personalizado -->
+<style>
+    tr.clickable-row:hover td:not(.sin-redireccion) {
+        background-color: #f2f2f2 !important;
+    }
+    td.sin-redireccion {
+        cursor: default !important;
+        background-color: white !important;
+    }
+</style>
+
+<script>
+    let idProductoAEliminar = null;
+    const modalEliminar = new bootstrap.Modal(document.getElementById('modalEliminar'));
+
+    // Asignar id al producto seleccionado para eliminar
+    document.querySelectorAll('[data-bs-target="#modalEliminar"]').forEach(button => {
+        button.addEventListener('click', function (e) {
+            idProductoAEliminar = this.getAttribute('data-producto');
+        });
+    });
+
+    // Confirmar eliminación
+    document.getElementById("btnConfirmarEliminar").addEventListener("click", function () {
+        if (!idProductoAEliminar) return;
+
+        fetch(`/productos/eliminar/${idProductoAEliminar}/`, {
+            method: "POST",
+            headers: {
+                "X-CSRFToken": "{{ csrf_token }}"
+            }
+        })
+        .then(res => res.json())
+        .then(data => {
+            if (data.success) {
+                document.getElementById(`producto-${idProductoAEliminar}`).remove();
+                modalEliminar.hide();
+
+                // Mostrar el toast de éxito
+                var toast = new bootstrap.Toast(document.getElementById('toastAccionExitosa'));
+                toast.show();
+            } else {
+                alert(data.error || "Error al eliminar el producto.");
+            }
+        })
+        .catch(() => alert("Error de red al intentar eliminar."));
+    });
+
+    // Redirección al hacer clic en la fila (excepto en acciones)
+    document.querySelectorAll(".clickable-row").forEach(row => {
+        row.addEventListener("click", function (e) {
+            if (!e.target.closest('.sin-redireccion')) {
+                window.location.href = this.dataset.url;
+            }
+        });
+    });
+
+    $(document).ready(function() {
+        $('#tabla-productos').DataTable({
+            language: {
+                lengthMenu: "Mostrar _MENU_ registros",
+                zeroRecords: "No se encontraron resultados",
+                info: "Mostrando _START_ a _END_ de _TOTAL_ registros",
+                infoEmpty: "Mostrando 0 a 0 de 0 registros",
+                infoFiltered: "(filtrado de _MAX_ registros totales)",
+                search: "Buscar:",
+                paginate: {
+                    first: "Primero",
+                    last: "Último",
+                    next: "Siguiente",
+                    previous: "Anterior"
+                }
+            },
+            pageLength: 25,
+            order: [[0, 'desc']]
+        });
+
+        // Mostrar toast si se agregó un producto (?added=1)
+        const urlParams = new URLSearchParams(window.location.search);
+        if (urlParams.get('added') === '1') {
+            var toast = new bootstrap.Toast(document.getElementById('toastAccionExitosa'));
+            toast.show();
+
+            // Limpia el parámetro de la URL sin recargar
+            window.history.replaceState(null, null, window.location.pathname);
+        }
+    });
+</script>
+{% endblock %}

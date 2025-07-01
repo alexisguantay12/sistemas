@@ -1,0 +1,168 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="card shadow rounded-4 border-0">
+        <div class="card-header bg-primary text-white fw-bold">
+            <i class="fas fa-desktop me-2"></i>Agregar Nueva PC
+        </div>
+        <div class="card-body">
+            <form method="POST" id="terminalForm" novalidate>
+                {% csrf_token %}
+                {{ form.non_field_errors }}
+
+                <div class="row">
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label">{{ form.nombre.label }}</label>
+                        {{ form.nombre }}
+                        <div class="text-danger small">{{ form.nombre.errors }}</div>
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label">{{ form.mac.label }}</label>
+                        {{ form.mac }}
+                        <div class="text-danger small">{{ form.mac.errors }}</div>
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label">{{ form.ubicacion.label }}</label>
+                        {{ form.ubicacion }}
+                        <div class="text-danger small">{{ form.ubicacion.errors }}</div>
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label">{{ form.estado.label }}</label>
+                        {{ form.estado }}
+                        <div class="text-danger small">{{ form.estado.errors }}</div>
+                    </div>
+                    <div class="col-12 mb-3">
+                        <label class="form-label">{{ form.descripcion.label }}</label>
+                        {{ form.descripcion }}
+                        <div class="text-danger small">{{ form.descripcion.errors }}</div>
+                    </div>
+                </div>
+
+                <h5 class="mt-4">Componentes Asociados</h5>
+                <table class="table table-sm table-bordered" id="componentesTable">
+                    <thead class="table-light">
+                        <tr>
+                            <th>Tipo</th>
+                            <th>Descripción</th>
+                            <th>Marca</th>
+                            <th>Nro Serie</th>
+                            <th>Estado</th>
+                            <th>Acción</th>
+                        </tr>
+                    </thead>
+                    <tbody></tbody>
+                </table>
+
+                <button type="button" class="btn btn-outline-primary" data-bs-toggle="modal" data-bs-target="#componenteModal">
+                    <i class="fas fa-plus"></i> Agregar Componente
+                </button>
+
+                <div class="text-end mt-4">
+                    <a href="{% url 'inventario:lista_pc' %}" class="btn btn-secondary me-2">Cancelar</a>
+                    <button type="submit" class="btn btn-primary">Guardar</button>
+                </div>
+
+                <input type="hidden" name="componentes_json" id="componentes_json">
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Componente -->
+<div class="modal fade" id="componenteModal" tabindex="-1" aria-labelledby="componenteModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content border-0 rounded-4">
+            <div class="modal-header bg-primary text-white">
+                <h5 class="modal-title" id="componenteModalLabel">Agregar Componente</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+            </div>
+            <div class="modal-body">
+                <form id="formComponente" novalidate autocomplete="off">
+                    <div class="mb-3">
+                        <label class="form-label">Tipo</label>
+                        <select class="form-select" id="tipo">
+                            <option value="RAM">Memoria RAM</option>
+                            <option value="DISCO">Disco</option>
+                            <option value="TECLADO">Teclado</option>
+                            <option value="MONITOR">Monitor</option>
+                            <option value="MOUSE">Mouse</option>
+                            <option value="CPU">CPU</option>
+                            <option value="OTRO">Otro</option>
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Descripción</label>
+                        <input type="text" class="form-control" id="descripcion">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Marca</label>
+                        <input type="text" class="form-control" id="marca">
+                    </div> 
+                    <div class="mb-3">
+                        <label class="form-label">Estado</label>
+                        <select class="form-select" id="estado">
+                            <option value="BUENO">Bueno</option>
+                            <option value="NUEVO">Nuevo</option>
+                            <option value="DEFECTUOSO">Defectuoso</option>
+                        </select>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                <button type="button" class="btn btn-primary" onclick="agregarComponente()" data-bs-dismiss="modal">Agregar</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    let componentes = [];
+
+    function agregarComponente() {
+        const tipo = document.getElementById('tipo').value;
+        const descripcion = document.getElementById('descripcion').value;
+        const marca = document.getElementById('marca').value;
+        const nro_serie = document.getElementById('nro_serie').value;
+        const estado = document.getElementById('estado').value;
+
+        const nuevo = { tipo, descripcion, marca, nro_serie, estado };
+        componentes.push(nuevo);
+        renderTabla();
+    }
+
+    function renderTabla() {
+        const tbody = document.querySelector('#componentesTable tbody');
+        tbody.innerHTML = '';
+        componentes.forEach((comp, i) => {
+            tbody.innerHTML += `
+                <tr>
+                    <td>${comp.tipo}</td>
+                    <td>${comp.descripcion}</td>
+                    <td>${comp.marca}</td>
+                    <td>${comp.nro_serie}</td>
+                    <td>${comp.estado}</td>
+                    <td><button class="btn btn-sm btn-danger" onclick="eliminarComponente(${i})">Eliminar</button></td>
+                </tr>
+            `;
+        });
+        document.getElementById('componentes_json').value = JSON.stringify(componentes);
+    }
+
+    function eliminarComponente(index) {
+        componentes.splice(index, 1);
+        renderTabla();
+    }
+    
+    // Limpiar modal al abrir
+    document.getElementById('componenteModal').addEventListener('show.bs.modal', () => {
+        document.getElementById('tipo').value = 'RAM';
+        document.getElementById('descripcion').value = '';
+        document.getElementById('marca').value = '';
+        document.getElementById('nro_serie').value = '';
+        document.getElementById('estado').value = 'BUENO';
+    });
+</script>
+{% endblock %}
