@@ -3,55 +3,49 @@
 {% block content %}
 <div class="px-3 px-md-5">
     <div class="d-flex justify-content-between align-items-center mb-3">
-        <h3 class="text-primary"><i class="fas fa-desktop"></i> Lista de PCs</h3>
-        <a href="{% url 'inventario:pc_agregar' %}" class="btn btn-success">
-            <i class="fas fa-plus"></i> Agregar PC
+        <h3 class="text-primary"><i class="fas fa-server"></i> Lista de Servidores</h3>
+        <a href="{% url 'inventario:agregar_servidor' %}" class="btn btn-success">
+            <i class="fas fa-plus"></i> Agregar Servidor
         </a>
     </div>
 
     <div class="card shadow-sm">
         <div class="card-body">
-            {% if pcs %}
+            {% if servidores %}
                 <div class="table-responsive">
-                    <table id="tabla-pcs" class="table table-hover align-middle">
+                    <table id="tabla-servidores" class="table table-hover align-middle">
                         <thead class="table-light">
-                            <tr> 
-                                <th>Nombre</th>
+                            <tr>
+                                <th>Hostname</th>
+                                <th>Versión SO</th>
+                                <th>Rol Principal</th>
                                 <th>Ubicación</th>
-                                <th>Responsable</th>
-                                <th>Estado</th>
                                 <th class="sin-redireccion">Acciones</th>
                             </tr>
                         </thead>
                         <tbody>
-                            {% for pc in pcs %}
-                            <tr id="pc-{{ pc.id }}" class="clickable-row" data-url="{% url 'inventario:pc_detalle' pc.id %}" style="cursor:pointer;">
-                                <td>{{ pc.nombre }}</td>
-                                <td>{{ pc.ubicacion.nombre }}</td>
-                                <td>{{ pc.ubicacion.responsable }}</td>
-                                <td>                        <span class="badge 
-                                    {% if pc.estado == 'BUENO' %} bg-success
-                                    {% elif pc.estado == 'PERFECTO'%} bg-success
-                                    {% else %} bg-danger
-                                    {% endif %}">
-                                    {{ pc.estado }}
-                                </span></td>
+                            {% for s in servidores %}
+                            <tr id="srv-{{ s.id }}" class="clickable-row" data-url="{% url 'inventario:detalle_servidor' s.id %}" style="cursor:pointer;">
+                                <td>{{ s.hostname }}</td>
+                                <td>{{ s.version_so }}</td>
+                                <td>{{ s.rol_principal }}</td>
+                                <td>{{ s.ubicacion.nombre }}</td>
                                 <td class="sin-redireccion">
-                                    <a href="{% url 'inventario:editar_pc' pc.id %}" class="btn btn-sm btn-warning"><i class="fas fa-edit"></i></a>
-                                    <button class="btn btn-sm btn-danger" title="Eliminar" 
-                                            data-pc="{{ pc.id }}" 
-                                            data-bs-toggle="modal" 
+                                    <a href="#" class="btn btn-sm btn-warning"><i class="fas fa-edit"></i></a>
+                                    <button class="btn btn-sm btn-danger" title="Eliminar"
+                                            data-servidor="{{ s.id }}"
+                                            data-bs-toggle="modal"
                                             data-bs-target="#modalEliminar">
                                         <i class="fas fa-trash"></i>
                                     </button>
                                 </td>
                             </tr>
                             {% endfor %}
-                        </tbody>                        
+                        </tbody>
                     </table>
                 </div>
             {% else %}
-                <p class="text-muted">No hay PCs cargadas aún.</p>
+                <p class="text-muted">No hay servidores registrados aún.</p>
             {% endif %}
         </div>
     </div>
@@ -66,7 +60,7 @@
                 <button type="button" class="btn-close btn-sm" data-bs-dismiss="modal"></button>
             </div>
             <div class="modal-body">
-                <p class="mb-0">¿Estás seguro de que querés eliminar esta PC?</p>
+                <p class="mb-0">¿Estás seguro de que querés eliminar este servidor?</p>
             </div>
             <div class="modal-footer">
                 <button class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Cancelar</button>
@@ -76,7 +70,7 @@
     </div>
 </div>
 
-<!-- Toast de mensaje de éxito -->
+<!-- Toast de éxito -->
 <div id="toastAccionExitosa" class="toast align-items-center text-white bg-success border-0 position-fixed bottom-0 end-0 m-3" role="alert" aria-live="assertive" aria-atomic="true" data-bs-delay="2000">
     <div class="d-flex">
         <div class="toast-body">
@@ -97,19 +91,19 @@
 </style>
 
 <script>
-    let idPcAEliminar = null;
+    let idServidorAEliminar = null;
     const modalEliminar = new bootstrap.Modal(document.getElementById('modalEliminar'));
 
     document.querySelectorAll('[data-bs-target="#modalEliminar"]').forEach(button => {
         button.addEventListener('click', function () {
-            idPcAEliminar = this.getAttribute('data-pc');
+            idServidorAEliminar = this.getAttribute('data-servidor');
         });
     });
 
     document.getElementById("btnConfirmarEliminar").addEventListener("click", function () {
-        if (!idPcAEliminar) return;
+        if (!idServidorAEliminar) return;
 
-        fetch(`/inventario/pc/eliminar/${idPcAEliminar}/`, {
+        fetch(`/inventario/servidores/eliminar/${idServidorAEliminar}/`, {
             method: "POST",
             headers: {
                 "X-CSRFToken": "{{ csrf_token }}"
@@ -118,12 +112,12 @@
         .then(res => res.json())
         .then(data => {
             if (data.success) {
-                document.getElementById(`pc-${idPcAEliminar}`).remove();
+                document.getElementById(`srv-${idServidorAEliminar}`).remove();
                 modalEliminar.hide();
                 var toast = new bootstrap.Toast(document.getElementById('toastAccionExitosa'));
                 toast.show();
             } else {
-                alert(data.error || "Error al eliminar la PC.");
+                alert(data.error || "Error al eliminar el servidor.");
             }
         })
         .catch(() => alert("Error de red al intentar eliminar."));
@@ -137,8 +131,8 @@
         });
     });
 
-    $(document).ready(function() {
-        $('#tabla-pcs').DataTable({
+    $(document).ready(function () {
+        $('#tabla-servidores').DataTable({
             language: {
                 lengthMenu: "Mostrar _MENU_ registros",
                 zeroRecords: "No se encontraron resultados",

@@ -1,0 +1,84 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="card shadow-lg border-0 rounded-4">
+        <div class="card-header bg-primary text-white d-flex align-items-center rounded-top-4">
+            <i class="fas fa-print me-2"></i>
+            <h5 class="mb-0">Detalle del Dispositivo: {{ dispositivo.marca }} {{ dispositivo.modelo }}</h5>
+        </div>
+        <div class="card-body px-4 py-4">
+
+            <div class="row g-3">
+                <div class="col-md-4">
+                    <div class="bg-light p-2 px-3 rounded-3 border small">
+                        <div class="text-muted mb-1"><i class="fas fa-tools me-2"></i> Tipo</div>
+                        <strong>{{ dispositivo.get_tipo_display }}</strong>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="bg-light p-2 px-3 rounded-3 border small">
+                        <div class="text-muted mb-1"><i class="fas fa-tag me-2"></i> Marca</div>
+                        <strong>{{ dispositivo.marca }}</strong>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="bg-light p-2 px-3 rounded-3 border small">
+                        <div class="text-muted mb-1"><i class="fas fa-box me-2"></i> Modelo</div>
+                        <strong>{{ dispositivo.modelo|default:"-" }}</strong>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="bg-light p-2 px-3 rounded-3 border small">
+                        <div class="text-muted mb-1"><i class="fas fa-barcode me-2"></i> N° de Serie</div>
+                        <strong>{{ dispositivo.nro_serie|default:"-" }}</strong>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="bg-light p-2 px-3 rounded-3 border small">
+                        <div class="text-muted mb-1"><i class="fas fa-plug me-2"></i> Conexión</div>
+                        <strong>{{ dispositivo.conexion|default:"-" }}</strong>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="bg-light p-2 px-3 rounded-3 border small">
+                        <div class="text-muted mb-1"><i class="fas fa-network-wired me-2"></i> IP</div>
+                        <strong>{{ dispositivo.ip|default:"-" }}</strong>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="bg-light p-2 px-3 rounded-3 border small">
+                        <div class="text-muted mb-1"><i class="fas fa-map-marker-alt me-2"></i> Ubicación</div>
+                        <strong>{{ dispositivo.ubicacion.nombre }}</strong>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="bg-light p-2 px-3 rounded-3 border small">
+                        <div class="text-muted mb-1"><i class="fas fa-check-circle me-2"></i> Estado</div>
+                        <span class="badge 
+                            {% if dispositivo.estado == 'FUNCIONANDO' %} bg-success
+                            {% elif dispositivo.estado == 'EN_REPARACION' %} bg-warning
+                            {% else %} bg-danger
+                            {% endif %}">
+                            {{ dispositivo.get_estado_display }}
+                        </span>
+                    </div>
+                </div>
+                <div class="col-12">
+                    <div class="bg-light p-3 rounded-3 border small">
+                        <div class="text-muted mb-1"><i class="fas fa-sticky-note me-2"></i> Observaciones</div>
+                        <strong>{{ dispositivo.observaciones|linebreaksbr|default:"Sin observaciones." }}</strong>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+        <div class="card-footer text-end bg-light border-top-0 rounded-bottom-4">
+            <a href="{% url 'inventario:lista_impresoras' %}" class="btn btn-outline-secondary">
+                <i class="fas fa-arrow-left me-1"></i>Volver
+            </a>
+        </div>
+    </div>
+</div>
+{% endblock %}

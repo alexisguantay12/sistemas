@@ -3,51 +3,52 @@
 
 {% block content %}
 <div class="container mt-4">
-    <div class="card shadow rounded-4 border-0">
+    <div class="card shadow-sm rounded-4 border-0">
         <div class="card-header bg-primary text-white fw-bold">
             <i class="fas fa-desktop me-2"></i>Agregar Nueva PC
         </div>
         <div class="card-body">
             <form method="POST" id="terminalForm" novalidate>
                 {% csrf_token %}
-                {{ form.non_field_errors }}
-
-                <div class="row">
-                    <div class="col-md-6 mb-3">
-                        <label class="form-label">{{ form.nombre.label }}</label>
-                        {{ form.nombre }}
-                        <div class="text-danger small">{{ form.nombre.errors }}</div>
+                <div class="row g-3">
+                    <div class="col-md-6">
+                        <label class="form-label">Nombre</label>
+                        <input type="text" id="nombre" name="nombre" class="form-control" autocomplete="off" required>
+                        <div class="form-text text-danger" id="nombre-error"></div>
                     </div>
-                    <div class="col-md-6 mb-3">
-                        <label class="form-label">{{ form.mac.label }}</label>
-                        {{ form.mac }}
-                        <div class="text-danger small">{{ form.mac.errors }}</div>
+                    <div class="col-md-6">
+                        <label class="form-label">Mac</label>
+                        <input type="text" id="mac" name="mac" class="form-control" autocomplete="off">
                     </div>
-                    <div class="col-md-6 mb-3">
-                        <label class="form-label">{{ form.ubicacion.label }}</label>
-                        {{ form.ubicacion }}
-                        <div class="text-danger small">{{ form.ubicacion.errors }}</div>
+                    <div class="col-md-6">
+                        <label class="form-label">Ubicación</label>
+                        <select id="ubicacion" name="ubicacion" class="form-select" required>
+                            <option value="">---------</option>
+                            {% for ubicacion in ubicaciones %}
+                            <option value="{{ ubicacion.id }}">{{ ubicacion }}</option>
+                            {% endfor %}
+                        </select>
                     </div>
-                    <div class="col-md-6 mb-3">
-                        <label class="form-label">{{ form.estado.label }}</label>
-                        {{ form.estado }}
-                        <div class="text-danger small">{{ form.estado.errors }}</div>
+                    <div class="col-md-6">
+                        <label class="form-label">Estado</label>
+                        <select id="estado-pc" name="estado-pc" class="form-select" required>
+                            <option value="PERFECTO">Perfecto</option>
+                            <option value="BUENO">Bueno</option>
+                            <option value="DEFECTUOSO">Defectuoso</option>
+                        </select>
                     </div>
-                    <div class="col-12 mb-3">
-                        <label class="form-label">{{ form.descripcion.label }}</label>
-                        {{ form.descripcion }}
-                        <div class="text-danger small">{{ form.descripcion.errors }}</div>
+                    <div class="col-12">
+                        <label class="form-label">Descripción</label>
+                        <textarea id="descripcion-pc" name="descripcion-pc" class="form-control" rows="1"></textarea>
                     </div>
                 </div>
-
                 <h5 class="mt-4">Componentes Asociados</h5>
-                <table class="table table-sm table-bordered" id="componentesTable">
+                <table class="table table-sm table-bordered table-hover" id="componentesTable">
                     <thead class="table-light">
                         <tr>
                             <th>Tipo</th>
                             <th>Descripción</th>
                             <th>Marca</th>
-                            <th>Nro Serie</th>
                             <th>Estado</th>
                             <th>Acción</th>
                         </tr>
@@ -55,13 +56,13 @@
                     <tbody></tbody>
                 </table>
 
-                <button type="button" class="btn btn-outline-primary" data-bs-toggle="modal" data-bs-target="#componenteModal">
+                <button type="button" class="btn btn-outline-primary btn-sm" data-bs-toggle="modal" data-bs-target="#componenteModal">
                     <i class="fas fa-plus"></i> Agregar Componente
                 </button>
 
                 <div class="text-end mt-4">
-                    <a href="{% url 'inventario:lista_pc' %}" class="btn btn-secondary me-2">Cancelar</a>
-                    <button type="submit" class="btn btn-primary">Guardar</button>
+                    <a href="{% url 'inventario:lista_pc' %}" class="btn btn-secondary me-2 btn-sm">Cancelar</a>
+                    <button type="submit" class="btn btn-primary btn-sm">Guardar</button>
                 </div>
 
                 <input type="hidden" name="componentes_json" id="componentes_json">
@@ -94,25 +95,25 @@
                     </div>
                     <div class="mb-3">
                         <label class="form-label">Descripción</label>
-                        <input type="text" class="form-control" id="descripcion">
+                        <input type="text" class="form-control form-control-sm" id="descripcion">
                     </div>
                     <div class="mb-3">
                         <label class="form-label">Marca</label>
-                        <input type="text" class="form-control" id="marca">
-                    </div> 
+                        <input type="text" class="form-control form-control-sm" id="marca">
+                    </div>
                     <div class="mb-3">
                         <label class="form-label">Estado</label>
                         <select class="form-select" id="estado">
+                            <option value="PERFECTO">Perfecto</option>
                             <option value="BUENO">Bueno</option>
-                            <option value="NUEVO">Nuevo</option>
                             <option value="DEFECTUOSO">Defectuoso</option>
                         </select>
                     </div>
                 </form>
             </div>
             <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
-                <button type="button" class="btn btn-primary" onclick="agregarComponente()" data-bs-dismiss="modal">Agregar</button>
+                <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Cancelar</button>
+                <button type="button" class="btn btn-primary btn-sm" onclick="agregarComponente()" data-bs-dismiss="modal">Agregar</button>
             </div>
         </div>
     </div>
@@ -124,15 +125,34 @@
     function agregarComponente() {
         const tipo = document.getElementById('tipo').value;
         const descripcion = document.getElementById('descripcion').value;
-        const marca = document.getElementById('marca').value;
-        const nro_serie = document.getElementById('nro_serie').value;
+        const marca = document.getElementById('marca').value; 
         const estado = document.getElementById('estado').value;
 
-        const nuevo = { tipo, descripcion, marca, nro_serie, estado };
+        const nuevo = { tipo, descripcion, marca, estado };
         componentes.push(nuevo);
         renderTabla();
     }
 
+    const verificarNombreUrl = "{% url 'inventario:verificar_nombre_terminal' %}";
+    
+    document.getElementById('nombre').addEventListener('input', async function () {
+        const nombre = this.value.trim();
+        const errorDiv = document.getElementById('nombre-error');
+        
+        if (nombre.length < 3) {
+            errorDiv.textContent = '';
+            return;
+        }
+
+        const response = await fetch(`${verificarNombreUrl}?nombre=${encodeURIComponent(nombre)}`);
+        const data = await response.json();
+
+        if (data.exists) {
+            errorDiv.textContent = 'Este nombre ya está en uso.';
+        } else {
+            errorDiv.textContent = '';
+        }
+    });
     function renderTabla() {
         const tbody = document.querySelector('#componentesTable tbody');
         tbody.innerHTML = '';
@@ -142,7 +162,6 @@
                     <td>${comp.tipo}</td>
                     <td>${comp.descripcion}</td>
                     <td>${comp.marca}</td>
-                    <td>${comp.nro_serie}</td>
                     <td>${comp.estado}</td>
                     <td><button class="btn btn-sm btn-danger" onclick="eliminarComponente(${i})">Eliminar</button></td>
                 </tr>
@@ -160,8 +179,7 @@
     document.getElementById('componenteModal').addEventListener('show.bs.modal', () => {
         document.getElementById('tipo').value = 'RAM';
         document.getElementById('descripcion').value = '';
-        document.getElementById('marca').value = '';
-        document.getElementById('nro_serie').value = '';
+        document.getElementById('marca').value = ''; 
         document.getElementById('estado').value = 'BUENO';
     });
 </script>

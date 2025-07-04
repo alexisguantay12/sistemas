@@ -1,0 +1,235 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="card shadow-lg border-0 rounded-4">
+        <div class="card-header bg-primary text-white d-flex align-items-center rounded-top-4">
+            <i class="fas fa-desktop me-2"></i>
+            <h5 class="mb-0">Editar PC: {{ terminal.nombre }}</h5>
+        </div>
+        <div class="card-body px-4 py-4">
+            <form method="POST" id="form-editar-pc">
+                {% csrf_token %}
+                <div class="row g-3 mb-3">
+                    <div class="col-md-4">
+                        <label class="form-label">Ubicación</label>
+                        <select name="ubicacion" class="form-select">
+                            {% for u in ubicaciones %}
+                                <option value="{{ u.id }}" {% if terminal.ubicacion.id == u.id %}selected{% endif %}>{{ u.nombre }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label">Estado</label>
+                        <select name="estado" class="form-select">
+                            <option value="PERFECTO" {% if terminal.estado == "PERFECTO" %}selected{% endif %}>Perfecto</option>
+                            <option value="BUENO" {% if terminal.estado == "BUENO" %}selected{% endif %}>Bueno</option>
+                            <option value="DEFECTUOSO" {% if terminal.estado == "DEFECTUOSO" %}selected{% endif %}>Defectuoso</option>
+                        </select>
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label">Descripción</label>
+                        <input type="text" name="descripcion" class="form-control" value="{{ terminal.descripcion }}">
+                    </div>
+                </div>
+
+                <hr class="my-4">
+                <h5 class="mb-3 d-flex align-items-center">
+                    <i class="fas fa-cogs me-2 text-secondary"></i> Componentes Asociados
+                </h5>
+
+                {% if componentes %}
+                <div class="table-responsive">
+                    <table class="table table-sm table-bordered align-middle small">
+                        <thead class="table-light">
+                            <tr>
+                                <th>Tipo</th>
+                                <th>Marca</th>
+                                <th>Estado</th>
+                                <th>Descripción</th>
+                                <th>Acciones</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for c in componentes %}
+                            <tr>
+                                <td>{{ c.get_tipo_display }}</td>
+                                <td>{{ c.marca }}</td>
+                                <td>
+                                    <select name="componente_estado_{{ c.id }}" class="form-select form-select-sm">
+                                        <option value="PERFECTO" {% if c.estado == "PERFECTO" %}selected{% endif %}>Perfecto</option>
+                                        <option value="BUENO" {% if c.estado == "BUENO" %}selected{% endif %}>Bueno</option>
+                                        <option value="DEFECTUOSO" {% if c.estado == "DEFECTUOSO" %}selected{% endif %}>Defectuoso</option>
+                                    </select>
+                                </td>
+                                <td>{{ c.descripcion }}</td>
+                                <td>
+                                    <button type="button" class="btn btn-sm btn-outline-warning" onclick="confirmarTransferencia({{ c.id }})">
+                                        <i class="fas fa-random"></i>
+                                    </button>
+                                    <button type="button" class="btn btn-sm btn-outline-danger" onclick="confirmarEliminar({{ c.id }})">
+                                        <i class="fas fa-trash"></i>
+                                    </button>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% else %}
+                    <div class="alert alert-info">No hay componentes asociados a esta terminal.</div>
+                {% endif %}
+
+                <hr class="my-4">
+                <h5 class="mb-3 d-flex align-items-center">
+                    <i class="fas fa-plus-circle me-2 text-secondary"></i> Agregar Componente
+                </h5>
+                <button type="button" class="btn btn-outline-primary" data-bs-toggle="modal" data-bs-target="#modalAgregarComponente">
+                    <i class="fas fa-search"></i> Buscar Componente
+                </button>
+
+                <hr class="my-4">
+                <div class="text-end">
+                    <button type="button" class="btn btn-success" onclick="confirmarGuardar()">
+                        <i class="fas fa-save me-1"></i> Guardar Cambios
+                    </button>
+                    <a href="{% url 'inventario:lista_pc' %}" class="btn btn-outline-secondary">
+                        <i class="fas fa-arrow-left me-1"></i> Volver
+                    </a>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Modal: Buscar y agregar componente -->
+<div class="modal fade" id="modalAgregarComponente" tabindex="-1" aria-labelledby="modalAgregarComponenteLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-centered">
+        <div class="modal-content rounded-4">
+            <div class="modal-header">
+                <h5 class="modal-title" id="modalAgregarComponenteLabel">Buscar Componente en Depósito</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+            </div>
+            <div class="modal-body">
+                <div class="mb-3">
+                    <input type="text" id="buscador" class="form-control" placeholder="Buscar por tipo, marca o descripción...">
+                </div>
+                <div id="resultados-busqueda" class="table-responsive"></div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Otros modales -->
+<div class="modal fade" id="modalTransferencia" tabindex="-1">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content rounded-4">
+      <div class="modal-header">
+        <h5 class="modal-title">¿Transferir Componente?</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">¿Estás seguro que querés transferir este componente a otra terminal?</div>
+      <div class="modal-footer">
+        <form method="POST">
+          {% csrf_token %}
+          <input type="hidden" name="transferir" id="inputTransferir">
+          <button type="submit" class="btn btn-warning">Confirmar</button>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="modal fade" id="modalEliminar" tabindex="-1">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content rounded-4">
+      <div class="modal-header">
+        <h5 class="modal-title">¿Eliminar Componente?</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">¿Estás seguro que querés eliminar este componente de esta PC?</div>
+      <div class="modal-footer">
+        <form method="POST">
+          {% csrf_token %}
+          <input type="hidden" name="eliminar" id="inputEliminar">
+          <button type="submit" class="btn btn-danger">Eliminar</button>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="modal fade" id="modalGuardar" tabindex="-1">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content rounded-4">
+      <div class="modal-header">
+        <h5 class="modal-title">¿Guardar Cambios?</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">Se guardarán todos los cambios de la PC. ¿Deseás continuar?</div>
+      <div class="modal-footer">
+        <button type="submit" form="form-editar-pc" name="guardar" class="btn btn-success">Guardar</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+function confirmarTransferencia(id) {
+    document.getElementById('inputTransferir').value = id;
+    new bootstrap.Modal(document.getElementById('modalTransferencia')).show();
+}
+
+function confirmarEliminar(id) {
+    document.getElementById('inputEliminar').value = id;
+    new bootstrap.Modal(document.getElementById('modalEliminar')).show();
+}
+
+function confirmarGuardar() {
+    new bootstrap.Modal(document.getElementById('modalGuardar')).show();
+}
+
+const buscador = document.getElementById('buscador');
+const resultadosBusqueda = document.getElementById('resultados-busqueda');
+
+buscador.addEventListener('input', async function () {
+    const query = this.value;
+    if (query.length < 2) {
+        resultadosBusqueda.innerHTML = "";
+        return;
+    }
+    const response = await fetch(`/inventario/buscar_componentes/?q=${encodeURIComponent(query)}`);
+    const data = await response.json();
+
+    let html = `
+    <table class="table table-bordered small">
+        <thead class="table-light">
+            <tr><th>Tipo</th><th>Marca</th><th>Descripción</th><th>Cantidad</th><th>Acción</th></tr>
+        </thead><tbody>`;
+
+    if (data.length === 0) {
+        html += `<tr><td colspan="5" class="text-center">No se encontraron componentes.</td></tr>`;
+    } else {
+        for (const comp of data) {
+            html += `
+            <tr>
+                <td>${comp.tipo}</td>
+                <td>${comp.marca}</td>
+                <td>${comp.descripcion}</td>
+                <td>${comp.cantidad}</td>
+                <td>
+                    <form method="POST">
+                        <input type="hidden" name="componente_id" value="${comp.id}">
+                        <button type="submit" name="asociar_componente" value="${comp.id}" class="btn btn-sm btn-success">Agregar</button>
+                    </form>
+                </td>
+            </tr>`;
+        }
+    }
+
+    html += `</tbody></table>`;
+    resultadosBusqueda.innerHTML = html;
+});
+</script>
+{% endblock %}

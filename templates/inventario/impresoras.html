@@ -1,57 +1,60 @@
 {% extends 'base.html' %}
 {% load static %}
+
 {% block content %}
 <div class="px-3 px-md-5">
     <div class="d-flex justify-content-between align-items-center mb-3">
-        <h3 class="text-primary"><i class="fas fa-desktop"></i> Lista de PCs</h3>
-        <a href="{% url 'inventario:pc_agregar' %}" class="btn btn-success">
-            <i class="fas fa-plus"></i> Agregar PC
+        <h3 class="text-primary"><i class="fas fa-print"></i> Lista de Impresoras / Escáneres</h3>
+        <a href="{% url 'inventario:agregar_impresora' %}" class="btn btn-success">
+            <i class="fas fa-plus"></i> Agregar Dispositivo
         </a>
     </div>
 
     <div class="card shadow-sm">
         <div class="card-body">
-            {% if pcs %}
+            {% if perifericos %}
                 <div class="table-responsive">
-                    <table id="tabla-pcs" class="table table-hover align-middle">
+                    <table id="tabla-perifericos" class="table table-hover align-middle">
                         <thead class="table-light">
-                            <tr> 
+                            <tr>
                                 <th>Nombre</th>
+                                <th>IP</th>
                                 <th>Ubicación</th>
-                                <th>Responsable</th>
                                 <th>Estado</th>
                                 <th class="sin-redireccion">Acciones</th>
                             </tr>
                         </thead>
                         <tbody>
-                            {% for pc in pcs %}
-                            <tr id="pc-{{ pc.id }}" class="clickable-row" data-url="{% url 'inventario:pc_detalle' pc.id %}" style="cursor:pointer;">
-                                <td>{{ pc.nombre }}</td>
-                                <td>{{ pc.ubicacion.nombre }}</td>
-                                <td>{{ pc.ubicacion.responsable }}</td>
-                                <td>                        <span class="badge 
-                                    {% if pc.estado == 'BUENO' %} bg-success
-                                    {% elif pc.estado == 'PERFECTO'%} bg-success
-                                    {% else %} bg-danger
-                                    {% endif %}">
-                                    {{ pc.estado }}
-                                </span></td>
+                            {% for p in perifericos %}
+                            <tr id="perif-{{ p.id }}" class="clickable-row" data-url="{% url 'inventario:detalle_impresora' p.id %}" style="cursor:pointer;">
+                                <td>{{ p.marca }} {{ p.modelo }}</td>
+                                <td>{{ p.ip|default:"-" }}</td>
+                                <td>{{ p.ubicacion.nombre }}</td>
+                                <td>
+                                    <span class="badge 
+                                        {% if p.estado == 'FUNCIONANDO' %} bg-success
+                                        {% elif p.estado == 'EN_REPARACION' %} bg-warning
+                                        {% else %} bg-danger
+                                        {% endif %}">
+                                        {{ p.get_estado_display }}
+                                    </span>
+                                </td>
                                 <td class="sin-redireccion">
-                                    <a href="{% url 'inventario:editar_pc' pc.id %}" class="btn btn-sm btn-warning"><i class="fas fa-edit"></i></a>
-                                    <button class="btn btn-sm btn-danger" title="Eliminar" 
-                                            data-pc="{{ pc.id }}" 
-                                            data-bs-toggle="modal" 
+                                    <a href="#" class="btn btn-sm btn-warning"><i class="fas fa-edit"></i></a>
+                                    <button class="btn btn-sm btn-danger" title="Eliminar"
+                                            data-periferico="{{ p.id }}"
+                                            data-bs-toggle="modal"
                                             data-bs-target="#modalEliminar">
                                         <i class="fas fa-trash"></i>
                                     </button>
                                 </td>
                             </tr>
                             {% endfor %}
-                        </tbody>                        
+                        </tbody>
                     </table>
                 </div>
             {% else %}
-                <p class="text-muted">No hay PCs cargadas aún.</p>
+                <p class="text-muted">No hay dispositivos registrados aún.</p>
             {% endif %}
         </div>
     </div>
@@ -66,7 +69,7 @@
                 <button type="button" class="btn-close btn-sm" data-bs-dismiss="modal"></button>
             </div>
             <div class="modal-body">
-                <p class="mb-0">¿Estás seguro de que querés eliminar esta PC?</p>
+                <p class="mb-0">¿Estás seguro de que querés eliminar este dispositivo?</p>
             </div>
             <div class="modal-footer">
                 <button class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Cancelar</button>
@@ -76,12 +79,10 @@
     </div>
 </div>
 
-<!-- Toast de mensaje de éxito -->
+<!-- Toast de éxito -->
 <div id="toastAccionExitosa" class="toast align-items-center text-white bg-success border-0 position-fixed bottom-0 end-0 m-3" role="alert" aria-live="assertive" aria-atomic="true" data-bs-delay="2000">
     <div class="d-flex">
-        <div class="toast-body">
-            Acción realizada con éxito.
-        </div>
+        <div class="toast-body">Acción realizada con éxito.</div>
         <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
     </div>
 </div>
@@ -97,19 +98,19 @@
 </style>
 
 <script>
-    let idPcAEliminar = null;
+    let idAEliminar = null;
     const modalEliminar = new bootstrap.Modal(document.getElementById('modalEliminar'));
 
     document.querySelectorAll('[data-bs-target="#modalEliminar"]').forEach(button => {
         button.addEventListener('click', function () {
-            idPcAEliminar = this.getAttribute('data-pc');
+            idAEliminar = this.getAttribute('data-periferico');
         });
     });
 
     document.getElementById("btnConfirmarEliminar").addEventListener("click", function () {
-        if (!idPcAEliminar) return;
+        if (!idAEliminar) return;
 
-        fetch(`/inventario/pc/eliminar/${idPcAEliminar}/`, {
+        fetch(`/inventario/perifericos/eliminar/${idAEliminar}/`, {
             method: "POST",
             headers: {
                 "X-CSRFToken": "{{ csrf_token }}"
@@ -118,12 +119,12 @@
         .then(res => res.json())
         .then(data => {
             if (data.success) {
-                document.getElementById(`pc-${idPcAEliminar}`).remove();
+                document.getElementById(`perif-${idAEliminar}`).remove();
                 modalEliminar.hide();
                 var toast = new bootstrap.Toast(document.getElementById('toastAccionExitosa'));
                 toast.show();
             } else {
-                alert(data.error || "Error al eliminar la PC.");
+                alert(data.error || "Error al eliminar el dispositivo.");
             }
         })
         .catch(() => alert("Error de red al intentar eliminar."));
@@ -137,8 +138,8 @@
         });
     });
 
-    $(document).ready(function() {
-        $('#tabla-pcs').DataTable({
+    $(document).ready(function () {
+        $('#tabla-perifericos').DataTable({
             language: {
                 lengthMenu: "Mostrar _MENU_ registros",
                 zeroRecords: "No se encontraron resultados",

@@ -65,7 +65,7 @@
 <!-- Barra de navegación -->
 <nav class="navbar navbar-expand-lg navbar-custom shadow-sm">
     <div class="container-fluid">
-        <a class="navbar-brand" href="{# logo u home opcional #}">Inventario</a>
+        <a class="navbar-brand" href="{% url 'inventario:dashboard' %}">Inventario</a>
         <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
             <span class="navbar-toggler-icon"></span>
         </button>
@@ -73,6 +73,12 @@
             <ul class="navbar-nav ms-auto">
                 <li class="nav-item">
                     <a class="nav-link" href="{% url 'inventario:lista_pc' %}"><i class="fas fa-desktop"></i> PCs</a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="{% url 'inventario:lista_servidores' %}"><i class="fas fa-server"></i> Servidores</a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="{% url 'inventario:lista_impresoras' %}"><i class="fas fa-print"></i> Impresoras</a>
                 </li>
                 <li class="nav-item dropdown">
                     <a class="nav-link dropdown-toggle d-flex align-items-center" href="#" id="userDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">

@@ -1,0 +1,71 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="card shadow-lg border-0 rounded-4">
+        <div class="card-header bg-primary text-white rounded-top-4">
+            <h5 class="mb-0"><i class="fas fa-print me-2"></i>Agregar Impresora / Escáner</h5>
+        </div>
+        <div class="card-body px-4 py-4">
+            <form method="POST">
+                {% csrf_token %}
+                <div class="row g-3">
+                    <div class="col-md-4">
+                        <label class="form-label">Tipo</label>
+                        <select name="tipo" class="form-select" required>
+                            <option value="IMPRESORA">Impresora</option>
+                            <option value="ESCANER">Escáner</option>
+                        </select>
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label">Marca</label>
+                        <input type="text" name="marca" class="form-control" required>
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label">Modelo</label>
+                        <input type="text" name="modelo" class="form-control">
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label">N° de Serie</label>
+                        <input type="text" name="nro_serie" class="form-control">
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label">Conexión</label>
+                        <input type="text" name="conexion" class="form-control" placeholder="USB / Red / Wi-Fi">
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label">IP</label>
+                        <input type="text" name="ip" class="form-control">
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label">Estado</label>
+                        <select name="estado" class="form-select" required>
+                            <option value="FUNCIONANDO">Funcionando</option>
+                            <option value="EN_REPARACION">En reparación</option>
+                            <option value="FUERA_DE_SERVICIO">Fuera de servicio</option>
+                        </select>
+                    </div>
+                    <div class="col-md-8">
+                        <label class="form-label">Ubicación</label>
+                        <select name="ubicacion_id" class="form-select" required>
+                            {% for ubicacion in ubicaciones %}
+                                <option value="{{ ubicacion.id }}">{{ ubicacion.nombre }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="col-12">
+                        <label class="form-label">Observaciones</label>
+                        <textarea name="observaciones" class="form-control" rows="3"></textarea>
+                    </div>
+                </div>
+
+                <div class="text-end mt-4">
+                    <a href="{% url 'inventario:lista_impresoras' %}" class="btn btn-secondary me-2">Cancelar</a>
+                    <button type="submit" class="btn btn-primary">Guardar</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}

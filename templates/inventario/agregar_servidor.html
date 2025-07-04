@@ -1,0 +1,93 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="card shadow-sm rounded-4 border-0">
+        <div class="card-header bg-primary text-white fw-bold">
+            <i class="fas fa-server me-2"></i> Registrar Nuevo Servidor
+        </div>
+        <div class="card-body">
+            <form method="POST" enctype="multipart/form-data" novalidate>
+                {% csrf_token %}
+
+                <div class="row g-3">
+                    <div class="col-md-6">
+                        <label for="hostname" class="form-label">Hostname</label>
+                        <input type="text" id="hostname" name="hostname" class="form-control" required>
+                    </div>
+
+                    <div class="col-md-3">
+                        <label for="ip" class="form-label">IP</label>
+                        <input type="text" id="ip" name="ip" class="form-control">
+                    </div>
+
+                    <div class="col-md-3">
+                        <label for="mac" class="form-label">MAC</label>
+                        <input type="text" id="mac" name="mac" class="form-control">
+                    </div>
+
+                    <div class="col-md-6">
+                        <label for="sistema_operativo" class="form-label">Sistema Operativo</label>
+                        <input type="text" id="sistema_operativo" name="sistema_operativo" class="form-control" required>
+                    </div>
+
+                    <div class="col-md-6">
+                        <label for="version_so" class="form-label">Versión del SO</label>
+                        <input type="text" id="version_so" name="version_so" class="form-control">
+                    </div>
+
+                    <div class="col-md-6">
+                        <label for="rol_principal" class="form-label">Rol Principal</label>
+                        <input type="text" id="rol_principal" name="rol_principal" class="form-control" placeholder="Ej: Base de datos, VPN, etc.">
+                    </div>
+
+                    <div class="col-md-6">
+                        <label for="estado" class="form-label">Estado</label>
+                        <select id="estado" name="estado" class="form-select" required> 
+                            <option value="PERFECTO">Perfecto</option>
+                            <option value="NUEVO">Nuevo</option>
+                            <option value="DEFECTUOSO">Defectuoso</option>
+                        </select>
+                    </div>
+
+                    <div class="col-md-6">
+                        <label for="ubicacion" class="form-label">Ubicación</label>
+                        <select id="ubicacion" name="ubicacion" class="form-select" required>
+                            <option value="">-- Seleccionar --</option>
+                            {% for u in ubicaciones %}
+                            <option value="{{ u.id }}">{{ u.nombre }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+
+                    <div class="col-md-6">
+                        <label for="ultima_revision" class="form-label">Última Revisión</label>
+                        <input type="date" id="ultima_revision" name="ultima_revision" class="form-control">
+                    </div>
+
+                    <div class="col-md-4">
+                        <label for="max_ram" class="form-label">Máx. RAM (GB)</label>
+                        <input type="number" id="max_ram" name="max_ram" class="form-control" min="0">
+                    </div>
+
+                    <div class="col-md-4">
+                        <label for="max_disco" class="form-label">Máx. Disco (GB)</label>
+                        <input type="number" id="max_disco" name="max_disco" class="form-control" min="0">
+                    </div>
+
+                    <div class="col-md-4">
+                        <label for="cantidad_puertos" class="form-label">Cantidad de Puertos</label>
+                        <input type="number" id="cantidad_puertos" name="cantidad_puertos" class="form-control" min="0">
+                    </div>
+                </div>
+
+                <div class="text-end mt-4">
+                    <a href="{% url 'inventario:lista_servidores' %}" class="btn btn-secondary me-2">Cancelar</a>
+                    <button type="submit" class="btn btn-primary">Guardar Servidor</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}

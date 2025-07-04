@@ -49,11 +49,11 @@
                             <i class="fas fa-check-circle me-2"></i> Estado
                         </div>
                         <span class="badge 
-                            {% if terminal.estado == 'BUENA' %} bg-success
-                            {% elif terminal.estado == 'NUEVA' %} bg-info
+                            {% if terminal.estado == 'BUENO' %} bg-success
+                            {% elif terminal.estado == 'PERFECTO'%} bg-success
                             {% else %} bg-danger
                             {% endif %}">
-                            {{ terminal.get_estado_display }}
+                            {{ terminal.estado }}
                         </span>
                     </div>
                 </div>
@@ -92,10 +92,10 @@
                             <td>
                                 <span class="badge 
                                     {% if componente.estado == 'BUENO' %} bg-success 
-                                    {% elif componente.estado == 'NUEVO' %} bg-info 
+                                    {% elif componente.estado == 'PERFECTO' %} bg-success
                                     {% else %} bg-danger 
                                     {% endif %}">
-                                    {{ componente.get_estado_display }}
+                                    {{ componente.estado }}
                                 </span>
                             </td>
                             <td>{{ componente.descripcion }}</td>
