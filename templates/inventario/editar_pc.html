@@ -11,6 +11,8 @@
         <div class="card-body px-4 py-4">
             <form method="POST" id="form-editar-pc">
                 {% csrf_token %}
+
+                <!-- Datos básicos -->
                 <div class="row g-3 mb-3">
                     <div class="col-md-4">
                         <label class="form-label">Ubicación</label>
@@ -53,7 +55,7 @@
                         </thead>
                         <tbody>
                             {% for c in componentes %}
-                            <tr>
+                            <tr id="fila-comp-{{ c.id }}">
                                 <td>{{ c.get_tipo_display }}</td>
                                 <td>{{ c.marca }}</td>
                                 <td>
@@ -78,7 +80,7 @@
                     </table>
                 </div>
                 {% else %}
-                    <div class="alert alert-info">No hay componentes asociados a esta terminal.</div>
+                <div class="alert alert-info">No hay componentes asociados a esta terminal.</div>
                 {% endif %}
 
                 <hr class="my-4">
@@ -88,6 +90,16 @@
                 <button type="button" class="btn btn-outline-primary" data-bs-toggle="modal" data-bs-target="#modalAgregarComponente">
                     <i class="fas fa-search"></i> Buscar Componente
                 </button>
+
+                <div id="componentes-seleccionados" class="mt-4" style="display: none;">
+                    <h6>Componentes seleccionados</h6>
+                    <table class="table table-sm table-bordered small">
+                        <thead class="table-light">
+                            <tr><th>Tipo</th><th>Marca</th><th>Descripción</th><th>Estado</th><th>Acción</th></tr>
+                        </thead>
+                        <tbody id="tabla-componentes"></tbody>
+                    </table>
+                </div>
 
                 <hr class="my-4">
                 <div class="text-end">
@@ -103,25 +115,7 @@
     </div>
 </div>
 
-<!-- Modal: Buscar y agregar componente -->
-<div class="modal fade" id="modalAgregarComponente" tabindex="-1" aria-labelledby="modalAgregarComponenteLabel" aria-hidden="true">
-    <div class="modal-dialog modal-lg modal-dialog-centered">
-        <div class="modal-content rounded-4">
-            <div class="modal-header">
-                <h5 class="modal-title" id="modalAgregarComponenteLabel">Buscar Componente en Depósito</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
-            </div>
-            <div class="modal-body">
-                <div class="mb-3">
-                    <input type="text" id="buscador" class="form-control" placeholder="Buscar por tipo, marca o descripción...">
-                </div>
-                <div id="resultados-busqueda" class="table-responsive"></div>
-            </div>
-        </div>
-    </div>
-</div>
-
-<!-- Otros modales -->
+<!-- Modales -->
 <div class="modal fade" id="modalTransferencia" tabindex="-1">
   <div class="modal-dialog modal-dialog-centered">
     <div class="modal-content rounded-4">
@@ -131,11 +125,7 @@
       </div>
       <div class="modal-body">¿Estás seguro que querés transferir este componente a otra terminal?</div>
       <div class="modal-footer">
-        <form method="POST">
-          {% csrf_token %}
-          <input type="hidden" name="transferir" id="inputTransferir">
-          <button type="submit" class="btn btn-warning">Confirmar</button>
-        </form>
+        <button type="button" class="btn btn-warning" id="btn-confirmar-transferencia">Confirmar</button>
       </div>
     </div>
   </div>
@@ -150,11 +140,7 @@
       </div>
       <div class="modal-body">¿Estás seguro que querés eliminar este componente de esta PC?</div>
       <div class="modal-footer">
-        <form method="POST">
-          {% csrf_token %}
-          <input type="hidden" name="eliminar" id="inputEliminar">
-          <button type="submit" class="btn btn-danger">Eliminar</button>
-        </form>
+        <button type="button" class="btn btn-danger" id="btn-confirmar-eliminar">Eliminar</button>
       </div>
     </div>
   </div>
@@ -176,22 +162,9 @@
 </div>
 
 <script>
-function confirmarTransferencia(id) {
-    document.getElementById('inputTransferir').value = id;
-    new bootstrap.Modal(document.getElementById('modalTransferencia')).show();
-}
-
-function confirmarEliminar(id) {
-    document.getElementById('inputEliminar').value = id;
-    new bootstrap.Modal(document.getElementById('modalEliminar')).show();
-}
-
-function confirmarGuardar() {
-    new bootstrap.Modal(document.getElementById('modalGuardar')).show();
-}
-
 const buscador = document.getElementById('buscador');
 const resultadosBusqueda = document.getElementById('resultados-busqueda');
+const componentesAgregados = new Set();
 
 buscador.addEventListener('input', async function () {
     const query = this.value;
@@ -199,37 +172,117 @@ buscador.addEventListener('input', async function () {
         resultadosBusqueda.innerHTML = "";
         return;
     }
-    const response = await fetch(`/inventario/buscar_componentes/?q=${encodeURIComponent(query)}`);
+
+    const response = await fetch("{% url 'inventario:buscar_componentes' %}?q=" + encodeURIComponent(query));
     const data = await response.json();
 
-    let html = `
+    let html =` 
     <table class="table table-bordered small">
         <thead class="table-light">
-            <tr><th>Tipo</th><th>Marca</th><th>Descripción</th><th>Cantidad</th><th>Acción</th></tr>
+            <tr><th>Tipo</th><th>Marca</th><th>Descripción</th><th>Stock</th><th>Estado</th><th>Acción</th></tr>
         </thead><tbody>`;
 
     if (data.length === 0) {
-        html += `<tr><td colspan="5" class="text-center">No se encontraron componentes.</td></tr>`;
+        html += <tr><td colspan="4" class="text-center">No se encontraron componentes.</td></tr>;
     } else {
         for (const comp of data) {
-            html += `
+            html += 
             <tr>
                 <td>${comp.tipo}</td>
                 <td>${comp.marca}</td>
                 <td>${comp.descripcion}</td>
-                <td>${comp.cantidad}</td>
+                <td>${comp.stock}</td>
+                <td>${comp.estado}</td>
                 <td>
-                    <form method="POST">
-                        <input type="hidden" name="componente_id" value="${comp.id}">
-                        <button type="submit" name="asociar_componente" value="${comp.id}" class="btn btn-sm btn-success">Agregar</button>
-                    </form>
+                    <button type="button" class="btn btn-sm btn-success" onclick='agregarComponente(${JSON.stringify(comp)})'>Seleccionar</button>
                 </td>
-            </tr>`;
+            </tr>;
         }
     }
 
-    html += `</tbody></table>`;
+    html += </tbody></table>;
     resultadosBusqueda.innerHTML = html;
+});
+
+document.getElementById('modalAgregarComponente').addEventListener('shown.bs.modal', function () {
+    buscador.value = "";
+    resultadosBusqueda.innerHTML = "";
+    buscador.focus();  // opcional: para que el cursor ya esté en el input
+});
+
+function agregarComponente(comp) {
+    if (componentesAgregados.has(comp.id)) return;
+
+    componentesAgregados.add(comp.id);
+
+    const tabla = document.getElementById('tabla-componentes');
+    const fila = document.createElement('tr');
+
+    fila.innerHTML = `
+        <td>${comp.tipo}</td>
+        <td>${comp.marca}</td>
+        <td>${comp.descripcion}</td>
+        <td>${comp.estado}</td>
+        <td>
+            <button type="button" class="btn btn-sm btn-outline-danger" onclick="eliminarComponente(${comp.id}, this)">
+                <i class="fas fa-times"></i>
+            </button>
+        </td>
+        <input type="hidden" name="componentes_agregados" value="${comp.id}">
+    `;
+
+    tabla.appendChild(fila);
+    document.getElementById('componentes-seleccionados').style.display = 'block';
+
+    // ✅ Cerrar el modal
+    const modal = bootstrap.Modal.getInstance(document.getElementById('modalAgregarComponente'));
+    modal.hide();
+}
+
+function eliminarComponente(id, btn) {
+    componentesAgregados.delete(id);
+    btn.closest('tr').remove();
+
+    if (componentesAgregados.size === 0) {
+        document.getElementById('componentes-seleccionados').style.display = 'none';
+    }
+}
+
+
+let componenteIdAccion = null;
+
+function confirmarTransferencia(id) {
+    componenteIdAccion = id;
+    new bootstrap.Modal(document.getElementById('modalTransferencia')).show();
+}
+
+function confirmarEliminar(id) {
+    componenteIdAccion = id;
+    new bootstrap.Modal(document.getElementById('modalEliminar')).show();
+}
+
+function confirmarGuardar() {
+    new bootstrap.Modal(document.getElementById('modalGuardar')).show();
+}
+
+document.getElementById('btn-confirmar-transferencia').addEventListener('click', () => {
+    const input = document.createElement('input');
+    input.type = 'hidden';
+    input.name = 'componentes_transferidos';
+    input.value = componenteIdAccion;
+    document.getElementById('form-editar-pc').appendChild(input);
+    document.querySelector(`#fila-comp-${componenteIdAccion}`).style.opacity = 0.4;
+    bootstrap.Modal.getInstance(document.getElementById('modalTransferencia')).hide();
+});
+
+document.getElementById('btn-confirmar-eliminar').addEventListener('click', () => {
+    const input = document.createElement('input');
+    input.type = 'hidden';
+    input.name = 'componentes_eliminados';
+    input.value = componenteIdAccion;
+    document.getElementById('form-editar-pc').appendChild(input);
+    document.querySelector(`#fila-comp-${componenteIdAccion}`).style.opacity = 0.4;
+    bootstrap.Modal.getInstance(document.getElementById('modalEliminar')).hide();
 });
 </script>
 {% endblock %}

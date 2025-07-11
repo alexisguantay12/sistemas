@@ -43,6 +43,31 @@ class Componente(BaseAbstractWithUser):
         return f"{self.tipo} - {self.marca} {self.modelo}"
 
 
+class ComponenteStock(BaseAbstractWithUser):
+    TIPO_CHOICES = [
+        ('RAM', 'Memoria RAM'),
+        ('DISCO', 'Disco'),
+        ('MOTHERBOARD', 'Placa Madre'),
+        ('TECLADO', 'Teclado'),
+        ('MONITOR', 'Monitor'),
+        ('MOUSE', 'Mouse'),
+        ('CPU', 'CPU'),
+        ('ROUTER', 'Router'),
+        ('SWITCH', 'Switch'),
+        ('AP', 'Access Point'),
+        ('VGA', 'Cable VGA'),
+        ('HDMI', 'Cable HDMI'),
+        ('ETHERNET', 'Cable Red'),
+        ('OTRO', 'Otro'),
+    ] 
+
+    tipo = models.CharField(max_length=20, choices=TIPO_CHOICES)
+    marca = models.CharField(max_length=100, blank=True) 
+    descripcion = models.TextField(blank=True)
+    nro_serie = models.CharField(max_length=100, blank=True)
+    estado = models.CharField(max_length=50)
+    stock = models.IntegerField(default=1,null=True)
+
 class Servidor(BaseAbstractWithUser): 
     hostname = models.CharField(max_length=100)
     ip = models.CharField(max_length=20, blank=True)

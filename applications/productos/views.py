@@ -457,3 +457,5 @@ def eliminar_ingreso(request, ingreso_id):
             return JsonResponse({"success": True, "message": f"Ingreso {lote.id} eliminado y stock revertido correctamente."})
     except Exception as e:
         return JsonResponse({"success": False, "error": f"No se pudo eliminar el ingreso. Error: {str(e)}"}, status=500)
+
+

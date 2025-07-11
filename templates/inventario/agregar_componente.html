@@ -1,0 +1,126 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="card shadow-sm rounded-4 border-0">
+        <div class="card-header bg-primary text-white fw-bold">
+            <i class="fas fa-microchip me-2"></i>Agregar Componente al Stock
+        </div>
+        <div class="card-body">
+            <form id="componenteForm" novalidate>
+                <div class="row g-3">
+                    <div class="col-md-6">
+                        <label class="form-label">Tipo</label>
+                        <select name="tipo" class="form-select" required>
+                            <option value="">Seleccione</option>
+                            <option value="RAM">Memoria RAM</option>
+                            <option value="DISCO">Disco</option>
+                            <option value="MOTHERBOARD">Placa Madre</option>
+                            <option value="TECLADO">Teclado</option>
+                            <option value="MONITOR">Monitor</option>
+                            <option value="MOUSE">Mouse</option>
+                            <option value="CPU">CPU</option>
+                            <option value="ROUTER">Router</option>
+                            <option value="SWITCH">Switch</option>
+                            <option value="AP">Access Point</option>
+                            <option value="VGA">Cable VGA</option>
+                            <option value="HDMI">Cable HDMI</option>
+                            <option value="ETHERNET">Cable Red</option>
+                            <option value="OTRO">Otro</option>
+                        </select>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label">Marca</label>
+                        <input type="text" name="marca" class="form-control">
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label">Número de Serie</label>
+                        <input type="text" name="nro_serie" class="form-control">
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label">Estado</label>
+                        <select name="estado" class="form-select" required>
+                            <option value="PERFECTO">Perfecto</option>
+                            <option value="BUENO" selected>Bueno</option>
+                            <option value="DEFECTUOSO">Defectuoso</option>
+                        </select>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label">Cantidad en Stock</label>
+                        <input type="number" name="stock" min="1" value="1" class="form-control" required>
+                    </div>
+                    <div class="col-12">
+                        <label class="form-label">Descripción</label>
+                        <textarea name="descripcion" rows="2" class="form-control"></textarea>
+                    </div>
+                </div>
+
+                <div class="text-end mt-4">
+                    <a href="{% url 'inventario:listar_componentes' %}" class="btn btn-secondary btn-sm">Cancelar</a>
+                    <button type="submit" class="btn btn-primary btn-sm">Guardar</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Toast -->
+<div id="toastError" class="toast align-items-center text-white bg-danger border-0 position-fixed bottom-0 end-0 m-3" role="alert" aria-live="assertive" aria-atomic="true" data-bs-delay="3000">
+    <div class="d-flex">
+        <div class="toast-body" id="toastErrorText">
+            Error al guardar.
+        </div>
+        <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
+    </div>
+</div>
+
+<script>
+document.getElementById('componenteForm').addEventListener('submit', async function(e) {
+    e.preventDefault();
+
+    const data = {
+        tipo: document.querySelector('[name="tipo"]').value,
+        marca: document.querySelector('[name="marca"]').value,
+        nro_serie: document.querySelector('[name="nro_serie"]').value,
+        estado: document.querySelector('[name="estado"]').value,
+        stock: document.querySelector('[name="stock"]').value,
+        descripcion: document.querySelector('[name="descripcion"]').value
+    };
+
+    // Validación mínima
+    if (!data.tipo || !data.estado || data.stock < 1) {
+        mostrarToast("Completá los campos obligatorios.");
+        return;
+    }
+
+    try {
+        const response = await fetch("{% url 'inventario:agregar_componente' %}", {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+                "X-CSRFToken": "{{ csrf_token }}"
+            },
+            body: JSON.stringify(data)
+        });
+
+        const result = await response.json();
+
+        if (result.success) {
+            window.location.href = "{% url 'inventario:listar_componentes' %}";
+        } else {
+            mostrarToast("Error al guardar: " + (result.error || "desconocido"));
+        }
+    } catch (error) {
+        mostrarToast("Error de red al intentar guardar.");
+    }
+});
+
+function mostrarToast(msg) {
+    const toastEl = document.getElementById('toastError');
+    document.getElementById('toastErrorText').textContent = msg;
+    const toast = new bootstrap.Toast(toastEl);
+    toast.show();
+}
+</script>
+{% endblock %}

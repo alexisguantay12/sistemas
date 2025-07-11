@@ -14,66 +14,91 @@ def listar_pcs(request):
 
 
 from django.shortcuts import render, get_object_or_404, redirect
-from .models import Terminal, Componente, Ubicacion
 from django.contrib import messages
+from django.db import transaction
+from .models import Terminal, Componente, ComponenteStock, Ubicacion
 
 def editar_pc(request, pk):
-    terminal = get_object_or_404(Terminal, pk=pk)
-    componentes = terminal.componentes.all()  # related_name en modelo Componente
+    terminal = get_object_or_404(Terminal, id=pk)
     ubicaciones = Ubicacion.objects.all()
+    componentes = terminal.componentes.all()
 
-    if request.method == 'POST':
+    if request.method == 'POST' and 'guardar' in request.POST:
+        try:
+            with transaction.atomic():
+                # --- Actualización de la Terminal ---
+                terminal.ubicacion_id = request.POST.get('ubicacion')
+                terminal.estado = request.POST.get('estado')
+                terminal.descripcion = request.POST.get('descripcion')
+                terminal.save()
 
-        # 🟢 GUARDAR CAMBIOS GENERALES
-        if 'guardar' in request.POST:
-            terminal.ubicacion_id = request.POST.get('ubicacion')
-            terminal.estado = request.POST.get('estado')
-            terminal.descripcion = request.POST.get('descripcion')
-            terminal.save()
-
-            # Actualizar estado de componentes
-            for componente in componentes:
-                key = f'componente_estado_{componente.id}'
-                if key in request.POST:
-                    nuevo_estado = request.POST[key]
-                    if nuevo_estado != componente.estado:
+                # --- Actualización del estado de los componentes asociados ---
+                for componente in componentes:
+                    nuevo_estado = request.POST.get(f'componente_estado_{componente.id}')
+                    if nuevo_estado and nuevo_estado != componente.estado:
                         componente.estado = nuevo_estado
                         componente.save()
-            messages.success(request, "Cambios guardados correctamente.")
-            return redirect('inventario:editar_pc', pk=pk)
 
-        # 🔄 TRANSFERIR COMPONENTE (desligar de la PC)
-        elif 'transferir' in request.POST:
-            componente_id = request.POST.get('transferir')
-            componente = get_object_or_404(Componente, id=componente_id)
-            componente.pc = None
-            componente.save()
-            messages.info(request, f"Componente '{componente.get_tipo_display()}' transferido.")
-            return redirect('inventario:editar_pc', pk=pk)
+                # --- Eliminar componentes removidos ---
+                ids_eliminados = request.POST.getlist('componentes_eliminados')
+                for cid in ids_eliminados:
+                    Componente.objects.filter(id=cid, terminal=terminal).delete()
 
-        # ➕ AGREGAR NUEVO COMPONENTE
-        elif 'agregar_componente' in request.POST:
-            tipo = request.POST.get('nuevo_tipo')
-            marca = request.POST.get('nuevo_marca')
-            descripcion = request.POST.get('nuevo_descripcion')
+                # --- Transferir componentes al stock ---
+                ids_transferidos = request.POST.getlist('componentes_transferidos')
+                for cid in ids_transferidos:
+                    componente = Componente.objects.filter(id=cid, terminal=terminal).first()
+                    if componente:
+                        stock_obj = ComponenteStock.objects.filter(
+                            tipo=componente.tipo,
+                            marca=componente.marca,
+                            estado=componente.estado
+                        ).first()
 
-            if tipo and marca:
-                nuevo = Componente.objects.create(
-                    tipo=tipo.upper(),
-                    marca=marca,
-                    descripcion=descripcion,
-                    estado='OK',  # Estado inicial por defecto
-                    pc=terminal
-                )
-                messages.success(request, f"Componente '{nuevo.tipo}' agregado a la PC.")
-            else:
-                messages.warning(request, "Tipo y marca son obligatorios para agregar un componente.")
-            return redirect('inventario:editar_pc', pk=pk)
+                        if stock_obj:
+                            stock_obj.stock = (stock_obj.stock or 0) + 1
+                            stock_obj.save()
+                        else:
+                            ComponenteStock.objects.create(
+                                tipo=componente.tipo,
+                                marca=componente.marca,
+                                descripcion=componente.descripcion,
+                                nro_serie=componente.nro_serie,
+                                estado=componente.estado,
+                                stock=1,
+                                user_made=request.user
+                            )
+
+                        componente.delete()
+
+                # --- Agregar nuevos componentes desde el stock ---
+                ids_agregados = request.POST.getlist('componentes_agregados')
+                for sid in ids_agregados:
+                    stock_item = ComponenteStock.objects.filter(id=sid).first()
+                    if stock_item and (stock_item.stock or 0) > 0:
+                        stock_item.stock -= 1
+                        stock_item.save()
+
+                        Componente.objects.create(
+                            tipo=stock_item.tipo,
+                            marca=stock_item.marca,
+                            descripcion=stock_item.descripcion,
+                            nro_serie=stock_item.nro_serie,
+                            estado=stock_item.estado,
+                            terminal=terminal,
+                            user_made=request.user
+                        )
+
+                messages.success(request, "Cambios guardados correctamente.")
+                return redirect('inventario:lista_pc')
+
+        except Exception as e:
+            messages.error(request, f"Ocurrió un error al guardar los cambios: {str(e)}")
 
     return render(request, 'inventario/editar_pc.html', {
         'terminal': terminal,
-        'componentes': componentes,
         'ubicaciones': ubicaciones,
+        'componentes': componentes,
     })
 
 @login_required
@@ -216,6 +241,72 @@ def agregar_servidor(request):
 
     ubicaciones = Ubicacion.objects.all()
     return render(request, 'inventario/agregar_servidor.html', {'ubicaciones': ubicaciones})
+
+
+from .models import ComponenteStock
+from django.http import JsonResponse
+from django.views.decorators.http import require_GET
+from django.db.models import Q
+from .models import ComponenteStock
+def buscar_componentes(request):
+    query = request.GET.get("q", "").strip()
+
+    if not query:
+        return JsonResponse([], safe=False)
+
+    componentes = ComponenteStock.objects.filter(
+        Q(tipo__icontains=query) | Q(descripcion__icontains=query)
+    ).order_by('tipo')[:30]  # Limitamos a 20 resultados
+
+    data = [
+        {
+            "id": componente.id,
+            "tipo": componente.get_tipo_display(),
+            "marca": componente.marca,
+            "descripcion": componente.descripcion,
+            "stock": componente.stock,
+            "estado": componente.estado
+        }
+        for componente in componentes
+    ]
+
+    return JsonResponse(data, safe=False)
+
+
+
+@login_required
+def agregar_componente(request):
+    if request.method == 'POST':
+        try:
+            data = json.loads(request.body)
+
+            componente = ComponenteStock.objects.create(
+                usuario=request.user,
+                tipo=data.get('tipo'),
+                marca=data.get('marca', ''),
+                nro_serie=data.get('nro_serie', ''),
+                estado=data.get('estado'),
+                stock=int(data.get('stock', 1)),
+                descripcion=data.get('descripcion', '')
+            )
+
+            return JsonResponse({'success': True, 'id': componente.id})
+
+        except Exception as e:
+            return JsonResponse({'success': False, 'error': str(e)}, status=400)
+
+    return render(request, 'inventario/agregar_componente.html')
+
+
+from django.contrib.auth.decorators import login_required
+from django.shortcuts import render
+from .models import ComponenteStock
+
+@login_required
+def listar_componentes(request):
+    componentes = ComponenteStock.objects.all().order_by('-id')
+    return render(request, 'inventario/listar_componentes.html', {'componentes': componentes})
+
 
 
 def lista_servidores(request):

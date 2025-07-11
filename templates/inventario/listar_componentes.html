@@ -1,0 +1,168 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block content %}
+<div class="px-3 px-md-5">
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <h3 class="text-primary"><i class="fas fa-microchip"></i> Componentes en Stock</h3>
+        <a href="{% url 'inventario:agregar_componente' %}" class="btn btn-success">
+            <i class="fas fa-plus"></i> Agregar Componente
+        </a>
+    </div>
+
+    <div class="card shadow-sm">
+        <div class="card-body">
+            {% if componentes %}
+            <div class="table-responsive">
+                <table id="tabla-componentes" class="table table-hover align-middle">
+                    <thead class="table-light">
+                        <tr>
+                            <th>Tipo</th>
+                            <th>Marca</th>
+                            <th>Nro. Serie</th>
+                            <th>Estado</th>
+                            <th>Stock</th>
+                            <th>Descripción</th>
+                            <th class="sin-redireccion">Acciones</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for comp in componentes %}
+                        <tr id="comp-{{ comp.id }}" class="clickable-row" data-url="#">
+                            <td>{{ comp.get_tipo_display }}</td>
+                            <td>{{ comp.marca }}</td>
+                            <td>{{ comp.nro_serie }}</td>
+                            <td>
+                                <span class="badge 
+                                    {% if comp.estado == 'PERFECTO' or comp.estado == 'BUENO' %} bg-success 
+                                    {% else %} bg-danger 
+                                    {% endif %}">
+                                    {{ comp.estado }}
+                                </span>
+                            </td>
+                            <td>{{ comp.stock }}</td>
+                            <td>{{ comp.descripcion|truncatechars:50 }}</td>
+                            <td class="sin-redireccion">
+                                <a href="#" class="btn btn-sm btn-warning"><i class="fas fa-edit"></i></a>
+                                <button class="btn btn-sm btn-danger" title="Eliminar"
+                                        data-comp="{{ comp.id }}"
+                                        data-bs-toggle="modal"
+                                        data-bs-target="#modalEliminar">
+                                    <i class="fas fa-trash"></i>
+                                </button>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% else %}
+            <p class="text-muted">No hay componentes cargados aún.</p>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<!-- Modal Confirmar Eliminación -->
+<div class="modal fade" id="modalEliminar" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-danger">
+            <div class="modal-header bg-danger-subtle">
+                <h6 class="modal-title text-danger"><i class="fas fa-exclamation-triangle"></i> Confirmar Eliminación</h6>
+                <button type="button" class="btn-close btn-sm" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <p class="mb-0">¿Estás seguro de que querés eliminar este componente?</p>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Cancelar</button>
+                <button class="btn btn-danger btn-sm" id="btnConfirmarEliminar"><i class="fas fa-trash"></i> Eliminar</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Toast de éxito -->
+<div id="toastAccionExitosa" class="toast align-items-center text-white bg-success border-0 position-fixed bottom-0 end-0 m-3" role="alert" aria-live="assertive" aria-atomic="true" data-bs-delay="2000">
+    <div class="d-flex">
+        <div class="toast-body">Acción realizada con éxito.</div>
+        <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
+    </div>
+</div>
+
+<style>
+    tr.clickable-row:hover td:not(.sin-redireccion) {
+        background-color: #f2f2f2 !important;
+    }
+    td.sin-redireccion {
+        cursor: default !important;
+        background-color: white !important;
+    }
+</style>
+
+<script>
+    let idComponenteEliminar = null;
+    const modalEliminar = new bootstrap.Modal(document.getElementById('modalEliminar'));
+
+    document.querySelectorAll('[data-bs-target="#modalEliminar"]').forEach(btn => {
+        btn.addEventListener('click', function () {
+            idComponenteEliminar = this.getAttribute('data-comp');
+        });
+    });
+
+    document.getElementById("btnConfirmarEliminar").addEventListener("click", function () {
+        if (!idComponenteEliminar) return;
+
+        fetch(`/inventario/componente/eliminar/${idComponenteEliminar}/`, {
+            method: "POST",
+            headers: {
+                "X-CSRFToken": "{{ csrf_token }}"
+            }
+        })
+        .then(res => res.json())
+        .then(data => {
+            if (data.success) {
+                document.getElementById(`comp-${idComponenteEliminar}`).remove();
+                modalEliminar.hide();
+                var toast = new bootstrap.Toast(document.getElementById('toastAccionExitosa'));
+                toast.show();
+            } else {
+                alert(data.error || "Error al eliminar el componente.");
+            }
+        })
+        .catch(() => alert("Error de red al intentar eliminar."));
+    });
+
+    document.querySelectorAll(".clickable-row").forEach(row => {
+        row.addEventListener("click", function (e) {
+            if (!e.target.closest('.sin-redireccion')) {
+                const url = this.dataset.url;
+                if (url && url !== "#") {
+                    window.location.href = url;
+                }
+            }
+        });
+    });
+
+    $(document).ready(function() {
+        $('#tabla-componentes').DataTable({
+            language: {
+                lengthMenu: "Mostrar _MENU_ registros",
+                zeroRecords: "No se encontraron resultados",
+                info: "Mostrando _START_ a _END_ de _TOTAL_ registros",
+                infoEmpty: "Mostrando 0 a 0 de 0 registros",
+                infoFiltered: "(filtrado de _MAX_ registros totales)",
+                search: "Buscar:",
+                paginate: {
+                    first: "Primero",
+                    last: "Último",
+                    next: "Siguiente",
+                    previous: "Anterior"
+                }
+            },
+            pageLength: 25,
+            order: [[0, 'asc']]
+        });
+    });
+</script>
+{% endblock %}

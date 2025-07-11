@@ -10,6 +10,14 @@ urlpatterns = [
     path('pc/eliminar/<int:pk>/', views.eliminar_pc, name='pc_eliminar'),
     path('pc/<int:pk>/', views.detalle_pc, name='pc_detalle'),
     path('pc/verificar_nombre/',views.verificar_nombre_terminal, name='verificar_nombre_terminal'),
+    path('inventario/buscar-componentes/',views.buscar_componentes, name='buscar_componentes'),
+
+
+
+    path('componentes/agregar/', views.agregar_componente, name='agregar_componente'),
+    path('componentes/', views.listar_componentes, name='listar_componentes'),
+
+
     path('servidores/', views.lista_servidores, name='lista_servidores'),
     path('servidores/agregar_servidor/', views.agregar_servidor, name='agregar_servidor'),
     path('servidor/<int:pk>/', views.detalle_servidor, name='detalle_servidor'),
