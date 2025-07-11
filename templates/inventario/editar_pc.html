@@ -161,6 +161,25 @@
   </div>
 </div>
 
+<!-- Modal Buscar Componente -->
+<div class="modal fade" id="modalAgregarComponente" tabindex="-1" aria-labelledby="modalAgregarComponenteLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-centered">
+      <div class="modal-content rounded-4 border-0">
+        <div class="modal-header bg-primary text-white">
+          <h5 class="modal-title" id="modalAgregarComponenteLabel">
+            <i class="fas fa-search me-2"></i> Buscar Componente en Stock
+          </h5>
+          <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+        </div>
+        <div class="modal-body">
+          <input type="text" id="buscador" class="form-control form-control-sm mb-3" placeholder="Buscar componente por tipo, marca o descripción...">
+          <div id="resultados-busqueda"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+  
+
 <script>
 const buscador = document.getElementById('buscador');
 const resultadosBusqueda = document.getElementById('resultados-busqueda');
@@ -176,17 +195,17 @@ buscador.addEventListener('input', async function () {
     const response = await fetch("{% url 'inventario:buscar_componentes' %}?q=" + encodeURIComponent(query));
     const data = await response.json();
 
-    let html =` 
+    let html = `
     <table class="table table-bordered small">
         <thead class="table-light">
             <tr><th>Tipo</th><th>Marca</th><th>Descripción</th><th>Stock</th><th>Estado</th><th>Acción</th></tr>
         </thead><tbody>`;
 
     if (data.length === 0) {
-        html += <tr><td colspan="4" class="text-center">No se encontraron componentes.</td></tr>;
+        html += `<tr><td colspan="6" class="text-center">No se encontraron componentes.</td></tr>`;
     } else {
         for (const comp of data) {
-            html += 
+            html += `
             <tr>
                 <td>${comp.tipo}</td>
                 <td>${comp.marca}</td>
@@ -196,11 +215,11 @@ buscador.addEventListener('input', async function () {
                 <td>
                     <button type="button" class="btn btn-sm btn-success" onclick='agregarComponente(${JSON.stringify(comp)})'>Seleccionar</button>
                 </td>
-            </tr>;
+            </tr>`;
         }
     }
 
-    html += </tbody></table>;
+    html += `</tbody></table>`;
     resultadosBusqueda.innerHTML = html;
 });
 
