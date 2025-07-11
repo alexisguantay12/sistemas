@@ -276,12 +276,13 @@ def buscar_componentes(request):
 
 @login_required
 def agregar_componente(request):
+    import json
     if request.method == 'POST':
         try:
             data = json.loads(request.body)
 
             componente = ComponenteStock.objects.create(
-                usuario=request.user,
+                user_made=request.user,
                 tipo=data.get('tipo'),
                 marca=data.get('marca', ''),
                 nro_serie=data.get('nro_serie', ''),
