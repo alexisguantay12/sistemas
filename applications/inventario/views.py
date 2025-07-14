@@ -249,30 +249,40 @@ from django.views.decorators.http import require_GET
 from django.db.models import Q
 from .models import ComponenteStock
 def buscar_componentes(request):
-    query = request.GET.get("q", "").strip()
+    query = request.GET.get("q", "").strip().lower()
 
     if not query:
         return JsonResponse([], safe=False)
 
-    componentes = ComponenteStock.objects.filter(
-        Q(tipo__icontains=query) | Q(descripcion__icontains=query)
-    ).order_by('tipo')[:30]  # Limitamos a 20 resultados
+    # Traemos todos los componentes (o podés limitar a los con stock > 0 si querés)
+    todos_los_componentes = ComponenteStock.objects.all()
 
+    # Filtramos en Python por cualquier campo relevante incluyendo el display del tipo
+    componentes_filtrados = [
+        c for c in todos_los_componentes
+        if query in c.get_tipo_display().lower()
+        or query in (c.tipo or '').lower()
+        or query in (c.marca or '').lower()
+        or query in (c.descripcion or '').lower()
+    ]
+
+    # Limitamos a 30 resultados
+    componentes = componentes_filtrados[:30]
+
+    # Serializamos
     data = [
         {
-            "id": componente.id,
-            "tipo": componente.get_tipo_display(),
-            "marca": componente.marca,
-            "descripcion": componente.descripcion,
-            "stock": componente.stock,
-            "estado": componente.estado
+            "id": c.id,
+            "tipo": c.get_tipo_display(),
+            "marca": c.marca,
+            "descripcion": c.descripcion,
+            "stock": c.stock,
+            "estado": c.estado,
         }
-        for componente in componentes
+        for c in componentes
     ]
 
     return JsonResponse(data, safe=False)
-
-
 
 @login_required
 def agregar_componente(request):

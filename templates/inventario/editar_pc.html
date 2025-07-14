@@ -172,7 +172,7 @@
           <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Cerrar"></button>
         </div>
         <div class="modal-body">
-          <input type="text" id="buscador" class="form-control form-control-sm mb-3" placeholder="Buscar componente por tipo, marca o descripción...">
+          <input type="text" id="buscador" autocomplete="off" class="form-control form-control-sm mb-3" placeholder="Buscar componente por tipo, marca o descripción...">
           <div id="resultados-busqueda"></div>
         </div>
       </div>
@@ -227,6 +227,9 @@ document.getElementById('modalAgregarComponente').addEventListener('shown.bs.mod
     buscador.value = "";
     resultadosBusqueda.innerHTML = "";
     buscador.focus();  // opcional: para que el cursor ya esté en el input
+});
+document.getElementById('modalAgregarComponente').addEventListener('hidden.bs.modal', function () {
+    resultadosBusqueda.innerHTML = "";  // 🔁 Limpia los resultados
 });
 
 function agregarComponente(comp) {
