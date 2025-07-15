@@ -2,9 +2,13 @@ from django.db import models
 from applications.core.models import BaseAbstractWithUser
 from django.utils import timezone
 
-class Ubicacion(models.Model):
+class Sector(models.Model):
     nombre = models.CharField(max_length=100)
     responsable = models.CharField(max_length=100)  # O ForeignKey a User si tenés usuarios cargados
+
+class Ubicacion(models.Model):
+    nombre = models.CharField(max_length=100)
+    sector = models.ForeignKey(Sector, on_delete=models.SET_NULL, null=True)
     
     def __str__(self):
         return self.nombre

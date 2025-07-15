@@ -5,7 +5,7 @@
   <title>Imprimiendo etiquetas...</title>
   <style>
     @page {
-      size: 50mm 25mm; /* Tamaño de la página */
+      size: 62mm 11mm; /* Tamaño actualizado de la página */
       margin: 0;
     }
     body {
@@ -19,8 +19,8 @@
     }
 
     .etiqueta {
-      width: 100mm;
-      height: 50mm;
+      width: 62mm;
+      height: 11mm;
       border: 1px solid #ccc; /* quitar si no querés borde */
     }
 
@@ -61,10 +61,9 @@
     }
 
     setTimeout(() => {
-        
         window.location.href = "{% url 'products_app:detalle_producto' producto_id %}";
         window.focus();
     }, 4000);
-</script>
+  </script>
 </body>
 </html>
