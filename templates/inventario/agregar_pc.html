@@ -11,22 +11,26 @@
             <form method="POST" id="terminalForm" novalidate>
                 {% csrf_token %}
                 <div class="row g-3">
-                    <div class="col-md-6">
+                    <div class="col-md-4">
                         <label class="form-label">Nombre</label>
                         <input type="text" id="nombre" name="nombre" class="form-control" autocomplete="off" required>
                         <div class="form-text text-danger" id="nombre-error"></div>
                     </div>
-                    <div class="col-md-6">
+                    <div class="col-md-4">
                         <label class="form-label">Mac</label>
                         <input type="text" id="mac" name="mac" class="form-control" autocomplete="off">
                     </div>
+                    <div class="col-md-4">
+                        <label class="form-label">Sectores</label>
+                        <select id="sector" name="sector" class="form-select" required> 
+                            {% for sector in sectores %}
+                            <option value="{{ sector.id }}">{{ sector }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
                     <div class="col-md-6">
                         <label class="form-label">Ubicación</label>
-                        <select id="ubicacion" name="ubicacion" class="form-select" required>
-                            <option value="">---------</option>
-                            {% for ubicacion in ubicaciones %}
-                            <option value="{{ ubicacion.id }}">{{ ubicacion }}</option>
-                            {% endfor %}
+                        <select id="ubicacion" name="ubicacion" class="form-select" required> 
                         </select>
                     </div>
                     <div class="col-md-6">
@@ -121,7 +125,8 @@
 
 <script>
     let componentes = [];
-
+    
+    const ubicacionesUrl = "{% url 'inventario:obtener_ubicaciones' %}";
     function agregarComponente() {
         const tipo = document.getElementById('tipo').value;
         const descripcion = document.getElementById('descripcion').value;
@@ -134,7 +139,33 @@
     }
 
     const verificarNombreUrl = "{% url 'inventario:verificar_nombre_terminal' %}";
-    
+
+    document.addEventListener("DOMContentLoaded", async function () {
+        const sectorSelect = document.getElementById("sector");
+        const ubicacionSelect = document.getElementById("ubicacion");
+        const ubicacionSeleccionada = ubicacionSelect.dataset.selected;
+
+        if (sectorSelect.value) {
+            try {
+                const response = await fetch(`${ubicacionesUrl}?sector_id=${sectorSelect.value}`);
+                const data = await response.json();
+
+                ubicacionSelect.innerHTML = '';
+                data.forEach(ubic => {
+                    const option = document.createElement("option");
+                    option.value = ubic.id;
+                    option.textContent = ubic.nombre;
+                    if (ubic.id == ubicacionSeleccionada) {
+                        option.selected = true;
+                    }
+                    ubicacionSelect.appendChild(option);
+                });
+            } catch (err) {
+                console.error("Error inicial al cargar ubicaciones:", err);
+            }
+        }
+    });
+        
     document.getElementById('nombre').addEventListener('input', async function () {
         const nombre = this.value.trim();
         const errorDiv = document.getElementById('nombre-error');
@@ -181,6 +212,30 @@
         document.getElementById('descripcion').value = '';
         document.getElementById('marca').value = ''; 
         document.getElementById('estado').value = 'BUENO';
+    }); 
+
+    document.getElementById("sector").addEventListener("change", async function () {
+        const sectorId = this.value;
+        const ubicacionSelect = document.getElementById("ubicacion");
+
+        // Limpiar el select actual
+        ubicacionSelect.innerHTML = '';
+
+        if (!sectorId) return;
+
+        try {
+            const response = await fetch(`${ubicacionesUrl}?sector_id=${sectorId}`);
+            const data = await response.json();
+
+            data.forEach(ubic => {
+                const option = document.createElement("option");
+                option.value = ubic.id;
+                option.textContent = ubic.nombre;  // Ajustar si el campo no se llama `nombre`
+                ubicacionSelect.appendChild(option);
+            });
+        } catch (error) {
+            console.error("Error al cargar ubicaciones:", error);
+        }
     });
 </script>
 {% endblock %}

@@ -3,7 +3,7 @@ from django.http import JsonResponse
 from django.contrib.auth.decorators import login_required
 from django.views.decorators.csrf import csrf_exempt
 from django.db import transaction
-from .models import Terminal, Componente, Servidor,Ubicacion
+from .models import Terminal, Componente, Servidor,Ubicacion,Sector
 from .forms import TerminalForm
 
 @login_required
@@ -101,6 +101,13 @@ def editar_pc(request, pk):
         'componentes': componentes,
     })
 
+
+
+def obtener_ubicaciones(request):
+    sector_id = request.GET.get("sector_id")
+    ubicaciones = Ubicacion.objects.filter(sector_id=sector_id).values("id", "nombre").order_by('nombre') # Ajusta campos según tu modelo
+    return JsonResponse(list(ubicaciones), safe=False)
+
 @login_required
 def agregar_pc(request):
     if request.method == 'POST':
@@ -125,6 +132,7 @@ def agregar_pc(request):
             return render(request, 'inventario/agregar_pc.html', {
                 'error': 'Ya existe una PC con ese nombre.',
                 'ubicaciones': Ubicacion.objects.all(),
+                'sectores':Sector.objects.all().order_by('nombre'),
                 'estados': Terminal.ESTADO_CHOICES
             })
 
@@ -156,11 +164,13 @@ def agregar_pc(request):
             return render(request, 'inventario/agregar_pc.html', {
                 'error': f'Ocurrió un error: {str(e)}',
                 'ubicaciones': Ubicacion.objects.all(),
+                'sectores':Sector.objects.all().order_by('nombre'),
                 'estados': Terminal.ESTADO_CHOICES
             })
 
     return render(request, 'inventario/agregar_pc.html', {
-        'ubicaciones': Ubicacion.objects.all() 
+        'ubicaciones': Ubicacion.objects.all(),
+        'sectores':Sector.objects.all().order_by('nombre')
     })
 
 

@@ -5,6 +5,9 @@ from django.utils import timezone
 class Sector(models.Model):
     nombre = models.CharField(max_length=100)
     responsable = models.CharField(max_length=100)  # O ForeignKey a User si tenés usuarios cargados
+    def __str__(self):
+        return self.nombre
+
 
 class Ubicacion(models.Model):
     nombre = models.CharField(max_length=100)

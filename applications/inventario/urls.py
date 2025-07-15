@@ -11,7 +11,8 @@ urlpatterns = [
     path('pc/<int:pk>/', views.detalle_pc, name='pc_detalle'),
     path('pc/verificar_nombre/',views.verificar_nombre_terminal, name='verificar_nombre_terminal'),
     path('inventario/buscar-componentes/',views.buscar_componentes, name='buscar_componentes'),
-
+    
+    path('ubicaciones/', views.obtener_ubicaciones, name='obtener_ubicaciones'),
 
 
     path('componentes/agregar/', views.agregar_componente, name='agregar_componente'),

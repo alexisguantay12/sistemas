@@ -28,7 +28,7 @@
                             <tr id="pc-{{ pc.id }}" class="clickable-row" data-url="{% url 'inventario:pc_detalle' pc.id %}" style="cursor:pointer;">
                                 <td>{{ pc.nombre }}</td>
                                 <td>{{ pc.ubicacion.nombre }}</td>
-                                <td>{{ pc.ubicacion.responsable }}</td>
+                                <td>{{ pc.ubicacion.sector.responsable }}</td>
                                 <td>                        <span class="badge 
                                     {% if pc.estado == 'BUENO' %} bg-success
                                     {% elif pc.estado == 'PERFECTO'%} bg-success
