@@ -414,7 +414,7 @@ def dashboard_sectores(request):
         data.append({
             'nombre': sector.nombre,
             'id': sector.id,
-            'responsable': sector.responsable,
+            #'responsable': sector.responsable,
             'pc_count': Terminal.objects.filter(ubicacion=sector).count(),
             'impresora_count': DispositivoPeriferico.objects.filter(ubicacion=sector, tipo='IMPRESORA').count(),
             'escaner_count': DispositivoPeriferico.objects.filter(ubicacion=sector, tipo='ESCANER').count(),
