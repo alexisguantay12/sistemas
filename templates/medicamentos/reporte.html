@@ -1,0 +1,98 @@
+{%load static%}
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <title>Pacientes Turnero Web</title>
+  <link rel="icon" type="image/png" href="{% static 'img/logo.png' %}">
+  <style>
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      margin: 40px;
+      background-color: #f9f9f9;
+      color: #333;
+    }
+
+    .header {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 20px;
+      margin-bottom: 30px;
+    }
+
+    .header img {
+      height: 60px;
+    }
+
+    .header h2 {
+      margin: 0;
+      font-size: 28px;
+      color: #2c3e50;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      background-color: #fff;
+      box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+    }
+
+    th, td {
+      padding: 12px 15px;
+      text-align: left;
+      border-bottom: 1px solid #ddd;
+    }
+
+    th {
+      background-color: #34495e;
+      color: white;
+      font-weight: 600;
+      text-transform: capitalize;
+    }
+
+    tr:nth-child(even) {
+      background-color: #f2f2f2;
+    }
+
+    tr:hover {
+      background-color: #e0f7fa;
+    }
+
+    .footer {
+      margin-top: 30px;
+      text-align: center;
+      font-size: 0.9em;
+      color: #777;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="header">
+    <img src="{% static 'img/logo.png' %}" alt="Logo Turnos">
+    <h2>Pacientes Turnero Web</h2>
+  </div>
+
+  <table>
+    <thead>
+      <tr>
+        {% for key in datos.0.keys %}
+          <th>{{ key }}</th>
+        {% endfor %}
+      </tr>
+    </thead>
+    <tbody>
+      {% for fila in datos %}
+        <tr>
+          {% for valor in fila.values %}
+            <td>{{ valor }}</td>
+          {% endfor %}
+        </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+ 
+
+</body>
+</html>

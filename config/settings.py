@@ -38,7 +38,8 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
     'applications.core',
     'applications.users', 
-    'applications.inventario'
+    'applications.inventario',
+    'applications.medicamentos'
 ]
 
 MIDDLEWARE = [
@@ -104,7 +105,18 @@ if motor_db == 'postgresql':
             'PASSWORD': get_secret('DB_PASSWORD'),
             'HOST': 'localhost',
             'PORT': '5432',
-        }, 
+        },    
+        'externa_readonly': {
+            'ENGINE': 'mssql',
+            'NAME': 'HCE',
+            'USER': 'UsrSantaClaraRead',
+            'PASSWORD': '5@nt@k1@r@',
+            'HOST': '192.168.180.254',  # o el hostname
+            'PORT': '1433',
+            'OPTIONS': {
+                'driver': 'ODBC Driver 17 for SQL Server',
+            },
+        }
     }
 elif motor_db == 'mysql':
     DATABASES = {
