@@ -1,0 +1,347 @@
+{% extends 'base.html' %}
+{% load static %}
+{% block content %}
+
+
+<style>
+:root{
+    /* Parámetros para ajustar compactación rápidamente */
+    --input-padding: 0.28rem;        /* cambiar -> menor = más compacto */
+    --font-size-base: 0.88rem;      /* tamaño base de la UI */
+    --table-font-size: 0.70rem;     /* tamaño de la tabla */
+    --card-padding: 0.55rem;        /* padding interior de las cards */
+    --card-radius: 8px;
+}
+
+/*  AJUSTES RÁPIDOS (cambia aquí para más/menos compacto)
+   - --input-padding: reduce para hacerlo más compacto
+   - --font-size-base: tamaño base de letra
+   - --table-font-size: fuente en tabla (reduce para que entre más)
+   - TAX_RATE: variable JS (ver más abajo)
+   ========================= */
+
+/* Compactar las cards */
+.card {
+    border: none;
+    border-radius: var(--card-radius);
+    margin-bottom: 0.25rem;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.04);
+    padding: var(--card-padding);
+    font-size: var(--font-size-base);
+}
+
+/* Títulos más discretos */
+.card-title {
+    font-size: 0.95rem;
+    font-weight: 600;
+    color: #495057;
+    margin-bottom: 0.45rem;
+}
+
+/* Inputs compactos */
+.form-control, .form-select {
+    border: 1px solid #dee2e6;
+    border-radius: 6px;
+    padding: var(--input-padding) 0.5rem;
+    font-size: 0.88rem;
+    background-color: #fff;
+    box-shadow: inset 0 1px 2px rgba(0,0,0,0.03);
+    transition: all 0.15s ease-in-out;
+    height: 25px; /* bajar si querés más compacto */
+}
+
+.form-control:focus, .form-select:focus {
+    border-color: #80bdff;
+    box-shadow: 0 0 4px rgba(0,123,255,0.18);
+}
+
+/* Etiquetas más pequeñas */
+label {
+    font-size: 0.75rem;
+    color: #6c757d;
+    margin-bottom: 2px;
+    display: block;
+}
+
+/* Tabla ultra compacta */
+.table {
+    font-size: var(--table-font-size);
+    margin-bottom: 0;
+}
+
+.table td, .table th {
+    padding: 0.28rem;
+    vertical-align: middle;
+    white-space: nowrap;
+}
+
+/* Botones más sutiles */
+.btn-sm {
+    padding: 0.18rem 0.45rem;
+    border-radius: 6px;
+    font-size: 0.78rem;
+}
+
+/* Totales más prolijos */
+.card-body.text-end p, 
+.card-body.text-end h5 {
+    margin: 0.12rem 0;
+    font-size: 0.9rem;
+}
+
+/* Para forzar que la vista ocupe más ancho en pantallas grandes */
+.container.my-4 {
+    max-width: 1200px;
+}
+
+/* Iconos de acción pequeños */
+.btn-danger.btn-sm, .btn-success.btn-sm {
+    line-height: 1;
+    height: 30px;
+}
+</style>
+
+<div class="container my-4">
+    <h3 class="text-primary"><i class="fas fa-file-medical"></i> Nuevo Presupuesto</h3>
+    <form method="POST" id="form-presupuesto">
+        {% csrf_token %}
+
+        <!-- Datos del paciente -->
+        <div class="card shadow-sm mb-2">
+            <div class="card-body">
+                <h5 class="card-title">Datos del Paciente</h5>
+                <div class="row g-2">
+                    <!-- Ajustá las clases col-md-* para controlar cuántas columnas entran -->
+                    <div class="col-md-4">
+                        <label>Nombre</label>
+                        <input type="text" name="paciente_nombre" class="form-control" required>
+                    </div>
+                    <div class="col-md-2">
+                        <label>DNI</label>
+                        <input type="text" name="paciente_dni" class="form-control">
+                    </div>
+                    <div class="col-md-2">
+                        <label>Edad</label>
+                        <input type="number" name="paciente_edad" class="form-control">
+                    </div>
+                    <div class="col-md-4">
+                        <label>Dirección</label>
+                        <input type="text" name="paciente_direccion" class="form-control">
+                    </div>
+                    <div class="col-md-3">
+                        <label>Teléfono</label>
+                        <input type="text" name="paciente_telefono" class="form-control">
+                    </div>
+                    <div class="col-md-3">
+                        <label>Obra Social</label>
+                        <input type="text" name="obra_social" class="form-control">
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Datos médicos -->
+        <div class="card shadow-sm mb-2">
+            <div class="card-body">
+                <h5 class="card-title">Datos Médicos</h5>
+                <div class="row g-2">
+                    <div class="col-md-6">
+                        <label>Médico</label>
+                        <input type="text" name="medico" class="form-control">
+                    </div>
+                    <div class="col-md-6">
+                        <label>Diagnóstico</label>
+                        <input type="text" name="diagnostico" class="form-control">
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Tabla de prestaciones -->
+        <div class="card shadow-sm mb-2">
+            <div class="card-body">
+                <h5 class="card-title">Prestaciones</h5>
+                <div class="table-responsive">
+                    <table class="table table-bordered align-middle" id="tabla-prestaciones">
+                        <thead class="table-light">
+                            <tr>
+                                <th style="width:70px">Código</th>
+                                <th style="width:210px">Prestación</th>
+                                <th style="width:70px">Cant.</th>
+                                <th style="width:100px">Precio U.</th>
+                                <th style="width:100px">Importe</th>
+                                <th style="width:100px">IVA</th>
+                                <th style="width:100px">Total</th>
+                                <th style="width:45px"></th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr class="fila-detalle">
+                                <td><input type="text" name="codigo" class="form-control codigo"></td>
+                                <td><input type="text" name="prestacion" class="form-control prestacion"></td>
+                                <td><input type="number" name="cantidad" class="form-control cantidad" value="1" min="1"></td>
+                                <td><input type="number" name="precio" class="form-control precio" step="0.01" value="0.00"></td>
+                                <td><input type="text" name="importe" class="form-control importe" readonly value="0.00"></td>
+                                <td><input type="text" name="iva" class="form-control iva" readonly value="0.00"></td>
+                                <td><input type="text" name="subtotal" class="form-control subtotal" readonly value="0.00"></td>
+                                <td><button type="button" class="btn btn-danger btn-sm eliminar-fila">X</button></td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <div class="mt-2">
+                    <button type="button" id="agregar-fila" class="btn btn-success btn-sm"><i class="fas fa-plus"></i> Agregar Prestación</button>
+                </div>
+
+            </div>
+        </div>
+
+        <!-- Totales compactos (modificá estilos arriba si querés más chico) -->
+        <div class="card shadow-sm mb-2">
+            <div class="card-body text-end">
+                <p><strong>Subtotal:</strong> $<span id="subtotal">0.00</span></p>
+                <p><strong>IVA (21%):</strong> $<span id="iva">0.00</span></p>
+                <h5><strong>Total:</strong> $<span id="total">0.00</span></h5>
+            </div>
+        </div>
+
+        <div class="text-end">
+            <button type="submit" class="btn btn-primary"><i class="fas fa-save"></i> Guardar Presupuesto</button>
+        </div>
+    </form>
+</div>
+
+<script>
+/*
+  Parámetros JS que podés cambiar
+  - TAX_RATE: tasa de IVA (ej: 0.21)
+  - DECIMALS: cantidad de decimales que querés mostrar
+*/
+const TAX_RATE = 0.21;
+const DECIMALS = 2;
+
+/* Actualiza una fila dada (calcula importe, iva y total fila) */
+function actualizarFila(tr){
+    const precioEl = tr.querySelector(".precio");
+    const cantidadEl = tr.querySelector(".cantidad");
+    const importeEl = tr.querySelector(".importe");
+    const ivaEl = tr.querySelector(".iva");
+    const subtotalEl = tr.querySelector(".subtotal");
+
+    const precio = parseFloat(precioEl.value) || 0;
+    const cantidad = parseFloat(cantidadEl.value) || 0;
+
+    const importe = precio * cantidad;               // sin IVA
+    const iva = importe * TAX_RATE;                 // IVA por fila
+    const total = importe + iva;                    // total por fila
+
+    importeEl.value = importe.toFixed(DECIMALS);
+    ivaEl.value = iva.toFixed(DECIMALS);
+    subtotalEl.value = total.toFixed(DECIMALS);
+}
+
+/* Recalcula totales generales */
+function calcularTotales(){
+    let subtotal = 0; // suma de importes sin IVA
+    let ivaTotal = 0;
+    document.querySelectorAll("#tabla-prestaciones tbody tr").forEach(tr => {
+        const importe = parseFloat(tr.querySelector(".importe").value) || 0;
+        const iva = parseFloat(tr.querySelector(".iva").value) || 0;
+        subtotal += importe;
+        ivaTotal += iva;
+    });
+    const total = subtotal + ivaTotal;
+
+    document.getElementById("subtotal").innerText = subtotal.toFixed(DECIMALS);
+    document.getElementById("iva").innerText = ivaTotal.toFixed(DECIMALS);
+    document.getElementById("total").innerText = total.toFixed(DECIMALS);
+}
+
+/* Delegación de eventos: input y cambios en la tabla */
+document.addEventListener("input", function(e){
+    const tr = e.target.closest("tr");
+    if (!tr || !tr.closest("#tabla-prestaciones")) return;
+
+    // Si cambiaron precio o cantidad o si hay campos editables, recalcular fila
+    if (e.target.classList.contains("precio") || e.target.classList.contains("cantidad") || e.target.classList.contains("codigo") || e.target.classList.contains("prestacion")){
+        actualizarFila(tr);
+        calcularTotales();
+    }
+});
+
+/* Listener para cuando se pierde foco en campo 'codigo' -> busca prestación vía fetch */
+document.getElementById("tabla-prestaciones").addEventListener("blur", async function(e) {
+    if (e.target && e.target.classList.contains("codigo")){
+        let codigo = e.target.value.trim();
+        if (codigo !== "") {
+            let fila = e.target.closest("tr");
+            try {
+                // Ajustá la URL si tu named URL es diferente
+                const url = "{% url 'presupuestos_app:get_prestacion' codigo='__codigo__' %}".replace("__codigo__", encodeURIComponent(codigo));
+
+                let resp = await fetch(url);
+                if (!resp.ok) throw new Error("Error en la respuesta del servidor");
+
+                let data = await resp.json();
+                // Esperamos que la respuesta JSON tenga { nombre, precio }
+                fila.querySelector(".prestacion").value = data.nombre || fila.querySelector(".prestacion").value;
+                fila.querySelector(".precio").value = (parseFloat(data.precio) || 0).toFixed(DECIMALS);
+                // forzamos cantidad a 1 si estaba vacío
+                if (!fila.querySelector(".cantidad").value) fila.querySelector(".cantidad").value = 1;
+
+                // recalcular
+                actualizarFila(fila);
+                calcularTotales();
+            } catch (err) {
+                console.error("Error:", err);
+                // no hacemos un alert intrusivo; podés activar si querés:
+                // alert("No se encontró la prestación para el código " + codigo);
+            }
+        }
+    }
+}, true); // useCapture true para capturar blur en inputs
+
+/* Agregar fila - clonamos la primera fila y reseteamos valores */
+document.getElementById("agregar-fila").addEventListener("click", function(){
+    const tbody = document.querySelector("#tabla-prestaciones tbody");
+    const template = tbody.querySelector("tr.fila-detalle");
+    const fila = template.cloneNode(true);
+
+    // resetear inputs
+    fila.querySelectorAll("input").forEach(el => {
+        if (el.classList.contains("cantidad")) el.value = 1;
+        else if (el.classList.contains("precio")) el.value = (0).toFixed(DECIMALS);
+        else el.value = "";
+    });
+
+    // recalcular fila recién agregada
+    actualizarFila(fila);
+    tbody.appendChild(fila);
+    calcularTotales();
+});
+
+/* Eliminar fila (delegado) */
+document.addEventListener("click", function(e){
+    if (e.target.classList.contains("eliminar-fila")){
+        // Evita borrar la última fila si querés (opcional)
+        const tbody = document.querySelector("#tabla-prestaciones tbody");
+        if (tbody.querySelectorAll("tr").length === 1) {
+            // si no querés permitir eliminar la última fila, limpiarla en su lugar:
+            const tr = e.target.closest("tr");
+            tr.querySelectorAll("input").forEach(i => i.value = (i.classList.contains("cantidad") ? 1 : ""));
+        } else {
+            e.target.closest("tr").remove();
+        }
+        calcularTotales();
+    }
+});
+
+/* Inicialización: recalcula en caso que haya valores precargados */
+document.addEventListener("DOMContentLoaded", function(){
+    document.querySelectorAll("#tabla-prestaciones tbody tr").forEach(tr => actualizarFila(tr));
+    calcularTotales();
+});
+</script>
+
+{% endblock %}

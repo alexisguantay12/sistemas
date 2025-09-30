@@ -39,7 +39,8 @@ INSTALLED_APPS = [
     'applications.core',
     'applications.users', 
     'applications.inventario',
-    'applications.medicamentos'
+    'applications.medicamentos',
+    'applications.presupuestos'
 ]
 
 MIDDLEWARE = [
