@@ -477,8 +477,7 @@ from reportlab.lib.units import mm
 from reportlab.pdfgen import canvas
 from reportlab.platypus import Table, TableStyle, Paragraph, Spacer
 from reportlab.lib.styles import getSampleStyleSheet
-from .models import Presupuesto
-import locale
+from .models import Presupuesto 
 from django.http import HttpResponse
 
 
@@ -491,8 +490,7 @@ def imprimir_presupuesto(request, pk):
     presupuesto = Presupuesto.objects.get(pk=pk)
     items = presupuesto.items.all()
 
-    # --- Locale argentino para números ---
-    locale.setlocale(locale.LC_ALL, 'es_AR.UTF-8')
+    # --- Locale argentino para números --- 
 
     # --- Crear PDF ---
     response = HttpResponse(content_type='application/pdf')
