@@ -482,6 +482,10 @@ import locale
 from django.http import HttpResponse
 
 
+def format_num(n):
+    """Formatea número con punto de miles y coma decimal: 12345.67 → 12.345,67"""
+    return f"{n:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
+
 
 def imprimir_presupuesto(request, pk):
     presupuesto = Presupuesto.objects.get(pk=pk)
@@ -534,10 +538,10 @@ def imprimir_presupuesto(request, pk):
             item.codigo or "",
             item.prestacion or "",
             item.cantidad,
-            locale.format_string("%.2f", item.precio, grouping=True),
-            locale.format_string("%.2f", item.importe, grouping=True),
-            locale.format_string("%.2f", item.iva, grouping=True),
-            locale.format_string("%.2f", item.subtotal, grouping=True),
+            format_num(item.precio),
+            format_num(item.importe),
+            format_num(item.iva),
+            format_num(item.subtotal),
         ])
 
     colWidths = [25*mm, 75*mm, 10*mm, 15*mm, 15*mm, 15*mm, 15*mm]
@@ -558,11 +562,11 @@ def imprimir_presupuesto(request, pk):
 
     # --- Totales ---
     c.setFont("Helvetica-Bold", 9)
-    c.drawRightString(width - margen_der, y_actual, f"Subtotal: $ {locale.format_string('%.2f', presupuesto.total, grouping=True)}")
+    c.drawRightString(width - margen_der, y_actual, f"Subtotal: $ {format_num(presupuesto.total)}")
     y_actual -= 6*mm
-    c.drawRightString(width - margen_der, y_actual, f"IVA (21%): $ {locale.format_string('%.2f', presupuesto.iva, grouping=True)}")
+    c.drawRightString(width - margen_der, y_actual, f"IVA (21%): ${format_num(presupuesto.iva)}")
     y_actual -= 6*mm
-    c.drawRightString(width - margen_der, y_actual, f"Total Presupuesto: $ {locale.format_string('%.2f', presupuesto.total, grouping=True)}")
+    c.drawRightString(width - margen_der, y_actual, f"Total Presupuesto: ${format_num(presupuesto.total)} ")
     y_actual -= 10*mm
 
     # --- Observaciones ---
