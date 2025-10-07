@@ -1,0 +1,28 @@
+<h3>Historial de Presupuesto #{{ historial.presupuesto.id }} - {{ historial.fecha|date:"d/m/Y H:i" }}</h3>
+
+<!-- Datos paciente -->
+<p><strong>Paciente:</strong> {{ historial.datos.paciente.nombre }}</p>
+<p><strong>DNI:</strong> {{ historial.datos.paciente.dni }}</p>
+<!-- ... otros campos ... -->
+
+<!-- Tabla de items -->
+<table class="table table-bordered">
+    <thead>
+        <tr>
+            <th>Código</th><th>Prestación</th><th>Cantidad</th><th>Precio</th><th>Subtotal</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for item in historial.datos.items %}
+        <tr>
+            <td>{{ item.codigo }}</td>
+            <td>{{ item.prestacion }}</td>
+            <td>{{ item.cantidad }}</td>
+            <td>${{ item.precio|floatformat:2 }}</td>
+            <td>${{ item.subtotal|floatformat:2 }}</td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+
+<p><strong>Total:</strong> ${{ historial.datos.total|floatformat:2 }}</p>

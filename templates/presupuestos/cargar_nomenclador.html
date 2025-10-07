@@ -1,0 +1,48 @@
+{# templates/presupuestos/cargar_nomenclador.html #}
+{% extends "base2.html" %}
+{% load static %}
+{% block content %}
+<div class="container my-4">
+    <h3>Cargar nomenclador / Actualizar prestaciones</h3>
+
+    <div class="card mb-3">
+        <div class="card-body">
+            <p>Subí un archivo <strong>.xlsx</strong> (recomendado) o <strong>.csv</strong>. 
+               El archivo debe contener por fila: <strong>código, nombre, precio</strong> (el precio puede estar en la última columna).</p>
+
+            <form method="post" enctype="multipart/form-data">
+                {% csrf_token %}
+                {{ form.archivo.label_tag }}<br>
+                {{ form.archivo }}<br><br>
+                <button class="btn btn-primary">Subir y procesar</button>
+            </form>
+        </div>
+    </div>
+
+    {% if resumen %}
+        <div class="card mb-3">
+            <div class="card-body">
+                <h5>Resumen</h5>
+                <p><strong>Creadas:</strong> {{ resumen.creadas }}</p>
+                <p><strong>Actualizadas:</strong> {{ resumen.actualizadas }}</p>
+                <p><strong>Errores:</strong> {{ resumen.errores|length }}</p>
+
+                {% if resumen.errores %}
+                    <div class="mt-2">
+                        <h6>Detalles de errores (primeros 50):</h6>
+                        <ul style="max-height:200px; overflow:auto; font-size:0.9rem;">
+                            {% for e in resumen.errores|slice:":50" %}
+                                <li>{{ e }}</li>
+                            {% endfor %}
+                        </ul>
+                        {% if resumen.errores|length > 50 %}
+                            <p class="text-muted">Se muestran los primeros 50 errores.</p>
+                        {% endif %}
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+    {% endif %}
+
+</div>
+{% endblock %}

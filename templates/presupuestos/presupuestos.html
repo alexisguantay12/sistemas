@@ -1,10 +1,10 @@
-{% extends 'base.html' %}
+{% extends 'base2.html' %}
 {% load static %}
 {% block content %}
 <div class="px-3 px-md-5">
     <div class="d-flex justify-content-between align-items-center mb-3">
         <h3 class="text-primary"><i class="fas fa-file-invoice-dollar"></i> Lista de Presupuestos</h3>
-        <a href="#" class="btn btn-success">
+        <a href="{% url 'presupuestos_app:agregar_presupuesto' %}" class="btn btn-success">
             <i class="fas fa-plus"></i> Nuevo Presupuesto
         </a>
     </div>
@@ -27,7 +27,7 @@
                         <tbody>
                             {% for presupuesto in presupuestos %}
                             <tr id="presupuesto-{{ presupuesto.id }}" class="clickable-row" 
-                                data-url="#" 
+                                data-url="{% url 'presupuestos_app:detalle_presupuesto' presupuesto.id %}" 
                                 style="cursor:pointer;">
                                 
                                 <td>{{ presupuesto.id }}</td>

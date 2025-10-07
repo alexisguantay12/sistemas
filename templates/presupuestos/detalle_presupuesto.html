@@ -1,0 +1,423 @@
+{% extends 'base2.html' %}
+{% load static %}
+{% load group_tags %}
+{% block content %}
+<style>
+:root {
+    --input-padding: 0.28rem;
+    --font-size-base: 0.88rem;
+    --table-font-size: 0.70rem;
+    --card-padding: 0.55rem;
+    --card-radius: 8px;
+}
+
+.card {
+    border: none;
+    border-radius: var(--card-radius);
+    margin-bottom: 0.25rem;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.04);
+    padding: var(--card-padding);
+    font-size: var(--font-size-base);
+}
+
+.card-title {
+    font-size: 0.95rem;
+    font-weight: 600;
+    color: #495057;
+    margin-bottom: 0.45rem;
+}
+
+.table {
+    font-size: var(--table-font-size);
+    margin-bottom: 0;
+}
+
+.table td, .table th {
+    padding: 0.28rem;
+    vertical-align: middle;
+    white-space: nowrap;
+}  
+#miTabla td:nth-child(5),
+#miTabla td:nth-child(6),
+#miTabla td:nth-child(7),
+#miTabla td:nth-child(8),
+#miTabla th:nth-child(5),
+#miTabla th:nth-child(6),
+#miTabla th:nth-child(7),
+#miTabla th:nth-child(8) {
+    text-align: right;
+}
+</style>
+
+<div class="container my-4">
+
+    <!-- Encabezado -->
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <h3 class="text-primary">
+            <i class="fas fa-file-medical"></i> Presupuesto #{{ presupuesto.id }}
+        </h3>
+        <div>
+            <a href="{% url 'presupuestos_app:imprimir_presupuesto' presupuesto.id %}" class="btn btn-info me-2">
+                <i class="fas fa-print"></i> Imprimir
+            </a>
+            <a href="{% url 'presupuestos_app:editar_presupuesto' presupuesto.id %}" class="btn btn-warning me-2">
+                <i class="fas fa-edit"></i> Editar
+            </a>
+            <a href="#modalPago" class="btn btn-success me-2" data-bs-toggle="modal">
+                <i class="fas fa-cash-register"></i> Registro de Pagos
+            </a> 
+            <a href="#modalHistorial" 
+                class="btn btn-info" 
+                data-bs-toggle="modal">
+                <i class="fas fa-history"></i> Ver historial
+            </a>
+        </div>
+    </div>
+
+    <!-- Datos del paciente -->
+    <div class="card shadow-sm mb-2">
+        <div class="card-body">
+            <h5 class="card-title">Datos del Paciente</h5>
+            <div class="row g-2">
+                <div class="col-md-4"><strong>Nombre:</strong> {{ presupuesto.paciente_nombre }}</div>
+                <div class="col-md-2"><strong>DNI:</strong> {{ presupuesto.paciente_dni }}</div>
+                <div class="col-md-2"><strong>Edad:</strong> {{ presupuesto.paciente_edad }}</div>
+                <div class="col-md-4"><strong>Dirección:</strong> {{ presupuesto.paciente_direccion }}</div>
+                <div class="col-md-3"><strong>Teléfono:</strong> {{ presupuesto.paciente_telefono }}</div>
+                <div class="col-md-3"><strong>Email:</strong> {{ presupuesto.paciente_email }}</div>
+                <div class="col-md-3"><strong>Obra Social:</strong> {{ presupuesto.obra_social }}</div>
+            </div>
+        </div>
+        <div class="card-body">
+            <h5 class="card-title">Datos Médicos</h5>
+            <div class="row g-2">
+                <div class="col-md-6"><strong>Médico:</strong> {{ presupuesto.medico }}</div>
+                <div class="col-md-6"><strong>Diagnóstico:</strong> {{ presupuesto.diagnostico }}</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Tabla de prestaciones -->
+    <div class="card shadow-sm mb-2">
+        <div class="card-body">
+            <h5 class="card-title">Prestaciones</h5>
+            <div class="table-responsive mt-2">
+                <table id="miTabla" class="table table-bordered align-middle">
+                    <thead class="table-light">
+                        <tr>
+                            <th>Código</th>
+                            <th>Tipo</th>
+                            <th>Prestación</th>
+                            <th>Cant.</th>
+                            <th>Precio U.</th>
+                            <th>Importe</th>
+                            <th>IVA</th>
+                            <th>Total</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for item in presupuesto.items.all %}
+                        <tr>
+                            <td>{{ item.codigo }}</td>
+                            <td>{{ item.get_tipo_display }}</td>
+                            <td>{{ item.prestacion }}</td>
+                            <td>{{ item.cantidad }}</td>
+                            <td>${{ item.precio|floatformat:2|moneda_ar }}</td>
+                            <td>${{ item.importe|floatformat:2|moneda_ar }}</td>
+                            <td>${{ item.iva|floatformat:2|moneda_ar  }}</td>
+                            <td>${{ item.subtotal|floatformat:2 |moneda_ar }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div> 
+        <div class="card-body d-flex justify-content-between align-items-start">
+            <div>
+                <h5 class="card-title">Seguimiento</h5>
+                <p><strong>Estado:</strong> {{ presupuesto.get_estado_display }}</p>
+                {% if presupuesto.motivo_no_concretado %}
+                    <p><strong>Motivo No Concretado:</strong> {{ presupuesto.motivo_no_concretado }}</p>
+                {% endif %}
+                <p><strong>Fecha de creación:</strong> {{ presupuesto.fecha_creacion|date:"d/m/Y H:i" }}</p>
+                <p><strong>Creado por:</strong> {{ presupuesto.user_made.first_name }} {{ presupuesto.user_made.last_name }}</p>
+    
+            </div>
+            <div class="text-end">
+                <p><strong>Subtotal:</strong> ${{ presupuesto.total|floatformat:2|moneda_ar  }}</p>
+                <h5><strong>Total:</strong> ${{ presupuesto.total|floatformat:2|moneda_ar  }}</h5>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal Registro de Pago -->
+    <div class="modal fade" id="modalPago" tabindex="-1" aria-labelledby="modalPagoLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+        
+        <div class="modal-header bg-light">
+            <h5 class="modal-title" id="modalPagoLabel">Registro de Pago - Presupuesto #{{ presupuesto.id }}</h5>
+            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+        </div>
+        
+        <div class="modal-body">
+            <!-- Formulario de nuevo pago -->
+            <form method="post" action="{% url 'presupuestos_app:registrar_pago' presupuesto.id %}">
+            {% csrf_token %}
+            <div class="row g-3">
+                <div class="col-md-4">
+                <label class="form-label">Monto</label>
+                <input type="number" step="0.01" class="form-control" name="monto" required>
+                </div>
+                <div class="col-md-4">
+                <label class="form-label">Medio de Pago</label>
+                <select name="medio_pago" class="form-select" required> 
+                    <option value="efectivo">Efectivo</option>
+                    <option value="transferencia">Transferencia</option>
+                    <option value="tarjeta">Tarjeta</option>
+                </select>
+                </div>
+                <div class="col-md-4">
+                <label class="form-label">Caja</label>
+                <select name="caja" class="form-select" required> 
+                    <option value="efectivo">Caja A</option>
+                    <option value="transferencia">Caja B</option> 
+                </select>
+                </div>
+            </div>
+
+            <div class="mt-4 text-end">
+                <button type="submit" class="btn btn-success">Guardar Pago</button>
+            </div>
+            </form>
+
+            <!-- Historial de pagos -->
+            <hr>
+            <h6>Pagos registrados</h6>
+            <table class="table table-sm table-striped">
+            <thead>
+                <tr>
+                <th>Fecha</th>
+                <th>Monto</th>
+                <th>Medio</th>
+                <th>Caja</th>
+                <th>Registró</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for pago in pagos %}
+                <tr>
+                <td>{{ pago.fecha|date:"d/m/Y H:i" }}</td>
+                <td>${{ pago.monto|moneda_ar  }}</td>
+                <td>{{ pago.medio_pago }}</td>
+                <td>{{ pago.caja}}</td>
+                <td>{{ pago.user_made.first_name}} {{pago.user_made.last_name}}</td>
+                </tr>
+                {% empty %}
+                <tr><td colspan="3" class="text-center text-muted">Sin pagos registrados</td></tr>
+                {% endfor %}
+            </tbody>
+            </table>
+
+            <div class="d-flex justify-content-between mt-2">
+            <strong>Total pagado: ${{ total_pagado }}</strong> 
+            </div>
+        </div>
+        
+        </div>
+    </div>
+    </div>
+
+
+    <!-- Modal Historial -->
+    <div class="modal fade" id="modalHistorial" tabindex="-1" aria-labelledby="modalHistorialLabel" aria-hidden="true">
+        <div class="modal-dialog modal-xl modal-dialog-scrollable">
+            <div class="modal-content border-0 shadow-lg">
+                <!-- Encabezado profesional -->
+                <div class="modal-header text-white" style="background: linear-gradient(90deg,#0d6efd,#6610f2);">
+                    <h4 class="modal-title d-flex align-items-center" id="modalHistorialLabel">
+                        <i class="fas fa-history me-2" style="font-size:1.5rem;"></i> Historial de cambios del Presupuesto
+                    </h4>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+                </div>
+
+                <div class="modal-body">
+                    <!-- Vista listado -->
+                    <div id="vistaListadoHistorial" class="row g-3">
+                        <!-- JS generará cards aquí -->
+                    </div>
+
+                    <!-- Vista detalle -->
+                    <div id="vistaDetalleHistorial" style="display:none;">
+                        <div class="d-flex justify-content-between align-items-center mb-3">
+                            <button class="btn btn-sm btn-secondary" id="btnVolverListado">
+                                ← Volver al historial
+                            </button>
+                            <button type="button" class="btn btn-sm btn-danger" data-bs-dismiss="modal">
+                                Cerrar
+                            </button>
+                        </div>
+                        <div id="detalleHistorialContent"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+<script>
+const historial = JSON.parse('{{ historial_json|escapejs }}');
+
+document.addEventListener("DOMContentLoaded", function() {
+    const vistaListado = document.getElementById("vistaListadoHistorial");
+    const vistaDetalle = document.getElementById("vistaDetalleHistorial");
+    const detalleContent = document.getElementById("detalleHistorialContent");
+    const btnVolver = document.getElementById("btnVolverListado");
+
+    // Generar listado con cards profesionales
+    let listadoHTML = '';
+    historial.forEach((h, index) => {
+        listadoHTML += `
+            <div class="col-md-6 col-lg-4">
+                <div class="card shadow-sm border-0 h-100 hover-shadow cursor-pointer ver-detalle-historial" data-index="${index}">
+                    <div class="card-body">
+                        <h5 class="card-title">Versión ${index+1}</h5>
+                        <p class="card-text mb-1"><strong>Fecha:</strong> ${h.fecha}</p> 
+                        <p class="card-text text-truncate"><strong>Paciente:</strong> ${h.paciente.nombre}</p>
+                        <p class="card-text text-truncate"><strong>Usuario:</strong> ${h.user}</p>
+                    </div>
+                </div>
+            </div>
+        `;
+    });
+    vistaListado.innerHTML = listadoHTML;
+
+    // Click para detalle
+    // Click para detalle
+    document.querySelectorAll(".ver-detalle-historial").forEach(item => {
+        item.addEventListener("click", function(e) {
+            const h = historial[this.dataset.index];
+            let html = `
+            <div class="card shadow-sm border-0 mb-3">
+                <!-- Encabezado vistoso y compacto -->
+                <div class="card-header bg-primary text-white py-2 px-3 rounded-top">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <h6 class="mb-0">Historial Versión ${parseInt(this.dataset.index)+1}</h6>
+                            <div><small>Fecha: ${h.fecha}</small></div>
+                            <div><small>Usuario: ${h.user}</small></div>
+                        </div>
+                        <div class="text-end">
+                            <span class="badge bg-light text-dark">Total: $${h.total.toFixed(2)}</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card-body p-3">
+                    <div class="row mb-2">
+                        <div class="col-md-6">
+                            <h6 class="mb-1">Paciente</h6>
+                            <p class="mb-0"><strong>Nombre:</strong> ${h.paciente.nombre}</p>
+                            <p class="mb-0"><strong>DNI:</strong> ${h.paciente.dni}</p>
+                            <p class="mb-0"><strong>Edad:</strong> ${h.paciente.edad}</p>
+                            <p class="mb-0"><strong>Teléfono:</strong> ${h.paciente.telefono}</p>
+                            <p class="mb-0"><strong>Email:</strong> ${h.paciente.email}</p>
+                            <p class="mb-0"><strong>Obra Social:</strong> ${h.paciente.obra_social}</p>
+                        </div>
+                        <div class="col-md-6">
+                            <h6 class="mb-1">Médico</h6>
+                            <p class="mb-0">${h.medico}</p>
+                            <h6 class="mt-2 mb-1">Estado</h6>
+                            <p class="mb-0">${h.estado}</p>
+                            ${h.motivo_no_concretado ? `<p class="mb-0"><strong>Motivo No Concretado:</strong> ${h.motivo_no_concretado}</p>` : ''}
+                        </div>
+                    </div>
+
+                    <hr class="my-2">
+
+                    <h6>Diagnóstico</h6>
+                    <p>${h.diagnostico}</p>
+
+                    <h6 class="mt-3">Prestaciones</h6>
+                    <div class="table-responsive">
+                        <table class="table table-sm table-bordered table-striped table-hover">
+                            <thead class="table-dark">
+                                <tr>
+                                    <th>Código</th>
+                                    <th>Tipo</th>
+                                    <th>Prestación</th>
+                                    <th>Cant.</th>
+                                    <th>Precio U.</th>
+                                    <th>Importe</th>
+                                    <th>IVA</th>
+                                    <th>Subtotal</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+            `;
+            h.items.forEach(it => {
+                html += `
+                    <tr>
+                        <td>${it.codigo}</td>
+                        <td>${it.tipo}</td>
+                        <td>${it.prestacion}</td>
+                        <td>${it.cantidad}</td>
+                        <td>$${it.precio.toFixed(2)}</td>
+                        <td>$${it.importe.toFixed(2)}</td>
+                        <td>$${it.iva.toFixed(2)}</td>
+                        <td>$${it.subtotal.toFixed(2)}</td>
+                    </tr>
+                `;
+            });
+            html += `
+                            </tbody>
+                        </table>
+                    </div>
+                    <div class="text-end mt-2">
+                        <h5><strong>Total:</strong> $${h.total.toFixed(2)}</h5>
+                    </div>
+                </div>
+            </div>
+            `;
+            detalleContent.innerHTML = html;
+            vistaListado.style.display = "none";
+            vistaDetalle.style.display = "block";
+        }); 
+
+    });
+
+    btnVolver.addEventListener("click", function() {
+        vistaDetalle.style.display = "none";
+        vistaListado.style.display = "flex";
+    });
+});
+</script>
+
+<style>
+.hover-shadow:hover {
+    box-shadow: 0 0.5rem 1rem rgba(0,0,0,0.15);
+}
+.cursor-pointer {
+    cursor: pointer;
+}
+.text-truncate {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+.card-header {
+    border-bottom: 2px solid #0d6efd;
+}
+.card-header h6 {
+    font-weight: 600;
+    font-size: 0.95rem;
+}
+.card-header small {
+    font-size: 0.8rem;
+    opacity: 0.8;
+}
+.badge {
+    font-size: 0.85rem;
+    padding: 0.35em 0.6em;
+}
+</style> 
+{%endblock%}
