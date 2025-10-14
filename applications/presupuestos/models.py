@@ -55,7 +55,9 @@ class Presupuesto(BaseAbstractWithUser):
 
     # Usuario que lo cargó 
 
-    
+    @property    
+    def subtotal(self):
+        return sum([item.importe for item in self.items.all()])
     @property    
     def total(self):
         return sum([item.subtotal for item in self.items.all()])

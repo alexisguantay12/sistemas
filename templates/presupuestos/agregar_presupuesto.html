@@ -109,6 +109,34 @@ label {
     text-align: right;
 }
 
+
+
+
+
+
+
+.input-group-sm > .form-control,
+.input-group-sm > .btn {
+    height: 24px; /* asegura que coincida con los demás */
+}
+
+td {
+    vertical-align: middle !important;
+}
+.lupa-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;            /* elimina relleno interno extra */
+  width: 38px;           /* igual ancho que alto */
+  height: 38px;          /* mismo alto que el input */
+}
+
+.lupa-btn i {
+  font-size: 14px;       /* ajusta tamaño del ícono */
+  margin: 0;             /* sin desplazamiento */
+}
+
 </style>
 
 <div class="container my-4">
@@ -127,23 +155,25 @@ label {
                     </div>
                     <div class="col-md-2">
                         <label>DNI</label>
-                        <input type="text" name="paciente_dni" class="form-control" autocomplete="off">
+                        <input type="text" name="paciente_dni" class="form-control" autocomplete="off" required="true">
                     </div>
                     <div class="col-md-2">
                         <label>Edad</label>
                         <input type="number" name="paciente_edad" class="form-control" autocomplete="off">
                     </div>
+                    
                     <div class="col-md-4">
-                        <label>Dirección</label>
-                        <input type="text" name="paciente_direccion" class="form-control" autocomplete="off">
+                        <label><span>Dirección</span>
+                        </label>
+                        <input type="text" name="paciente_di" class="form-control" autocomplete="off">
                     </div>
                     <div class="col-md-3">
                         <label>Teléfono</label>
-                        <input type="text" name="paciente_telefono" class="form-control" autocomplete="off">
+                        <input type="text" name="paciente_telefono" class="form-control" autocomplete="new-password">
                     </div>
                     <div class="col-md-3">
                         <label>Email</label>
-                        <input type="text" name="paciente_email" class="form-control" autocomplete="off">
+                        <input type="text" name="paciente_email" class="form-control" autocomplete="new-password">
                     </div>
                     <div class="col-md-3">
                         <label>Obra Social</label>
@@ -203,10 +233,10 @@ label {
                     <table class="table table-bordered align-middle" id="tabla-prestaciones">
                         <thead class="table-light">
                             <tr>
-                                <th style="width:70px">Código</th>
-                                <th style="width:90px">Tipo</th>
-                                <th style="width:210px">Prestación</th> 
-                                <th style="width:70px">Cant.</th>
+                                <th style="width:90px">Código</th>
+                                <th style="width:70px">Tipo</th>
+                                <th style="width:240px">Prestación</th> 
+                                <th style="width:50px">Cant.</th>
                                 <th style="width:100px">Precio U.</th>
                                 <th style="width:100px">Importe</th>
                                 <th style="width:100px">IVA</th>
@@ -216,7 +246,14 @@ label {
                         </thead>
                         <tbody>
                             <tr class="fila-detalle">
-                                <td><input type="text" name="codigo" class="form-control codigo"></td>
+                                <td >
+                                    <div class="input-group input-group-sm">
+                                        <input type="text" name="codigo" class="form-control codigo" autocomplete="off">
+                                        <button type="button" class="btn btn-outline-secondary lupa-btn" data-bs-toggle="modal" data-bs-target="#modalBusqueda">
+                                            <i class="fas fa-search"></i>
+                                        </button>
+                                    </div>
+                                </td> 
                                 <td>
                                     <select name="tipo" class="form-control tipo">
                                         <option value="gastos" selected>Gastos</option>
@@ -235,27 +272,61 @@ label {
                         </tbody>
                     </table>
                 </div>
-
-                <div class="mt-2">
-                    <button type="button" id="agregar-fila" class="btn btn-success btn-sm"><i class="fas fa-plus"></i> Agregar Prestación</button>
+                <div class="row">
+                    <div class="mt-2 col-md-6">
+                        <button type="button" id="agregar-fila" class="btn btn-success btn-sm"><i class="fas fa-plus"></i> Agregar Prestación</button>
+                    </div>
+                    <div class="card-body text-end mt-0 col-md-6">
+                        <p><strong>Importe sin iva:</strong> $<span id="subtotal">0.00</span></p>
+                        <p><strong>IVA (21%):</strong> $<span id="iva">0.00</span></p>
+                        <h5><strong>Total:</strong> $<span id="total">0.00</span></h5>
+                    </div>
                 </div>
             </div>
-        </div>
-
-        <!-- Totales compactos (modificá estilos arriba si querés más chico) -->
-        <div class="card shadow-sm mb-2">
-            <div class="card-body text-end">
-                <p><strong>Subtotal:</strong> $<span id="subtotal">0.00</span></p>
-                <p><strong>IVA (21%):</strong> $<span id="iva">0.00</span></p>
-                <h5><strong>Total:</strong> $<span id="total">0.00</span></h5>
-            </div>
-        </div>
+        </div> 
 
         <div class="text-end">
         <button type="button" class="btn btn-primary" id="btnGuardarPresupuesto">
             <i class="fas fa-save"></i> Guardar Presupuesto
         </button>
         </div>
+
+
+        
+        <!-- Modal Buscador -->
+        <div class="modal fade" id="modalBusqueda" tabindex="-1" aria-labelledby="modalBusquedaLabel" aria-hidden="true">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+            
+            <div class="modal-header">
+                <h5 class="modal-title" id="modalBusquedaLabel">Buscar Nomenclador</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+
+            <div class="modal-body">
+                <div class="input-group mb-3">
+                <input type="text" id="busqueda" class="form-control" placeholder="Buscar por código o nombre...">
+                <button type="button" class="btn btn-primary" id="btnBuscar">Buscar</button>
+                </div>
+
+                <table class="table table-hover table-sm" id="tablaResultados">
+                <thead>
+                    <tr>
+                    <th>Código</th>
+                    <th>Nombre</th>
+                    <th>Gastos</th>
+                    <th>Especialista</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <!-- Se llena dinámicamente -->
+                </tbody>
+                </table>
+            </div>
+            </div>
+        </div>
+        </div>
+
 
         <!-- Modal de Confirmación --> 
         <div class="modal fade" id="modalConfirmacion" tabindex="-1" aria-labelledby="modalConfirmacionLabel" aria-hidden="true">
@@ -314,13 +385,107 @@ function actualizarFila(tr){
 }
 
 
+let filaActualBuscador = null;
+
+// 1️⃣ Cuando se hace clic en la lupa, guardamos qué fila lo llamó
+document.addEventListener('click', function(e) {
+    if (e.target.closest('.lupa-btn')) {
+        filaActualBuscador = e.target.closest('tr');
+    }
+});
+
+// 2️⃣ Simulación de datos (en tu caso se traerán de Django por fetch)
+const urlBuscarNomenclador = "{% url 'presupuestos_app:buscar_nomenclador' %}";
+ 
+// 2️⃣ Buscar en el backend
+document.getElementById('btnBuscar').addEventListener('click', () => {
+    const termino = document.getElementById('busqueda').value.trim();
+
+    if (!termino) {
+        alert("Por favor ingresa un término de búsqueda.");
+        return;
+    }
+
+    fetch(`${urlBuscarNomenclador}?q=${encodeURIComponent(termino)}`)
+        .then(response => {
+            if (!response.ok) throw new Error("Error al buscar en el servidor");
+            return response.json();
+        })
+        .then(resultados => {
+            const tbody = document.querySelector('#tablaResultados tbody');
+            tbody.innerHTML = '';
+
+            if (resultados.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="3" class="text-center text-muted">Sin resultados</td></tr>';
+                return;
+            }
+
+            resultados.forEach(item => {
+                const fila = document.createElement('tr');
+                fila.innerHTML = `
+                    <td>${item.codigo}</td>
+                    <td>${item.nombre}</td>
+                    <td>${item.gastos}</td>
+                    <td>${item.especialista}</td>
+                `;
+                fila.style.cursor = 'pointer';
+                fila.addEventListener('click', () => seleccionarItem(item));
+                tbody.appendChild(fila);
+            });
+        })
+        .catch(error => {
+            console.error(error);
+            alert("Ocurrió un error al buscar los datos.");
+        });
+});
+
+// 4️⃣ Cuando se selecciona un ítem, se completa la fila y se cierra el modal
+
+// 2️⃣ Seleccionar ítem del modal y completar la fila
+async function seleccionarItem(item) {
+    const modal = bootstrap.Modal.getInstance(document.getElementById('modalBusqueda'));
+    modal.hide();
+
+    if (!filaActualBuscador) return;
+
+    const fila = filaActualBuscador;
+    const codigo = item.codigo;
+
+    fila.querySelector('.codigo').value = codigo;
+
+    try {
+        // ⚙️ Consultar al backend con el código seleccionado
+        const url = "{% url 'presupuestos_app:get_prestacion' codigo='__codigo__' %}".replace("__codigo__", encodeURIComponent(codigo));
+
+        const resp = await fetch(url);
+        if (!resp.ok) throw new Error("Error en la respuesta del servidor");
+
+        const data = await resp.json();
+
+        // ✅ Completar los campos
+        fila.querySelector(".tipo").value = "gastos";
+        fila.querySelector(".prestacion").value = data.nombre || "";
+        fila.querySelector(".precio").value = (parseFloat(data.precio) || 0).toFixed(DECIMALS);
+
+        // Forzar cantidad = 1 si estaba vacía
+        if (!fila.querySelector(".cantidad").value) fila.querySelector(".cantidad").value = 1;
+
+        // Recalcular totales
+        actualizarFila(fila);
+        calcularTotales();
+
+    } catch (err) {
+        console.error("Error:", err);
+        alert("No se encontró la prestación para el código " + codigo);
+    }
+}
+
 
 
  
  
 
-/*Aca esta funcion agrega proporcionales en medicamento*/
-
+/* Aca esta funcion agrega proporcionales en medicamento */
 document.getElementById("btn-medicamentos").addEventListener("click", function() {
     const porcentaje = parseFloat(document.getElementById("med-prop").value) / 100; // 0.4, 0.5, etc.
     const tbody = document.querySelector("#tabla-prestaciones tbody");
@@ -328,8 +493,9 @@ document.getElementById("btn-medicamentos").addEventListener("click", function()
 
     // Función auxiliar para procesar un código base y crear/actualizar fila proporcional
     function procesarCodigoBase(codigoBase, codigoDestino, nombrePrestacion) {
-        // Buscar fila existente
-        let filaExistente = Array.from(tbody.querySelectorAll("tr")).find(f => f.querySelector(".codigo").value === codigoDestino);
+        // Buscar fila existente (la proporcional)
+        let filaExistente = Array.from(tbody.querySelectorAll("tr"))
+            .find(f => f.querySelector(".codigo").value.trim() === codigoDestino);
 
         // Sumamos cantidades y precios proporcionales de todas las filas con codigoBase
         let totalCantidad = 0;
@@ -352,14 +518,18 @@ document.getElementById("btn-medicamentos").addEventListener("click", function()
 
         if (!filaExistente) {
             // Creamos nueva fila basada en la primera fila del codigoBase
-            const filaBase = Array.from(tbody.querySelectorAll("tr")).find(f => f.querySelector(".codigo").value.trim() === codigoBase);
+            const filaBase = Array.from(tbody.querySelectorAll("tr"))
+                .find(f => f.querySelector(".codigo").value.trim() === codigoBase);
+
+            if (!filaBase) return; // seguridad por si no se encuentra
+
             const nuevaFila = filaBase.cloneNode(true);
 
-            // Seteamos valores
+            // Seteamos valores proporcionales
             nuevaFila.querySelector(".codigo").value = codigoDestino;
             nuevaFila.querySelector(".prestacion").value = nombrePrestacion;
             nuevaFila.querySelector(".cantidad").value = totalCantidad;
-            nuevaFila.querySelector(".precio").value = (totalPrecio / totalCantidad).toFixed(DECIMALS); // precio unitario proporcional
+            nuevaFila.querySelector(".precio").value = (totalPrecio / totalCantidad).toFixed(DECIMALS);
             nuevaFila.querySelector(".importe").value = totalPrecio.toFixed(DECIMALS);
             nuevaFila.querySelector(".iva").value = iva.toFixed(DECIMALS);
             nuevaFila.querySelector(".subtotal").value = subtotal.toFixed(DECIMALS);
@@ -376,14 +546,23 @@ document.getElementById("btn-medicamentos").addEventListener("click", function()
         }
     }
 
-    // Procesamos ambos códigos
+    // --- Procesamos códigos fijos ---
     procesarCodigoBase("430101", "medint", "Medicamentos y descartables en Internado");
     procesarCodigoBase("400101", "meduti", "Medicamentos y descartables en UTI");
+
+    // --- Nueva lógica para generar MEDQUIR ---
+    Array.from(tbody.querySelectorAll("tr")).forEach(fila => {
+        const codigo = fila.querySelector(".codigo").value.trim();
+
+        // Si es un código numérico y cumple la condición (<140000 o >720000)
+        if (!isNaN(codigo) && (parseInt(codigo) < 140000 || parseInt(codigo) > 720000)) {
+            procesarCodigoBase(codigo, "medquir", "Medicamentos y descartables en Quirófano");
+        }
+    });
 
     // Recalculamos totales generales
     calcularTotales();
 });
-
  /* Recalcula totales generales */
 function calcularTotales() {
     let subtotal = 0;

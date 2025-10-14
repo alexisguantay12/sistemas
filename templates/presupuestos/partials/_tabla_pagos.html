@@ -1,0 +1,17 @@
+{% load group_tags %}
+{% for pago in pagos %}
+<tr>
+    <td>{{ pago.fecha|date:"d/m/Y H:i" }}</td>
+    <td>${{ pago.monto|moneda_ar }}</td>
+    <td>{{ pago.medio_pago }}</td>
+    <td>{{ pago.caja }}</td>
+    <td>{{ pago.user_made.first_name }} {{ pago.user_made.last_name }}</td>
+    {% if pago.puede_eliminar %}
+        <td><span class="badge bg-danger eliminar-pago" data-id="{{ pago.id }}" style="cursor:pointer;">Eliminar</span></td>
+    {% else %}
+        <td><span class="badge bg-secondary">Bloqueado</span></td>
+    {% endif %}
+</tr>
+{% empty %}
+<tr><td colspan="6" class="text-center text-muted">Sin pagos registrados</td></tr>
+{% endfor %}

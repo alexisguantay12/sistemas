@@ -138,7 +138,7 @@ else:
 
 AUTH_USER_MODEL = 'users.User'
 LOGIN_URL = '/usuarios/login/'
-LOGIN_REDIRECT_URL = '/'  # opcional, si querés que redirija ahí después de login
+LOGIN_REDIRECT_URL = '/presupuestos/'  # opcional, si querés que redirija ahí después de login
 
 
 # Password validation

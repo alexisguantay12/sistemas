@@ -37,7 +37,7 @@ def login_view(request):
             user = form.get_user()
             login(request, user)
             next_url = request.GET.get('next')
-            return redirect(next_url if next_url else 'core_app:home')
+            return redirect(next_url if next_url else 'presupuestos_app:presupuestos')
         else:
             messages.error(request, 'Usuario o contraseña incorrectos.')
 

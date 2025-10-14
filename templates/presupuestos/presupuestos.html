@@ -1,6 +1,11 @@
 {% extends 'base2.html' %}
 {% load static %}
 {% block content %}
+<style>
+.dataTables_filter {
+display: none;
+}
+</style>
 <div class="px-3 px-md-5">
     <div class="d-flex justify-content-between align-items-center mb-3">
         <h3 class="text-primary"><i class="fas fa-file-invoice-dollar"></i> Lista de Presupuestos</h3>
@@ -12,6 +17,12 @@
     <div class="card shadow-sm">
         <div class="card-body">
             {% if presupuestos %}
+                <div class="mb-3 d-flex gap-2">
+                    <input type="text" id="buscarNombre" class="form-control" placeholder="Buscar por paciente" autocomplete="off">
+                    <input type="text" id="buscarDni" class="form-control" placeholder="Buscar por DNI" autocomplete="off">
+                    <input type="text" id="buscarNro" class="form-control" placeholder="Buscar por Nro Presupuesto" autocomplete="off">
+ 
+                </div>
                 <div class="table-responsive">
                     <table id="tabla-presupuestos" class="table table-hover align-middle">
                         <thead class="table-light">
@@ -19,6 +30,7 @@
                                 <th>ID</th>
                                 <th>Fecha</th>
                                 <th>Paciente</th>
+                                <th class="d-none">DNI</th> <!-- 👈 columna oculta -->
                                 <th>Médico</th>
                                 <th>Estado</th>
                                 <th class="sin-redireccion">Acciones</th>
@@ -26,13 +38,13 @@
                         </thead>
                         <tbody>
                             {% for presupuesto in presupuestos %}
-                            <tr id="presupuesto-{{ presupuesto.id }}" class="clickable-row" 
-                                data-url="{% url 'presupuestos_app:detalle_presupuesto' presupuesto.id %}" 
+                            <tr id="presupuesto-{{ presupuesto.id }}" class="clickable-row"
+                                data-url="{% url 'presupuestos_app:detalle_presupuesto' presupuesto.id %}"
                                 style="cursor:pointer;">
-                                
                                 <td>{{ presupuesto.id }}</td>
                                 <td>{{ presupuesto.fecha_creacion|date:"d/m/Y H:i" }}</td>
                                 <td>{{ presupuesto.paciente_nombre }}</td>
+                                <td class="d-none">{{ presupuesto.paciente_dni }}</td> <!-- 👈 -->
                                 <td>{{ presupuesto.medico }}</td>
                                 <td>
                                     <span class="badge 
@@ -131,6 +143,8 @@
         })
         .catch(() => alert("Error de red al intentar eliminar."));
     });
+  
+
 
     document.querySelectorAll(".clickable-row").forEach(row => {
         row.addEventListener("click", function (e) {
@@ -141,18 +155,29 @@
     });
 
     $(document).ready(function() {
-        $('#tabla-presupuestos').DataTable({
+        var tabla = $('#tabla-presupuestos').DataTable({
             language: {
                 lengthMenu: "Mostrar _MENU_ registros",
                 zeroRecords: "No se encontraron resultados",
                 info: "Mostrando _START_ a _END_ de _TOTAL_ registros",
                 infoEmpty: "Mostrando 0 a 0 de 0 registros",
-                infoFiltered: "(filtrado de _MAX_ registros totales)",
-                search: "Buscar:",
+                infoFiltered: "(filtrado de _MAX_ registros totales)", 
                 paginate: { first: "Primero", last: "Último", next: "Siguiente", previous: "Anterior" }
-            },
+            }, 
             pageLength: 25,
             order: [[0, 'desc']]
+        });
+                // --- Filtros personalizados ---
+         
+        $('#buscarNombre').on('keyup', function() {
+            tabla.column(2).search(this.value).draw(); // Columna 2 = Paciente
+        });
+
+        $('#buscarDni').on('keyup', function() {
+            tabla.column(3).search(this.value).draw(); // Columna 3 = DNI (oculta)
+        });
+            $('#buscarNro').on('keyup', function() {
+            tabla.column(0).search(this.value).draw(); // Columna 3 = DNI (oculta)
         });
     });
 </script>
