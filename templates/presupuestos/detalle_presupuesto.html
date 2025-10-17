@@ -80,12 +80,12 @@
             <h5 class="card-title">Datos del Paciente</h5>
             <div class="row g-2">
                 <div class="col-md-4"><strong>Nombre:</strong> {{ presupuesto.paciente_nombre }}</div>
-                <div class="col-md-2"><strong>DNI:</strong> {{ presupuesto.paciente_dni }}</div>
+                <div class="col-md-3"><strong>DNI:</strong> {{ presupuesto.paciente_dni }}</div>
                 <div class="col-md-2"><strong>Edad:</strong> {{ presupuesto.paciente_edad }}</div>
                 <div class="col-md-4"><strong>Dirección:</strong> {{ presupuesto.paciente_direccion }}</div>
                 <div class="col-md-3"><strong>Teléfono:</strong> {{ presupuesto.paciente_telefono }}</div>
                 <div class="col-md-3"><strong>Email:</strong> {{ presupuesto.paciente_email }}</div>
-                <div class="col-md-3"><strong>Obra Social:</strong> {{ presupuesto.obra_social }}</div>
+                <div class="col-md-6"><strong>Obra Social:</strong> {{ presupuesto.obra_social  }}</div>
             </div>
         </div>
         <div class="card-body">
@@ -116,7 +116,7 @@
                         </tr>
                     </thead>
                     <tbody>
-                        {% for item in presupuesto.items.all %}
+                        {% for item in itemspresupuesto %}
                         <tr>
                             <td>{{ item.codigo }}</td>
                             <td>{{ item.get_tipo_display }}</td>
@@ -153,72 +153,72 @@
 
     <!-- Modal Registro de Pago -->
     <div class="modal fade" id="modalPago" tabindex="-1" aria-labelledby="modalPagoLabel" aria-hidden="true">
-    <div class="modal-dialog modal-lg">
-        <div class="modal-content">
-        
-        <div class="modal-header bg-light">
-            <h5 class="modal-title" id="modalPagoLabel">Registro de Pago - Presupuesto Nro:{{ presupuesto.id }}</h5>
-            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
-        </div>
-        
-        <div class="modal-body">
-            <!-- Formulario de nuevo pago -->
-            <form id="formRegistroPago" method="post" action="{% url 'presupuestos_app:registrar_pago' presupuesto.id %}">
-            {% csrf_token %}
-            <div class="row g-3">
-                <div class="col-md-4">
-                    <label class="form-label">Monto</label>
-                    <input type="number" step="0.01" class="form-control" name="monto" required>
-                </div>
-                <div class="col-md-4">
-                    <label class="form-label">Medio de Pago</label>
-                    <select name="medio_pago" class="form-select" required>
-                        <option value="efectivo">Efectivo</option>
-                        <option value="transferencia">Transferencia</option>
-                        <option value="tarjeta">Tarjeta</option>
-                    </select>
-                </div>
-                <div class="col-md-4">
-                    <label class="form-label">Caja</label>
-                    <select name="caja" class="form-select" required>
-                        <option value="Caja A">Caja A</option>
-                        <option value="Caja B">Caja B</option>
-                    </select>
-                </div>
-            </div>
-
-            <div class="mt-4 text-end">
-                <button type="submit" class="btn btn-success">Guardar Pago</button>
-            </div>
-        </form>
-
-        <hr>
-        <h6>Pagos registrados</h6>
-        <table class="table table-sm table-striped">
-            <thead>
-                <tr>
-                    <th>Fecha</th>
-                    <th>Monto</th>
-                    <th>Medio</th>
-                    <th>Caja</th>
-                    <th>Registró</th>
-                    <th>Acción</th>
-                </tr>
-            </thead>
-            <tbody id="tablaPagosBody">
-                {% include 'presupuestos/partials/_tabla_pagos.html' %}
-            </tbody>
-        </table>
-
-        <div class="d-flex justify-content-between mt-2">
-            <p><strong id="totalCalculado">Total pagado: ${{ total_pagado|moneda_ar }}</strong></p>
-            <p><strong id="totalSaldo">Saldo: ${{ saldo|moneda_ar }}</strong></p>
-        </div>
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
                 
+                <div class="modal-header bg-light">
+                    <h5 class="modal-title" id="modalPagoLabel">Registro de Pago - Presupuesto Nro:{{ presupuesto.id }}</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+                </div>
+                
+                <div class="modal-body">
+                    <!-- Formulario de nuevo pago -->
+                    <form id="formRegistroPago" method="post" action="{% url 'presupuestos_app:registrar_pago' presupuesto.id %}">
+                    {% csrf_token %}
+                    <div class="row g-3">
+                        <div class="col-md-4">
+                            <label class="form-label">Monto</label>
+                            <input type="number" step="0.01" class="form-control" name="monto" required>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label">Medio de Pago</label>
+                            <select name="medio_pago" class="form-select" required>
+                                <option value="efectivo">Efectivo</option>
+                                <option value="transferencia">Transferencia</option>
+                                <option value="tarjeta">Tarjeta</option>
+                            </select>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label">Caja</label>
+                            <select name="caja" class="form-select" required>
+                                <option value="Caja A">Caja A</option>
+                                <option value="Caja B">Caja B</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="mt-4 text-end">
+                        <button type="submit" class="btn btn-success">Guardar Pago</button>
+                    </div>
+                </form>
+
+                <hr>
+                <h6>Pagos registrados</h6>
+                <table class="table table-sm table-striped">
+                    <thead>
+                        <tr>
+                            <th>Fecha</th>
+                            <th>Monto</th>
+                            <th>Medio</th>
+                            <th>Caja</th>
+                            <th>Registró</th>
+                            <th>Acción</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tablaPagosBody">
+                        {% include 'presupuestos/partials/_tabla_pagos.html' %}
+                    </tbody>
+                </table>
+
+                <div class="d-flex justify-content-between mt-2">
+                    <p><strong id="totalCalculado">Total pagado: ${{ total_pagado|moneda_ar }}</strong></p>
+                    <p><strong id="totalSaldo">Saldo: ${{ saldo|moneda_ar }}</strong></p>
+                </div>
+                        
+                </div>
+            </div>
         </div>
     </div>
-    </div>
-
 
     <!-- Modal Historial -->
     <div class="modal fade" id="modalHistorial" tabindex="-1" aria-labelledby="modalHistorialLabel" aria-hidden="true">
@@ -308,13 +308,13 @@
 
 </div>
 <script>
-const historial = JSON.parse('{{ historial_json|escapejs }}'); 
+
 document.addEventListener("DOMContentLoaded", function() {
     const vistaListado = document.getElementById("vistaListadoHistorial");
     const vistaDetalle = document.getElementById("vistaDetalleHistorial");
     const detalleContent = document.getElementById("detalleHistorialContent");
     const btnVolver = document.getElementById("btnVolverListado");
-
+    const historial = JSON.parse('{{ historial_json|escapejs }}'); 
     // Generar listado con cards profesionales
     let listadoHTML = '';
     historial.forEach((h, index) => {

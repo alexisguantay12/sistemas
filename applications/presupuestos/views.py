@@ -24,11 +24,11 @@ from reportlab.lib.utils import ImageReader
 from django.contrib.auth.decorators import login_required
 
 from .models import (
-    Presupuesto, PresupuestoItem, Prestacion, PresupuestoHistorial, Pago
+    Presupuesto, PresupuestoItem, Prestacion, PresupuestoHistorial, Pago, Medico, ObraSocial
 )
 from .forms import NomencladorUploadForm
 from django.db.models import Q
-
+from django.db.models import Case, When, Value, IntegerField
 # ============================================================
 # 🧾 Listado de Presupuestos
 # ============================================================
@@ -67,7 +67,7 @@ def registrar_pago(request, pk):
 
         pagos = presupuesto.pagos.all().order_by('-fecha')
         for p in pagos:
-            p.puede_eliminar = (timezone.now() - p.fecha).total_seconds() < 900
+            p.puede_eliminar = (timezone.now() - p.fecha).total_seconds() < 900 and p.user_made==request.user
 
         pagos_html = render_to_string('presupuestos/partials/_tabla_pagos.html', {'pagos': pagos})
         total_pagado = sum(pago.monto for pago in presupuesto.pagos.all())
@@ -86,11 +86,12 @@ def eliminar_pago(request, pk):
     pago = get_object_or_404(Pago, id=pk)
  
     presupuesto = pago.presupuesto
+    pago.user_deleted=request.user
     pago.delete()
 
     pagos = presupuesto.pagos.all().order_by('-fecha')
     for p in pagos:
-        p.puede_eliminar = (timezone.now() - p.fecha).total_seconds() < 900
+        p.puede_eliminar = (timezone.now() - p.fecha).total_seconds() < 900 and p.user_made==request.user
     total_pagado = sum(pago.monto for pago in presupuesto.pagos.all())
     saldo = presupuesto.total - (total_pagado or 0)  # previene None
     pagos_html = render_to_string('presupuestos/partials/_tabla_pagos.html', {'pagos': pagos})
@@ -106,7 +107,7 @@ def detalle_presupuesto(request, pk):
     total_pagado = sum(pago.monto for pago in presupuesto.pagos.all())
     saldo = presupuesto.total - (total_pagado or 0)  # previene None
     for p in pagos:
-        p.puede_eliminar = (timezone.now() - p.fecha).total_seconds() < 900
+        p.puede_eliminar = (timezone.now() - p.fecha).total_seconds() < 900 and p.user_made==request.user
     historial_json = []
     for h in historial:
         datos = h.datos  # dict con todos los datos guardados
@@ -141,13 +142,28 @@ def detalle_presupuesto(request, pk):
             'total': float(datos.get('total', 0)),
         })
 
+    
+
+    itemspresupuesto = (
+        presupuesto.items
+        .annotate(
+            prioridad=Case(
+                When(codigo__regex=r'^\d+$', then=Value(0)),            # si el código es numérico
+                When(codigo__istartswith="med", then=Value(2)),         # si empieza con "med"
+                default=Value(1),                                       # el resto
+                output_field=IntegerField(),
+            )
+        )
+        .order_by("prioridad", "codigo")  # ordena primero por prioridad, luego por código
+    ) 
     context = {
         'presupuesto': presupuesto,
+        'itemspresupuesto':itemspresupuesto,
         'historial_json': json.dumps(historial_json),
         'pagos': pagos,
         'total_pagado':total_pagado,
         'saldo':saldo
-    }
+    } 
     return render(request, 'presupuestos/detalle_presupuesto.html', context)
 
 
@@ -157,6 +173,20 @@ def detalle_presupuesto(request, pk):
 
 def guardar_historial(presupuesto, usuario=None):
     """Guarda una copia completa del estado actual del presupuesto."""
+
+    itemspresupuesto = (
+        presupuesto.items
+        .annotate(
+            prioridad=Case(
+                When(codigo__regex=r'^\d+$', then=Value(0)),            # si el código es numérico
+                When(codigo__istartswith="med", then=Value(2)),         # si empieza con "med"
+                default=Value(1),                                       # el resto
+                output_field=IntegerField(),
+            )
+        )
+        .order_by("prioridad", "codigo")  # ordena primero por prioridad, luego por código
+    )
+
     items = [{
         "codigo": item.codigo,
         "tipo": item.get_tipo_display(),
@@ -166,7 +196,7 @@ def guardar_historial(presupuesto, usuario=None):
         "importe": float(item.importe),
         "iva": float(item.iva),
         "subtotal": float(item.subtotal),
-    } for item in presupuesto.items.all()]
+    } for item in itemspresupuesto]
 
     datos = {
         "paciente": {
@@ -176,9 +206,9 @@ def guardar_historial(presupuesto, usuario=None):
             "direccion": presupuesto.paciente_direccion,
             "telefono": presupuesto.paciente_telefono,
             "email": presupuesto.paciente_email,
-            "obra_social": presupuesto.obra_social,
+            "obra_social": presupuesto.obra_social.nombre,
         },
-        "medico": presupuesto.medico,
+        "medico": presupuesto.medico.nombre,
         "diagnostico": presupuesto.diagnostico,
         "estado": presupuesto.estado,
         "motivo_no_concretado": presupuesto.motivo_no_concretado,
@@ -213,54 +243,72 @@ def editar_presupuesto(request, pk):
 
     if request.method == "POST":
         # Guardar historial antes de modificar
-        guardar_historial(presupuesto, usuario=presupuesto.user_updated)
+        try:
+            with transaction.atomic():
+                guardar_historial(presupuesto, usuario=presupuesto.user_updated) 
+                # Actualizar campos principales 
+                presupuesto.paciente_nombre = request.POST.get("paciente_nombre") 
+                presupuesto.paciente_edad = request.POST.get("paciente_edad") or None
+                presupuesto.paciente_direccion = request.POST.get("paciente_direccion")
+                presupuesto.paciente_telefono = request.POST.get("paciente_telefono")
+                presupuesto.paciente_email = request.POST.get("paciente_email") 
+                presupuesto.diagnostico = request.POST.get("diagnostico")
+                presupuesto.user_updated = request.user
+                presupuesto.save()
 
-        # Actualizar campos principales
-        presupuesto.paciente_nombre = request.POST.get("paciente_nombre")
-        presupuesto.paciente_dni = request.POST.get("paciente_dni")
-        presupuesto.paciente_edad = request.POST.get("paciente_edad") or None
-        presupuesto.paciente_direccion = request.POST.get("paciente_direccion")
-        presupuesto.paciente_telefono = request.POST.get("paciente_telefono")
-        presupuesto.paciente_email = request.POST.get("paciente_email")
-        presupuesto.obra_social = request.POST.get("obra_social")
-        presupuesto.medico = request.POST.get("medico")
-        presupuesto.diagnostico = request.POST.get("diagnostico")
-        presupuesto.user_updated = request.user
-        presupuesto.save()
+                # Eliminar items anteriores
+                presupuesto.items.all().delete()
 
-        # Eliminar items anteriores
-        presupuesto.items.all().delete()
+                # Crear los nuevos desde el POST
+                codigos = request.POST.getlist("codigo")
+                tipos = request.POST.getlist("tipo")
+                prestaciones = request.POST.getlist("prestacion")
+                cantidades = request.POST.getlist("cantidad")
+                precios = request.POST.getlist("precio")
+                importes = request.POST.getlist("importe")
+                ivas = request.POST.getlist("iva")
+                subtotales = request.POST.getlist("subtotal")
 
-        # Crear los nuevos desde el POST
-        codigos = request.POST.getlist("codigo")
-        tipos = request.POST.getlist("tipo")
-        prestaciones = request.POST.getlist("prestacion")
-        cantidades = request.POST.getlist("cantidad")
-        precios = request.POST.getlist("precio")
-        importes = request.POST.getlist("importe")
-        ivas = request.POST.getlist("iva")
-        subtotales = request.POST.getlist("subtotal")
+                for i in range(len(codigos)):
+                    if codigos[i].strip() == "" and prestaciones[i].strip() == "":
+                        continue
 
-        for i in range(len(codigos)):
-            if codigos[i].strip() == "" and prestaciones[i].strip() == "":
-                continue
+                    PresupuestoItem.objects.create(
+                        presupuesto=presupuesto,
+                        codigo=codigos[i] or "",
+                        tipo=tipos[i] or "",
+                        prestacion=prestaciones[i],
+                        cantidad=int(cantidades[i]) if cantidades[i] else 1,
+                        precio=float(precios[i].replace(',', '.')) if precios[i] else 0,
+                        importe=float(importes[i].replace('.', '').replace(',', '.')) if importes[i] else 0,
+                        iva=float(ivas[i].replace('.', '').replace(',', '.')) if ivas[i] else 0,
+                        subtotal=float(subtotales[i].replace('.', '').replace(',', '.')) if subtotales[i] else 0,
+                    )
 
-            PresupuestoItem.objects.create(
-                presupuesto=presupuesto,
-                codigo=codigos[i],
-                tipo=tipos[i],
-                prestacion=prestaciones[i],
-                cantidad=Decimal(cantidades[i]),
-                precio=Decimal(precios[i]),
-                importe=Decimal(importes[i]),
-                iva=Decimal(ivas[i]),
-                subtotal=Decimal(subtotales[i]),
+                messages.success(request, "Presupuesto actualizado correctamente")
+                return redirect("presupuestos_app:detalle_presupuesto", pk=presupuesto.pk)
+        except Exception as e:
+            # Manejo de errores
+            print("Error al crear presupuesto y pago:", e)
+            return None, None
+        
+    #Esta parte del codigo ordena por codigo antes de presentarlo en la tabla de presupuesto
+
+    from django.db.models import Case, When, Value, IntegerField    
+    itemspresupuesto = (
+        presupuesto.items
+        .annotate(
+            prioridad=Case(
+                When(codigo__regex=r'^\d+$', then=Value(0)),            # si el código es numérico
+                When(codigo__istartswith="med", then=Value(2)),         # si empieza con "med"
+                default=Value(1),                                       # el resto
+                output_field=IntegerField(),
             )
-
-        messages.success(request, "Presupuesto actualizado correctamente")
-        return redirect("presupuestos_app:detalle_presupuesto", pk=presupuesto.pk)
-
+        )
+        .order_by("prioridad", "codigo")  # ordena primero por prioridad, luego por código
+    ) 
     return render(request, "presupuestos/editar_presupuesto.html", {
+        "itemspresupuesto":itemspresupuesto,
         "presupuesto": presupuesto,
         "tiene_iva": tiene_iva
     })
@@ -272,49 +320,76 @@ def editar_presupuesto(request, pk):
 @login_required
 def agregar_presupuesto(request):
     if request.method == "POST":
-        presupuesto = Presupuesto.objects.create(
-            paciente_nombre=request.POST.get("paciente_nombre"),
-            paciente_dni=request.POST.get("paciente_dni"),
-            paciente_edad=request.POST.get("paciente_edad") or None,
-            paciente_direccion=request.POST.get("paciente_direccion"),
-            paciente_telefono=request.POST.get("paciente_telefono"),
-            paciente_email=request.POST.get("paciente_email"),
-            obra_social=request.POST.get("obra_social"),
-            medico=request.POST.get("medico"),
-            diagnostico=request.POST.get("diagnostico"),
-            user_made=request.user,
-            user_updated=request.user
-        )
+        try: 
+            with transaction.atomic():
+                medico_id = request.POST.get("medico")
+                obra_social_id = request.POST.get("obra_social")
+                from datetime import datetime
+            # 1️⃣ Recuperar el valor del input <input type="date" name="fecha_presupuesto">
+                fecha_str = request.POST.get("fecha_presupuesto")  # ejemplo: "2025-10-17"
 
-        # Carga de items
-        codigos = request.POST.getlist("codigo")
-        tipos = request.POST.getlist("tipo")
-        prestaciones = request.POST.getlist("prestacion")
-        cantidades = request.POST.getlist("cantidad")
-        precios = request.POST.getlist("precio")
-        importes = request.POST.getlist("importe")
-        ivas = request.POST.getlist("iva")
-        subtotales = request.POST.getlist("subtotal")
+                # 2️⃣ Si el usuario ingresó fecha, combinarla con la hora actual
+                if fecha_str:
+                    fecha_base = datetime.strptime(fecha_str, "%Y-%m-%d")  # convierte el string a fecha
+                    hora_actual = datetime.now().time()                     # hora actual del sistema
+                    fecha_final = datetime.combine(fecha_base, hora_actual) # une fecha + hora
+                else:
+                    fecha_final = datetime.now()  # si no hay fecha, usar fecha/hora actuales
 
-        with transaction.atomic():
-            for i in range(len(prestaciones)):
-                if not prestaciones[i].strip():
-                    continue
-                PresupuestoItem.objects.create(
-                    presupuesto=presupuesto,
-                    codigo=codigos[i] or "",
-                    tipo=tipos[i] or "",
-                    prestacion=prestaciones[i],
-                    cantidad=int(cantidades[i]) if cantidades[i] else 1,
-                    precio=float(precios[i]) if precios[i] else 0,
-                    importe=float(importes[i]) if importes[i] else 0,
-                    iva=float(ivas[i]) if ivas[i] else 0,
-                    subtotal=float(subtotales[i]) if subtotales[i] else 0,
+
+                # Validar que se haya elegido un médico válido
+                medico = get_object_or_404(Medico, id=medico_id)
+                obra_social = get_object_or_404(ObraSocial,id = obra_social_id)
+                presupuesto = Presupuesto.objects.create(
+                    paciente_nombre=request.POST.get("paciente_nombre"),
+                    paciente_dni=request.POST.get("paciente_dni"),
+                    paciente_edad=request.POST.get("paciente_edad") or None,
+                    paciente_direccion=request.POST.get("paciente_direccion"),
+                    paciente_telefono=request.POST.get("paciente_telefono"),
+                    paciente_email=request.POST.get("paciente_email"),
+                    obra_social=obra_social,
+                    medico=medico,
+                    diagnostico=request.POST.get("diagnostico"),
+                    fecha_creacion = fecha_final,
+                    user_made=request.user,
+                    user_updated=request.user
                 )
-        return redirect("presupuestos_app:presupuestos")
+
+                # Carga de items
+                codigos = request.POST.getlist("codigo")
+                tipos = request.POST.getlist("tipo")
+                prestaciones = request.POST.getlist("prestacion")
+                cantidades = request.POST.getlist("cantidad")
+                precios = request.POST.getlist("precio")
+                importes = request.POST.getlist("importe")
+                ivas = request.POST.getlist("iva")
+                subtotales = request.POST.getlist("subtotal")
+
+                with transaction.atomic():
+                    for i in range(len(prestaciones)):
+                        if not prestaciones[i].strip():
+                            continue
+                        PresupuestoItem.objects.create(
+                            presupuesto=presupuesto,
+                            codigo=codigos[i] or "",
+                            tipo=tipos[i] or "",
+                            prestacion=prestaciones[i],
+                            cantidad=int(cantidades[i]) if cantidades[i] else 1,
+                            precio=float(precios[i].replace(',', '.')) if precios[i] else 0,
+                            importe=float(importes[i].replace('.', '').replace(',', '.')) if importes[i] else 0,
+                            iva=float(ivas[i].replace('.', '').replace(',', '.')) if ivas[i] else 0,
+                            subtotal=float(subtotales[i].replace('.', '').replace(',', '.')) if subtotales[i] else 0,
+                        )
+                return render(request, "presupuestos/redirigir_pdf.html", {"presupuesto_id": presupuesto.id})
+        except Exception as e:
+            # Manejo de errores
+            print("Error al crear presupuesto y pago:", e)
+            return None, None
 
     prestaciones = Prestacion.objects.all()
-    return render(request, "presupuestos/agregar_presupuesto.html", {"prestaciones": prestaciones})
+    medicos = Medico.objects.all().order_by('nombre')
+    obras_sociales = ObraSocial.objects.all().order_by('nombre')
+    return render(request, "presupuestos/agregar_presupuesto.html", {"obras_sociales":obras_sociales,"prestaciones": prestaciones,"medicos":medicos})
 
 
 # ============================================================
@@ -352,7 +427,7 @@ def get_prestacion(request, codigo):
 def get_tipo(request, codigo):
     tipo = request.GET.get("tipo")
     try:
-        prestacion = Prestacion.objects.get(codigo=codigo)
+        prestacion = Prestacion.objects.get(codigo=codigo) 
         if tipo == "gastos":
             precio = prestacion.gastos
         elif tipo == "especialista":
@@ -368,13 +443,11 @@ def get_tipo(request, codigo):
             p_desc = get_object_or_404(Prestacion, codigo='431002')
             precio = (prestacion.gastos + prestacion.especialista) + (p_desc.gastos + p_desc.especialista)
         elif codigo == '340907':
-            precio = (prestacion.gastos + prestacion.especialista) * 3
-        else:
-            precio = prestacion.gastos
+            precio = (prestacion.gastos + prestacion.especialista) * 3 
+    
 
     except Prestacion.DoesNotExist:
         return JsonResponse({"error": "Código no encontrado"}, status=404)
-
     return JsonResponse({"precio": precio})
 
 
@@ -483,6 +556,57 @@ def cargar_nomenclador(request):
     })
 
 
+
+
+@login_required
+def codigos_particulares(request):
+    error = None
+    mensaje = None
+
+    if request.method == "POST":
+        id_edit = request.POST.get("id_edit")
+        codigo = request.POST.get("codigo", "").strip()
+        nombre = request.POST.get("nombre", "").strip()
+        gastos = request.POST.get("gastos") or 0
+        especialista = request.POST.get("especialista") or 0
+
+        # Validación: código duplicado si es nuevo
+        if not id_edit and Prestacion.objects.filter(codigo=codigo).exists():
+            error = f"El código {codigo} ya existe."
+        else:
+            if id_edit:
+                prest = get_object_or_404(Prestacion, id=id_edit)
+                prest.nombre = nombre
+                prest.gastos = gastos
+                prest.especialista = especialista
+                prest.save()
+                mensaje = "Prestación actualizada correctamente."
+            else:
+                Prestacion.objects.create(
+                    nombre=nombre,
+                    codigo=codigo,
+                    gastos=gastos,
+                    especialista=especialista,
+                    tipo="particular",
+                    user_made=request.user,
+                    user_updated=request.user,
+                )
+                mensaje = "Prestación creada correctamente."
+
+    prestaciones = Prestacion.objects.filter(tipo="particular").order_by("nombre")
+    return render(request, "presupuestos/codigos_particulares.html", {
+        "prestaciones": prestaciones,
+        "error": error,
+        "mensaje": mensaje
+    })
+
+
+@login_required
+def eliminar_codigo_particular(request, pk):
+    prest = get_object_or_404(Prestacion, pk=pk, tipo="particular")
+    if request.method == "POST":
+        prest.delete()
+    return redirect("presupuestos_app:codigos_particulares")
 # ============================================================
 # 🔍 Buscar Nomenclador (para autocompletar)
 # ============================================================
@@ -505,15 +629,29 @@ def format_num(n):
     return f"{n:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
 @login_required
 def imprimir_presupuesto(request, pk):
-    presupuesto = Presupuesto.objects.get(pk=pk)
-    items = presupuesto.items.all()
+    presupuesto = Presupuesto.objects.get(pk=pk) 
 
-    # --- Locale argentino para números --- 
+    items= (
+        presupuesto.items
+        .annotate(
+            prioridad=Case(
+                When(codigo__regex=r'^\d+$', then=Value(0)),            # si el código es numérico
+                When(codigo__istartswith="med", then=Value(2)),         # si empieza con "med"
+                default=Value(1),                                       # el resto
+                output_field=IntegerField(),
+            )
+        )
+        .order_by("prioridad", "codigo")  # ordena primero por prioridad, luego por código
+    ) 
+
+  
 
     # --- Crear PDF ---
     response = HttpResponse(content_type='application/pdf')
-    response['Content-Disposition'] = f'inline; filename="presupuesto_{pk}.pdf"'
+    filename = f"presupuesto_{pk}_{presupuesto.paciente_nombre}.pdf"
+    response['Content-Disposition'] = f'inline; filename="{filename}"'
     c = canvas.Canvas(response, pagesize=A4)
+    c.setTitle(filename)  # 👈 Esto define el nombre que ve el navegador
     width, height = A4
 
     # --- Márgenes ---

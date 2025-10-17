@@ -1,0 +1,18 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Redirigiendo...</title>
+    <script>
+        // Apenas se carga la página, abre el PDF en nueva pestaña
+        window.onload = function() {
+            const pdfUrl = "{% url 'presupuestos_app:imprimir_presupuesto' presupuesto_id %}";
+            window.open(pdfUrl, '_blank');  // abre el PDF
+            window.location.href = "{% url 'presupuestos_app:presupuestos' %}";  // vuelve al listado
+        };
+    </script>
+</head>
+<body>
+    <p>Generando presupuesto...</p>
+</body>
+</html>

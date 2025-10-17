@@ -19,13 +19,25 @@ class Prestacion(BaseAbstractWithUser):
     codigo = models.CharField(max_length=50, blank=True, null=True)  # si usás nomenclador
     gastos = models.DecimalField(max_digits=14, decimal_places=2)
     especialista = models.DecimalField(max_digits=14, decimal_places=2)
+    TIPO_CHOICES = [
+        ('particular', 'Particular'),
+        ('ips', 'IPS'), 
+    ]
+    tipo = models.CharField(max_length=50, choices=TIPO_CHOICES, default='obra_social')
 
     def total(self):
         return self.gastos+ self.especialista
     def __str__(self):
         return f"{self.nombre} - ${self.precio}"
     
-
+class ObraSocial(models.Model):
+    nombre = models.CharField(max_length=200)
+    def __str__(self):
+        # Convierte "ALEXIS RAMON" → "Alexis Ramon"
+        if self.nombre:
+            return self.nombre.title().strip()
+        return ""
+    
 
 class Presupuesto(BaseAbstractWithUser):
     ESTADOS = [
@@ -41,14 +53,14 @@ class Presupuesto(BaseAbstractWithUser):
     paciente_edad = models.PositiveIntegerField(blank=True, null=True)
     paciente_direccion = models.CharField(max_length=255, blank=True, null=True)
     paciente_telefono = models.CharField(max_length=50, blank=True, null=True)
-    obra_social = models.CharField(max_length=100, blank=True, null=True)
+    obra_social = models.ForeignKey('ObraSocial',related_name='obras_sociales',on_delete=models.CASCADE)
     paciente_email=models.EmailField(max_length=100, blank=True, null=True)
     # Datos médicos
-    medico = models.CharField(max_length=200, blank=True, null=True)
+    medico = models.ForeignKey("Medico", related_name='medicos',on_delete=models.CASCADE)
     diagnostico = models.CharField(max_length=255, blank=True, null=True)
     episodio = models.CharField(max_length=200,blank=True,null=True)   
     # Seguimiento
-    fecha_creacion = models.DateTimeField(auto_now_add=True)
+    fecha_creacion = models.DateTimeField()
     estado = models.CharField(max_length=20, choices=ESTADOS, default='pendiente')
     motivo_no_concretado = models.TextField(blank=True, null=True)
 
@@ -90,6 +102,16 @@ class Pago(BaseAbstractWithUser):
     def __str__(self):
         return f"Pago {self.monto} - {self.presupuesto.id}"
 
+class Medico(models.Model):
+    matricula = models.CharField(max_length=60, blank=True, null=True)
+    nombre = models.CharField(max_length=50, blank=True, null=True)
+    def __str__(self):
+        # Convierte "ALEXIS RAMON" → "Alexis Ramon"
+        if self.nombre:
+            return self.nombre.title().strip()
+        return ""
+    
+    
 class PresupuestoItem(models.Model):
     presupuesto = models.ForeignKey(
         "Presupuesto", 

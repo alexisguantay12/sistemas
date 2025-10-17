@@ -1,0 +1,145 @@
+{% extends 'base2.html' %}
+{% load static %}
+
+{% block content %}
+<div class="container-fluid mt-4">
+  <div class="card shadow-lg border-0">
+    <div class="card-header bg-light border-bottom">
+      <h4 class="mb-0 text-primary fw-bold">
+        <i class="fas fa-stethoscope"></i> Gestión de Códigos Particulares
+      </h4>
+    </div>
+    <div class="card-body bg-white">
+      <div class="row g-4">
+
+        <!-- 🧩 FORMULARIO -->
+        <div class="col-md-4 border-end">
+          <h6 class="text-success fw-bold mb-3">
+            <i class="fas fa-plus-circle"></i> Nueva / Editar Prestación
+          </h6>
+
+          {% if error %}
+          <div class="alert alert-danger py-2">{{ error }}</div>
+          {% endif %}
+          {% if mensaje %}
+          <div class="alert alert-success py-2">{{ mensaje }}</div>
+          {% endif %}
+
+          <form method="post" id="formPrestacion">
+            {% csrf_token %}
+            <input type="hidden" name="id_edit" id="id_edit">
+
+            <div class="mb-3">
+              <label class="form-label">Código</label>
+              <input type="text" name="codigo" id="codigo" class="form-control form-control-sm" required>
+            </div>
+            <div class="mb-3">
+              <label class="form-label">Nombre</label>
+              <input type="text" name="nombre" id="nombre" class="form-control form-control-sm" required>
+            </div>
+            <div class="mb-3">
+              <label class="form-label">Gastos</label>
+              <input type="number" step="0.01" name="gastos" id="gastos" class="form-control form-control-sm" required>
+            </div>
+            <div class="mb-3">
+              <label class="form-label">Especialista</label>
+              <input type="number" step="0.01" name="especialista" id="especialista" class="form-control form-control-sm" required>
+            </div>
+
+            <div class="d-flex justify-content-between">
+              <button type="submit" class="btn btn-success btn-sm">
+                <i class="fas fa-save"></i> Guardar
+              </button>
+              <button type="button" class="btn btn-secondary btn-sm" id="btnLimpiar">
+                <i class="fas fa-undo"></i> Limpiar
+              </button>
+            </div>
+          </form>
+        </div>
+
+        <!-- 🧾 LISTADO -->
+        <div class="col-md-8">
+          <h6 class="text-primary fw-bold mb-3">
+            <i class="fas fa-list"></i> Listado de Códigos Particulares
+          </h6>
+
+          <div class="table-responsive">
+            <table class="table table-hover table-sm align-middle">
+              <thead class="table-light">
+                <tr>
+                  <th>Código</th>
+                  <th>Nombre</th>
+                  <th>Gastos</th>
+                  <th>Especialista</th>
+                  <th>Total</th>
+                  <th class="text-center">Acciones</th>
+                </tr>
+              </thead>
+              <tbody>
+                {% for p in prestaciones %}
+                <tr>
+                  <td>{{ p.codigo }}</td>
+                  <td>{{ p.nombre }}</td>
+                  <td>${{ p.gastos|floatformat:2 }}</td>
+                  <td>${{ p.especialista|floatformat:2 }}</td>
+                  <td><strong>${{ p.total|floatformat:2 }}</strong></td>
+                  <td class="text-center">
+                    <button class="btn btn-sm btn-outline-secondary editar-btn me-1"
+                            data-id="{{ p.id }}"
+                            data-nombre="{{ p.nombre }}"
+                            data-codigo="{{ p.codigo }}"
+                            data-gastos="{{ p.gastos }}"
+                            data-especialista="{{ p.especialista }}">
+                      <i class="fas fa-edit"></i>
+                    </button>
+                    <form method="post" action="{% url 'presupuestos_app:eliminar_codigo_particular' p.id %}" style="display:inline;">
+                      {% csrf_token %}
+                      <button type="submit" class="btn btn-sm btn-outline-danger eliminar-btn">
+                        <i class="fas fa-trash"></i>
+                      </button>
+                    </form>
+                  </td>
+                </tr>
+                {% empty %}
+                <tr><td colspan="6" class="text-center text-muted">No hay códigos cargados</td></tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+// --- EDITAR ---
+document.querySelectorAll(".editar-btn").forEach(btn => {
+  btn.addEventListener("click", () => {
+    document.getElementById("id_edit").value = btn.dataset.id;
+    document.getElementById("nombre").value = btn.dataset.nombre;
+    document.getElementById("codigo").value = btn.dataset.codigo;
+    document.getElementById("codigo").readOnly = true; // Bloquear edición del código
+    document.getElementById("gastos").value = btn.dataset.gastos;
+    document.getElementById("especialista").value = btn.dataset.especialista;
+  });
+});
+
+// --- LIMPIAR ---
+document.getElementById("btnLimpiar").addEventListener("click", () => {
+  document.getElementById("formPrestacion").reset();
+  document.getElementById("id_edit").value = "";
+  document.getElementById("codigo").readOnly = false;
+});
+
+// --- CONFIRMAR ELIMINAR ---
+document.querySelectorAll(".eliminar-btn").forEach(btn => {
+  btn.addEventListener("click", e => {
+    if (!confirm("¿Seguro que desea eliminar este código?")) {
+      e.preventDefault();
+    }
+  });
+});
+</script>
+{% endblock %}

@@ -27,13 +27,12 @@ display: none;
                     <table id="tabla-presupuestos" class="table table-hover align-middle">
                         <thead class="table-light">
                             <tr>
-                                <th>ID</th>
-                                <th>Fecha</th>
+                                <th>Nro</th>
+                                <th>Fecha Creacion</th>
                                 <th>Paciente</th>
                                 <th class="d-none">DNI</th> <!-- 👈 columna oculta -->
                                 <th>Médico</th>
-                                <th>Estado</th>
-                                <th class="sin-redireccion">Acciones</th>
+                                <th>Estado</th> 
                             </tr>
                         </thead>
                         <tbody>
@@ -54,16 +53,16 @@ display: none;
                                         {% endif %}">
                                         {{ presupuesto.estado|capfirst }}
                                     </span>
-                                </td>
+                                </td><!-- 
                                 <td class="sin-redireccion">
                                     <a href="#" class="btn btn-sm btn-warning"><i class="fas fa-edit"></i></a>
-                                    <button class="btn btn-sm btn-danger" title="Eliminar" 
+                                    Modal Confirmación Eliminar <button class="btn btn-sm btn-danger" title="Eliminar" 
                                             data-presupuesto="{{ presupuesto.id }}" 
                                             data-bs-toggle="modal" 
                                             data-bs-target="#modalEliminar">
                                         <i class="fas fa-trash"></i>
                                     </button>
-                                </td>
+                                </td>-->
                             </tr>
                             {% endfor %}
                         </tbody>

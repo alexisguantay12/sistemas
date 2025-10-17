@@ -165,7 +165,7 @@ td {
                     <div class="col-md-4">
                         <label><span>Dirección</span>
                         </label>
-                        <input type="text" name="paciente_di" class="form-control" autocomplete="off">
+                        <input type="text" name="paciente_direccion" class="form-control" autocomplete="off">
                     </div>
                     <div class="col-md-3">
                         <label>Teléfono</label>
@@ -175,22 +175,46 @@ td {
                         <label>Email</label>
                         <input type="text" name="paciente_email" class="form-control" autocomplete="new-password">
                     </div>
-                    <div class="col-md-3">
+                    <div class="col-md-4">
                         <label>Obra Social</label>
-                        <input type="text" name="obra_social" class="form-control" autocomplete="off">
+                        <select name="obra_social" class="form-select" required>
+                            <option value="">Seleccione una obra social..</option>
+                            {% for obra_social in obras_sociales %}
+                                {% if obra_social.id == 190 %}
+                                <option value="{{ obra_social.id }}" selected>{{ obra_social.nombre }}</option>
+
+                                {% else %}
+                                <option value="{{ obra_social.id }}">{{ obra_social.nombre }}</option>
+
+                                {% endif%} 
+                            {% endfor %}
+                        </select>
                     </div>
                 </div>
             </div> 
             <div class="card-body">
                 <h5 class="card-title">Datos Médicos</h5>
                 <div class="row g-2">
-                    <div class="col-md-6">
-                        <label>Médico</label>
-                        <input type="text" name="medico" class="form-control" autocomplete="off">
+                    <div class="col-md-4">
+                        <label>Medico</label>
+                        <select name="medico" class="form-select" required>
+                            <option value="">Seleccione un médico...</option>
+                            {% for medico in medicos %}
+                                <option value="{{ medico.id }}">{{ medico.nombre }}</option>
+                            {% endfor %}
+                        </select>
                     </div>
-                    <div class="col-md-6">
+                    <div class="col-md-5">
                         <label>Diagnóstico</label>
                         <input type="text" name="diagnostico" class="form-control" autocomplete="off">
+                    </div>
+                    <div class="col-md-3">
+                    <label for="fecha_presupuesto">Fecha</label>
+                    <input id="fecha_presupuesto"
+                            name="fecha_presupuesto"
+                            type="date"
+                            class="form-control"
+                            required>
                     </div>
                 </div>
             </div>
@@ -263,7 +287,7 @@ td {
                                 </td>
                                 <td><input type="text" name="prestacion" class="form-control prestacion"></td>
                                 <td><input type="number" name="cantidad" class="form-control cantidad" value="1" min="1"></td>
-                                <td><input type="number" name="precio" class="form-control precio" step="0.01" value="0.00"></td>
+                                <td><input type="number" name="precio" class="form-control precio" readonly step="0.01" value="0.00"></td>
                                 <td><input type="text" name="importe" class="form-control importe" readonly value="0.00"></td>
                                 <td><input type="text" name="iva" class="form-control iva" readonly value="0.00"></td>
                                 <td><input type="text" name="subtotal" class="form-control subtotal" readonly value="0.00"></td>
@@ -356,141 +380,212 @@ td {
 </div>
 
 <script>
-/*
-  Parámetros JS que podés cambiar
-  - TAX_RATE: tasa de IVA (ej: 0.21)
-  - DECIMALS: cantidad de decimales que querés mostrar
-*/
-const TAX_RATE = 0.21;
-const DECIMALS = 2;
+/* ===========================================
+   CONFIGURACIÓN GENERAL
+   =========================================== */
+const TAX_RATE = 0.21;   // Tasa de IVA
+const DECIMALS = 2;      // Cantidad de decimales mostrados
 
-/* Actualiza una fila dada (calcula importe, iva y total fila) */
-function actualizarFila(tr){
-    const precioEl = tr.querySelector(".precio");
-    const cantidadEl = tr.querySelector(".cantidad");
-    const importeEl = tr.querySelector(".importe");
-    const ivaEl = tr.querySelector(".iva");
-    const subtotalEl = tr.querySelector(".subtotal");
+let filaActualBuscador = null; // Fila activa del modal buscador
 
-    const precio = parseFloat(precioEl.value) || 0;
-    const cantidad = parseFloat(cantidadEl.value) || 0;
 
-    const importe = precio * cantidad;               // sin IVA
-    const iva = importe * TAX_RATE;                 // IVA por fila
-    const total = importe + iva;                    // total por fila
+/* ===========================================
+   FORMATEO Y CONVERSIÓN DE NÚMEROS
+   =========================================== */
 
-    importeEl.value = importe.toFixed(DECIMALS);
-    ivaEl.value = iva.toFixed(DECIMALS);
-    subtotalEl.value = total.toFixed(DECIMALS);
+/** Formatea número al estilo argentino (puntos miles, coma decimal). */
+function formatearNumeroAR(numero) {
+    if (!numero) return "";
+    
+    // Eliminar todo lo que no sea número
+    numero = numero.toString().replace(/\D/g, '');
+    
+    // Convertir a float y dividir entre 100 para los decimales
+    let n = (parseFloat(numero) / 100).toFixed(2);
+
+    // Separar entero y decimal
+    let partes = n.split(".");
+    let entero = partes[0];
+    let decimal = partes[1];
+
+    // Agregar puntos cada 3 dígitos
+    entero = entero.replace(/\B(?=(\d{3})+(?!\d))/g, ".");
+
+    return entero + "," + decimal;
+}
+/** Convierte string "123.456,78" → 123456.78 */
+function parsearNumeroAR(str) {
+    if (!str) return 0;
+    return parseFloat(str.replace(/\./g, "").replace(",", "."));
 }
 
 
-let filaActualBuscador = null;
+/*  ===========================================
+    Cuando se setea el codigo y el mismo sale de alli
+    FOCUS - OFF
+    ===========================================  */  
 
-// 1️⃣ Cuando se hace clic en la lupa, guardamos qué fila lo llamó
-document.addEventListener('click', function(e) {
-    if (e.target.closest('.lupa-btn')) {
-        filaActualBuscador = e.target.closest('tr');
+
+document.getElementById("tabla-prestaciones").addEventListener("blur", async e => {
+    if (!e.target.classList.contains("codigo")) return;
+    const codigo = e.target.value.trim();
+    if (!codigo) return;
+
+    const fila = e.target.closest("tr");
+    try {
+        const url = "{% url 'presupuestos_app:get_prestacion' codigo='__codigo__' %}"
+            .replace("__codigo__", encodeURIComponent(codigo));
+        const resp = await fetch(url);
+        if (!resp.ok) throw new Error();
+        const data = await resp.json();
+
+        fila.querySelector(".tipo").value = "gastos";
+        fila.querySelector(".prestacion").value = data.nombre || fila.querySelector(".prestacion").value;
+        fila.querySelector(".precio").value = (parseFloat(data.precio) || 0).toFixed(DECIMALS);
+        if (!fila.querySelector(".cantidad").value) fila.querySelector(".cantidad").value = 1;
+        calcularTotales();
+    } catch {
+        console.warn("Prestación no encontrada:", codigo);
+    }
+}, true);
+
+
+/*  ===========================================
+    Cuando se Busca con el buscador
+    BUSCADOR DE PRESTACIONES
+    ===========================================  */  
+  const $f = document.getElementById('fecha_presupuesto');
+  const hoy = new Date().toISOString().split('T')[0]; // YYYY-MM-DD
+  $f.value = hoy;   // por defecto hoy
+  $f.max = hoy;     // no permitir fechas futuras
+  // opcional: mínimo
+  // $f.min = '2024-01-01';
+
+
+// Guarda la fila actual al abrir modal
+
+document.addEventListener("click", e => {
+    if (e.target.closest(".lupa-btn")) {
+        filaActualBuscador = e.target.closest("tr");
     }
 });
 
-// 2️⃣ Simulación de datos (en tu caso se traerán de Django por fetch)
-const urlBuscarNomenclador = "{% url 'presupuestos_app:buscar_nomenclador' %}";
- 
-// 2️⃣ Buscar en el backend
-document.getElementById('btnBuscar').addEventListener('click', () => {
-    const termino = document.getElementById('busqueda').value.trim();
+// Buscar prestaciones desde el modal
 
-    if (!termino) {
-        alert("Por favor ingresa un término de búsqueda.");
-        return;
-    }
+document.getElementById("btnBuscar").addEventListener("click", async () => {
+    const termino = document.getElementById("busqueda").value.trim();
+    if (!termino) return alert("Por favor ingresa un término de búsqueda.");
 
-    fetch(`${urlBuscarNomenclador}?q=${encodeURIComponent(termino)}`)
-        .then(response => {
-            if (!response.ok) throw new Error("Error al buscar en el servidor");
-            return response.json();
-        })
-        .then(resultados => {
-            const tbody = document.querySelector('#tablaResultados tbody');
-            tbody.innerHTML = '';
+    const tbody = document.querySelector("#tablaResultados tbody");
+    tbody.innerHTML = '<tr><td colspan="4" class="text-center text-muted">Buscando...</td></tr>';
 
-            if (resultados.length === 0) {
-                tbody.innerHTML = '<tr><td colspan="3" class="text-center text-muted">Sin resultados</td></tr>';
-                return;
-            }
+    try {
+        const resp = await fetch(`{% url 'presupuestos_app:buscar_nomenclador' %}?q=${encodeURIComponent(termino)}`);
+        if (!resp.ok) throw new Error("Error al buscar en el servidor");
+        const resultados = await resp.json();
 
-            resultados.forEach(item => {
-                const fila = document.createElement('tr');
-                fila.innerHTML = `
+        tbody.innerHTML = resultados.length
+            ? resultados.map(item => `
+                <tr style="cursor:pointer">
                     <td>${item.codigo}</td>
                     <td>${item.nombre}</td>
                     <td>${item.gastos}</td>
                     <td>${item.especialista}</td>
-                `;
-                fila.style.cursor = 'pointer';
-                fila.addEventListener('click', () => seleccionarItem(item));
-                tbody.appendChild(fila);
-            });
-        })
-        .catch(error => {
-            console.error(error);
-            alert("Ocurrió un error al buscar los datos.");
-        });
+                </tr>`).join("")
+            : '<tr><td colspan="4" class="text-center text-muted">Sin resultados</td></tr>';
+
+        // Vincular click en resultados
+        tbody.querySelectorAll("tr").forEach((tr, i) =>
+            tr.addEventListener("click", () => seleccionarItem(resultados[i]))
+        );
+    } catch (err) {
+        console.error(err);
+        tbody.innerHTML = '<tr><td colspan="4" class="text-center text-danger">Error al cargar datos</td></tr>';
+    }
 });
 
-// 4️⃣ Cuando se selecciona un ítem, se completa la fila y se cierra el modal
-
-// 2️⃣ Seleccionar ítem del modal y completar la fila
+/** Completa la fila con los datos del ítem seleccionado. */
 async function seleccionarItem(item) {
-    const modal = bootstrap.Modal.getInstance(document.getElementById('modalBusqueda'));
+    const modal = bootstrap.Modal.getInstance(document.getElementById("modalBusqueda"));
     modal.hide();
-
     if (!filaActualBuscador) return;
 
     const fila = filaActualBuscador;
-    const codigo = item.codigo;
-
-    fila.querySelector('.codigo').value = codigo;
+    fila.querySelector(".codigo").value = item.codigo;
 
     try {
-        // ⚙️ Consultar al backend con el código seleccionado
-        const url = "{% url 'presupuestos_app:get_prestacion' codigo='__codigo__' %}".replace("__codigo__", encodeURIComponent(codigo));
+        const url = "{% url 'presupuestos_app:get_prestacion' codigo='__codigo__' %}"
+            .replace("__codigo__", encodeURIComponent(item.codigo));
 
         const resp = await fetch(url);
         if (!resp.ok) throw new Error("Error en la respuesta del servidor");
-
         const data = await resp.json();
 
-        // ✅ Completar los campos
         fila.querySelector(".tipo").value = "gastos";
         fila.querySelector(".prestacion").value = data.nombre || "";
         fila.querySelector(".precio").value = (parseFloat(data.precio) || 0).toFixed(DECIMALS);
-
-        // Forzar cantidad = 1 si estaba vacía
-        if (!fila.querySelector(".cantidad").value) fila.querySelector(".cantidad").value = 1;
-
-        // Recalcular totales
-        actualizarFila(fila);
+        if (!fila.querySelector(".cantidad").value) fila.querySelector(".cantidad").value = 1; 
         calcularTotales();
-
     } catch (err) {
         console.error("Error:", err);
-        alert("No se encontró la prestación para el código " + codigo);
+        alert("No se encontró la prestación para el código " + item.codigo);
     }
 }
 
 
+/* ===========================================
+   CÁLCULOS DE FILA Y TOTALES
+   =========================================== */
 
- 
- 
+/** Recalcula los importes de una fila (importe, IVA, subtotal). */
+function actualizarFila(tr) {
+    const precio = parsearNumeroAR(tr.querySelector(".precio").value);
+    const cantidad = parseFloat(tr.querySelector(".cantidad").value) || 0;
+    const importe = precio * cantidad;
+    const iva = importe * TAX_RATE;
+    const total = importe + iva;
+
+    tr.querySelector(".importe").value = formatearNumeroAR(importe);
+    tr.querySelector(".iva").value = formatearNumeroAR(iva);
+    tr.querySelector(".subtotal").value = formatearNumeroAR(total);
+}
+
+/** Calcula los totales generales del presupuesto. */
+function calcularTotales() {
+    let subtotal = 0, ivaTotal = 0;
+    const ivaIncluido = document.getElementById("chek-iva")?.checked ?? true;
+
+    document.querySelectorAll("#tabla-prestaciones tbody tr").forEach(tr => {
+        const cantidad = parseFloat(tr.querySelector(".cantidad")?.value) || 0;
+        const precio = parseFloat(tr.querySelector(".precio")?.value) || 0;
+        const importe = cantidad * precio;
+        const iva = ivaIncluido ? importe * TAX_RATE : 0;
+        const total = importe + iva; 
+        tr.querySelector(".importe").value = formatearNumeroAR(importe.toFixed(2));
+        tr.querySelector(".iva").value = formatearNumeroAR(iva.toFixed(2));
+        tr.querySelector(".subtotal").value = formatearNumeroAR(total.toFixed(2));
+        
+        subtotal += importe;
+        ivaTotal += iva;
+    });
+
+    const total = subtotal + (ivaIncluido ? ivaTotal : 0);
+    document.getElementById("subtotal").textContent = formatearNumeroAR(subtotal.toFixed(2));
+    document.getElementById("iva").textContent = formatearNumeroAR(ivaIncluido ? ivaTotal.toFixed(2) : 0);
+    document.getElementById("total").textContent = formatearNumeroAR(total.toFixed(2));
+}
+
+
+
+/* ===========================================
+   MANEJO DE TABLA DE PRESTACIONES
+   =========================================== */
 
 /* Aca esta funcion agrega proporcionales en medicamento */
 document.getElementById("btn-medicamentos").addEventListener("click", function() {
     const porcentaje = parseFloat(document.getElementById("med-prop").value) / 100; // 0.4, 0.5, etc.
     const tbody = document.querySelector("#tabla-prestaciones tbody");
     const ivaIncluido = document.getElementById("chek-iva")?.checked ?? true;
-
     // Función auxiliar para procesar un código base y crear/actualizar fila proporcional
     function procesarCodigoBase(codigoBase, codigoDestino, nombrePrestacion) {
         // Buscar fila existente (la proporcional)
@@ -503,13 +598,24 @@ document.getElementById("btn-medicamentos").addEventListener("click", function()
 
         Array.from(tbody.querySelectorAll("tr")).forEach(fila => {
             const codigo = fila.querySelector(".codigo").value.trim();
-            if (codigo === codigoBase) {
+            if (codigo === codigoBase &&codigoDestino!='medquir') {
                 const cantidad = parseFloat(fila.querySelector(".cantidad").value) || 0;
                 const precioOriginal = parseFloat(fila.querySelector(".precio").value) || 0;
                 totalCantidad += cantidad;
                 totalPrecio += precioOriginal * porcentaje * cantidad;
             }
         });
+        if(codigoDestino=='medquir'){
+            Array.from(tbody.querySelectorAll("tr")).forEach(fila => {
+                const codigo = fila.querySelector(".codigo").value.trim(); 
+                if (parseInt(codigo) <140000 || parseInt(codigo)>700000) {
+                    const cantidad = parseFloat(fila.querySelector(".cantidad").value) || 0;
+                    const precioOriginal = parseFloat(fila.querySelector(".precio").value) || 0; 
+                    totalPrecio += precioOriginal * porcentaje * cantidad; 
+                }
+            });
+            totalCantidad=1;
+        }
 
         if (totalCantidad === 0) return; // no hay filas base, nada que hacer
 
@@ -530,9 +636,6 @@ document.getElementById("btn-medicamentos").addEventListener("click", function()
             nuevaFila.querySelector(".prestacion").value = nombrePrestacion;
             nuevaFila.querySelector(".cantidad").value = totalCantidad;
             nuevaFila.querySelector(".precio").value = (totalPrecio / totalCantidad).toFixed(DECIMALS);
-            nuevaFila.querySelector(".importe").value = totalPrecio.toFixed(DECIMALS);
-            nuevaFila.querySelector(".iva").value = iva.toFixed(DECIMALS);
-            nuevaFila.querySelector(".subtotal").value = subtotal.toFixed(DECIMALS);
 
             // Insertamos al final
             tbody.appendChild(nuevaFila);
@@ -540,9 +643,6 @@ document.getElementById("btn-medicamentos").addEventListener("click", function()
             // Actualizamos fila existente
             filaExistente.querySelector(".cantidad").value = totalCantidad;
             filaExistente.querySelector(".precio").value = (totalPrecio / totalCantidad).toFixed(DECIMALS);
-            filaExistente.querySelector(".importe").value = totalPrecio.toFixed(DECIMALS);
-            filaExistente.querySelector(".iva").value = iva.toFixed(DECIMALS);
-            filaExistente.querySelector(".subtotal").value = subtotal.toFixed(DECIMALS);
         }
     }
 
@@ -557,188 +657,115 @@ document.getElementById("btn-medicamentos").addEventListener("click", function()
         // Si es un código numérico y cumple la condición (<140000 o >720000)
         if (!isNaN(codigo) && (parseInt(codigo) < 140000 || parseInt(codigo) > 720000)) {
             procesarCodigoBase(codigo, "medquir", "Medicamentos y descartables en Quirófano");
+            
         }
     });
 
     // Recalculamos totales generales
     calcularTotales();
 });
- /* Recalcula totales generales */
-function calcularTotales() {
-    let subtotal = 0;
-    let ivaTotal = 0;
-    const ivaIncluido = document.getElementById("chek-iva")?.checked ?? true;
-    document.querySelectorAll("#tabla-prestaciones tbody tr").forEach(tr => {
-        const cantidad = parseFloat(tr.querySelector(".cantidad")?.value) || 0;
-        const precio = parseFloat(tr.querySelector(".precio")?.value) || 0;
-
-        const importe = cantidad * precio;
-        let iva = ivaIncluido ? importe * TAX_RATE : 0;
-
-        const totalFila = importe + iva;
-
-        // Actualizamos fila
-        tr.querySelector(".importe").value = importe.toFixed(DECIMALS);
-        tr.querySelector(".iva").value = iva.toFixed(DECIMALS);
-        tr.querySelector(".subtotal").value = totalFila.toFixed(DECIMALS);
-
-        subtotal += importe;
-        ivaTotal += iva;
-    });
-
-    // Control del checkbox IVA
-   
-    if (!ivaIncluido) ivaTotal = 0;
-
-    const total = subtotal + ivaTotal;
-
-    // Actualizamos pantalla
-    document.getElementById("subtotal").textContent = subtotal.toFixed(DECIMALS);
-    document.getElementById("iva").textContent = ivaTotal.toFixed(DECIMALS);
-    document.getElementById("total").textContent = total.toFixed(DECIMALS);
-}
-
-/* Delegación de eventos: input y cambios en la tabla */
-document.addEventListener("input", function(e){
-    const tr = e.target.closest("tr");
-    if (!tr || !tr.closest("#tabla-prestaciones")) return;
-
-    // Si cambiaron precio o cantidad o si hay campos editables, recalcular fila
-    if (e.target.classList.contains("precio") || e.target.classList.contains("cantidad") || e.target.classList.contains("codigo") || e.target.classList.contains("prestacion")){
-        actualizarFila(tr);
-        calcularTotales();
-    }
-});
-
-/* Listener para cuando se pierde foco en campo 'codigo' -> busca prestación vía fetch */
-document.getElementById("tabla-prestaciones").addEventListener("blur", async function(e) {
-    if (e.target && e.target.classList.contains("codigo")){
-        let codigo = e.target.value.trim();
-        if (codigo !== "") {
-            let fila = e.target.closest("tr");
-            
-            try {
-                // Ajustá la URL si tu named URL es diferente
-                const url = "{% url 'presupuestos_app:get_prestacion' codigo='__codigo__' %}".replace("__codigo__", encodeURIComponent(codigo));
-
-                let resp = await fetch(url);
-                if (!resp.ok) throw new Error("Error en la respuesta del servidor");
-
-                let data = await resp.json();
-                // Esperamos que la respuesta JSON tenga { nombre, precio }
-                fila.querySelector(".tipo").value="gastos"; 
-                fila.querySelector(".prestacion").value = data.nombre || fila.querySelector(".prestacion").value;
-                fila.querySelector(".precio").value = (parseFloat(data.precio) || 0).toFixed(DECIMALS);
-                // forzamos cantidad a 1 si estaba vacío
-                if (!fila.querySelector(".cantidad").value) fila.querySelector(".cantidad").value = 1;
-
-                // recalcular
-                actualizarFila(fila);
-                calcularTotales();
-            } catch (err) {
-                console.error("Error:", err);
-                // no hacemos un alert intrusivo; podés activar si querés:
-                // alert("No se encontró la prestación para el código " + codigo);
-            }
-        }
-    }
-}, true); // useCapture true para capturar blur en inputs
- 
-
-/* Listener para cuando se cambie el tipo de gasto */
-document.querySelectorAll("#tabla-prestaciones").forEach((tabla) => {
-    tabla.addEventListener("change", function (e) {
-        if (e.target && e.target.classList.contains("tipo")) {
-            let fila = e.target.closest("tr");
-            let tipo = e.target.value;
-            let codigo = fila.querySelector(".codigo").value;  // 👈 tomo el código de esa fila
-
-            // construyo la URL dinámica con Django
-            const url = "{% url 'presupuestos_app:get_tipo' codigo='__codigo__' %}"
-                            .replace("__codigo__", encodeURIComponent(codigo));
-
-            fetch(`${url}?tipo=${tipo}`)
-                .then((response) => response.json())
-                .then((data) => {
-                    let cantidad = parseFloat(fila.querySelector(".cantidad").value) || 1;
-                    let precio = parseFloat(data.precio);
-                    let iva = parseFloat(data.precio)*0.21;
-                    let total = precio + iva;
-
-                    // Impactamos en los campos
-                    fila.querySelector(".precio").value = precio.toFixed(2);
-                    fila.querySelector(".importe").value = (precio * cantidad).toFixed(2);
-                    fila.querySelector(".iva").value = (iva * cantidad).toFixed(2);
-                    fila.querySelector(".subtotal").value = (total * cantidad).toFixed(2);
-                })
-                .catch((error) => {
-                    console.error("Error al traer datos:", error);
-                });
-        }
-    });
-});
 
 
-/* Agregar fila - clonamos la primera fila y reseteamos valores */
-document.getElementById("agregar-fila").addEventListener("click", function(){
+
+
+
+/** Crea una nueva fila en la tabla. */
+function agregarFila() {
     const tbody = document.querySelector("#tabla-prestaciones tbody");
     const template = tbody.querySelector("tr.fila-detalle");
     const fila = template.cloneNode(true);
 
-    // resetear inputs
     fila.querySelectorAll("input").forEach(el => {
-        if (el.classList.contains("cantidad")) el.value = 1;
-        else if (el.classList.contains("precio")) el.value = (0).toFixed(DECIMALS);
-        else el.value = "";
+        el.value = el.classList.contains("cantidad") ? 1 : "";
+        if (el.classList.contains("precio")) el.value = (0).toFixed(DECIMALS);
     });
 
-    // recalcular fila recién agregada
-    actualizarFila(fila);
-    tbody.appendChild(fila);
-    calcularTotales();
-});
+    tbody.appendChild(fila); 
+}
 
-/* Eliminar fila (delegado) */
-document.addEventListener("click", function(e){
-    if (e.target.classList.contains("eliminar-fila")){
-        // Evita borrar la última fila si querés (opcional)
-        const tbody = document.querySelector("#tabla-prestaciones tbody");
-        if (tbody.querySelectorAll("tr").length === 1) {
-            // si no querés permitir eliminar la última fila, limpiarla en su lugar:
-            const tr = e.target.closest("tr");
-            tr.querySelectorAll("input").forEach(i => i.value = (i.classList.contains("cantidad") ? 1 : ""));
-        } else {
-            e.target.closest("tr").remove();
-        }
+/** Elimina fila (o limpia si es la última). */
+function eliminarFila(tr) {
+    const tbody = document.querySelector("#tabla-prestaciones tbody");
+    if (tbody.querySelectorAll("tr").length > 1) {
+        tr.remove();
+    } else {
+        tr.querySelectorAll("input").forEach(i => i.value = i.classList.contains("cantidad") ? 1 : "");
+    }
+    calcularTotales();
+}
+
+
+/* ===========================================
+   EVENTOS GLOBALES
+   =========================================== */
+
+// Recalcular cuando cambian campos editables
+document.addEventListener("input", e => {
+    const tr = e.target.closest("#tabla-prestaciones tr");
+    if (tr && ["precio", "cantidad", "codigo", "prestacion"].some(c => e.target.classList.contains(c))) {
         calcularTotales();
     }
 });
 
-/* Inicialización: recalcula en caso que haya valores precargados */
-document.addEventListener("DOMContentLoaded", function(){
-    document.querySelectorAll("#tabla-prestaciones tbody tr").forEach(tr => actualizarFila(tr));
+
+
+// Cambio de tipo (gastos/especialista/todo)
+document.getElementById("tabla-prestaciones").addEventListener("change", e => {
+    if (!e.target.classList.contains("tipo")) return;
+    const fila = e.target.closest("tr");
+    const codigo = fila.querySelector(".codigo").value;
+    const tipo = e.target.value;
+
+    const url = "{% url 'presupuestos_app:get_tipo' codigo='__codigo__' %}"
+        .replace("__codigo__", encodeURIComponent(codigo));
+
+    fetch(`${url}?tipo=${tipo}`)
+        .then(r => r.json())
+        .then(data => { 
+            const cantidad = parseFloat(fila.querySelector(".cantidad").value) || 1;
+            const precio = parseFloat(data.precio) || 0; 
+
+            fila.querySelector(".precio").value = precio.toFixed(2); 
+            calcularTotales();
+        })
+        .catch(err => console.error("Error al traer tipo:", err));
+});
+
+// Botones agregar/eliminar fila
+document.getElementById("agregar-fila").addEventListener("click", agregarFila);
+document.addEventListener("click", e => {
+    if (e.target.classList.contains("eliminar-fila")) eliminarFila(e.target.closest("tr"));
+});
+
+// Cambio de IVA incluido
+document.getElementById("chek-iva").addEventListener("change", calcularTotales);
+
+// Inicialización
+document.addEventListener("DOMContentLoaded", () => {
+    document.querySelectorAll("#tabla-prestaciones tbody tr").forEach(actualizarFila);
     calcularTotales();
-    document.getElementById("chek-iva").addEventListener("change", calcularTotales);
-
-   
 });
 
-/* --- Confirmación antes de guardar --- */
-document.getElementById("btnGuardarPresupuesto").addEventListener("click", function() {
-    const modal = new bootstrap.Modal(document.getElementById("modalConfirmacion"));
-    modal.show();
+
+/* ===========================================
+   CONFIRMACIÓN DE GUARDADO
+   =========================================== */
+
+document.getElementById("btnGuardarPresupuesto").addEventListener("click", () => {
+    const form = document.getElementById("form-presupuesto");
+
+    // ejecuta la validación HTML5 normal
+    if (!form.checkValidity()) {
+        form.reportValidity();   // muestra los mensajes de error del navegador
+        return;                  // cancela el envío si hay errores
+    }
+    new bootstrap.Modal(document.getElementById("modalConfirmacion")).show();
 });
 
-document.getElementById("btnConfirmarGuardar").addEventListener("click", function() {
-    // Cierra el modal
-    const modal = bootstrap.Modal.getInstance(document.getElementById("modalConfirmacion"));
-    modal.hide();
-
-    // Envía el formulario real
+document.getElementById("btnConfirmarGuardar").addEventListener("click", () => {
+    bootstrap.Modal.getInstance(document.getElementById("modalConfirmacion")).hide();
     document.getElementById("form-presupuesto").submit();
 });
-
-
 </script>
 
 {% endblock %}

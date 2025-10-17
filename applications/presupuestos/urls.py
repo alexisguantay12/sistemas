@@ -16,4 +16,7 @@ urlpatterns = [
     path('imprimir/<int:pk>/', views.imprimir_presupuesto, name='imprimir_presupuesto'),
     path('buscar_nomenclador/', views.buscar_nomenclador, name='buscar_nomenclador'),
     path('detalle/eliminar-pago/<int:pk>/',views.eliminar_pago, name = 'eliminar_pago'),
+    path("codigos-particulares/", views.codigos_particulares, name="codigos_particulares"),
+    path("codigos-particulares/eliminar/<int:pk>/", views.eliminar_codigo_particular, name="eliminar_codigo_particular"),
+
 ]
