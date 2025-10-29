@@ -29,7 +29,12 @@
     padding: var(--card-padding);
     font-size: var(--font-size-base);
 }
-
+textarea.form-control {
+    height: auto !important;     /* ignora la altura fija */
+    min-height: 100px !important; /* define un tamaño mínimo real */
+    line-height: 1.3;
+    resize: vertical;            /* permite agrandar manualmente */
+}
 /* Títulos más discretos */
 .card-title {
     font-size: 0.95rem;
@@ -193,7 +198,7 @@ td {
                 </div>
             </div> 
             <div class="card-body">
-                <h5 class="card-title">Datos Médicos</h5>
+                <h5 class="card-title">Datos Adicionales</h5>
                 <div class="row g-2">
                     <div class="col-md-4">
                         <label>Medico</label>
@@ -215,6 +220,14 @@ td {
                             type="date"
                             class="form-control"
                             required>
+                    </div>
+                    <div class="col-md-6">
+                        <label>Observaciones</label>
+                        <input type="text" name="observaciones" class="form-control" autocomplete="off">
+                    </div>
+                    <div class="col-md-2">
+                        <label>Episodio asociado</label>
+                        <input type="text" name="episodio" class="form-control" autocomplete="off">
                     </div>
                 </div>
             </div>
@@ -291,7 +304,20 @@ td {
                                 <td><input type="text" name="importe" class="form-control importe" readonly value="0.00"></td>
                                 <td><input type="text" name="iva" class="form-control iva" readonly value="0.00"></td>
                                 <td><input type="text" name="subtotal" class="form-control subtotal" readonly value="0.00"></td>
-                                <td><button type="button" class="btn btn-danger btn-sm eliminar-fila">X</button></td>
+                                <td class="d-flex gap-1 justify-content-center">
+                                    <!-- Botón comentario -->
+                                    <button type="button" class="btn btn-outline-secondary btn-sm btn-comentario" title="Agregar comentario">
+                                        <i class="fas fa-comment-dots"></i>
+                                    </button>
+
+                                    <!-- Botón eliminar -->
+                                    <button type="button" class="btn btn-danger btn-sm eliminar-fila">
+                                        <i class="fas fa-times"></i>
+                                    </button>
+
+                                    <!-- Input oculto donde se guardará el comentario -->
+                                    <input type="hidden" name="comentario" class="comentario">
+                                </td>
                             </tr>
                         </tbody>
                     </table>
@@ -316,7 +342,24 @@ td {
         </div>
 
 
-        
+        <!-- Mini modal para comentarios -->
+        <div class="modal fade" id="modalComentario" tabindex="-1" aria-labelledby="modalComentarioLabel" aria-hidden="true">
+            <div class="modal-dialog modal-sm modal-dialog-centered">
+                <div class="modal-content">
+                    <div class="modal-header bg-info text-white py-2">
+                        <h6 class="modal-title" id="modalComentarioLabel"><i class="fas fa-comment-dots me-2"></i>Comentario</h6>
+                        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                    </div>
+                    <div class="modal-body">
+                        <textarea id="textoComentario" class="form-control" rows="1" placeholder="Escribí un comentario..."></textarea>
+                    </div>
+                    <div class="modal-footer py-2">
+                        <button type="button" class="btn btn-light btn-sm" data-bs-dismiss="modal">Cancelar</button>
+                        <button type="button" class="btn btn-primary btn-sm" id="btnGuardarComentario">Guardar</button>
+                    </div>
+                </div>
+            </div>
+        </div>
         <!-- Modal Buscador -->
         <div class="modal fade" id="modalBusqueda" tabindex="-1" aria-labelledby="modalBusquedaLabel" aria-hidden="true">
         <div class="modal-dialog modal-lg">
@@ -395,7 +438,7 @@ let filaActualBuscador = null; // Fila activa del modal buscador
 
 /** Formatea número al estilo argentino (puntos miles, coma decimal). */
 function formatearNumeroAR(numero) {
-    if (!numero) return "";
+    if (numero === null || numero === undefined || numero === "") return "";
     
     // Eliminar todo lo que no sea número
     numero = numero.toString().replace(/\D/g, '');
@@ -443,6 +486,18 @@ document.getElementById("tabla-prestaciones").addEventListener("blur", async e =
         fila.querySelector(".prestacion").value = data.nombre || fila.querySelector(".prestacion").value;
         fila.querySelector(".precio").value = (parseFloat(data.precio) || 0).toFixed(DECIMALS);
         if (!fila.querySelector(".cantidad").value) fila.querySelector(".cantidad").value = 1;
+
+
+        // 💡 NUEVO: permitir editar si no es de tipo IPS 
+        if (data.tipo && data.tipo.toLowerCase() === "particular") {
+            fila.querySelector(".precio").removeAttribute("readonly");
+            fila.querySelector(".precio").classList.add("bg-light");
+        } else {
+            fila.querySelector(".precio").setAttribute("readonly", true);
+            fila.querySelector(".precio").classList.remove("bg-light");
+        }
+
+
         calcularTotales();
     } catch {
         console.warn("Prestación no encontrada:", codigo);
@@ -525,6 +580,18 @@ async function seleccionarItem(item) {
         fila.querySelector(".prestacion").value = data.nombre || "";
         fila.querySelector(".precio").value = (parseFloat(data.precio) || 0).toFixed(DECIMALS);
         if (!fila.querySelector(".cantidad").value) fila.querySelector(".cantidad").value = 1; 
+
+        
+        // 💡 NUEVO: permitir editar si no es de tipo IPS
+        console.log("El tipo es :", data.tipo)
+        if (data.tipo && data.tipo.toLowerCase() === "particular") {
+            fila.querySelector(".precio").removeAttribute("readonly");
+            fila.querySelector(".precio").classList.add("bg-light");
+        } else {
+            fila.querySelector(".precio").setAttribute("readonly", true);
+            fila.querySelector(".precio").classList.remove("bg-light");
+        }
+
         calcularTotales();
     } catch (err) {
         console.error("Error:", err);
@@ -636,7 +703,7 @@ document.getElementById("btn-medicamentos").addEventListener("click", function()
             nuevaFila.querySelector(".prestacion").value = nombrePrestacion;
             nuevaFila.querySelector(".cantidad").value = totalCantidad;
             nuevaFila.querySelector(".precio").value = (totalPrecio / totalCantidad).toFixed(DECIMALS);
-
+            nuevaFila.querySelector(".comentario").value = ""
             // Insertamos al final
             tbody.appendChild(nuevaFila);
         } else {
@@ -744,6 +811,10 @@ document.getElementById("chek-iva").addEventListener("change", calcularTotales);
 document.addEventListener("DOMContentLoaded", () => {
     document.querySelectorAll("#tabla-prestaciones tbody tr").forEach(actualizarFila);
     calcularTotales();
+    window.history.pushState({}, "");
+    window.addEventListener("popstate", () => {
+        window.location.href = "{% url 'presupuestos_app:presupuestos' %}";
+    });
 });
 
 
@@ -766,6 +837,66 @@ document.getElementById("btnConfirmarGuardar").addEventListener("click", () => {
     bootstrap.Modal.getInstance(document.getElementById("modalConfirmacion")).hide();
     document.getElementById("form-presupuesto").submit();
 });
+
+
+
+
+/* ===========================================
+   COMENTARIOS EN CADA FILA
+   =========================================== */
+let filaComentarioActual = null;
+
+document.addEventListener("click", e => {
+    // Si se hace clic en el ícono de comentario
+    if (e.target.closest(".btn-comentario")) {
+        filaComentarioActual = e.target.closest("tr");
+        const comentarioGuardado = filaComentarioActual.querySelector(".comentario").value || "";
+        document.getElementById("textoComentario").value = comentarioGuardado;
+        const modal = new bootstrap.Modal(document.getElementById("modalComentario"));
+        modal.show();
+    }
+});
+
+document.getElementById("btnGuardarComentario").addEventListener("click", () => {
+    const texto = document.getElementById("textoComentario").value.trim();
+    if (filaComentarioActual) {
+        // Guardar comentario en input oculto
+        const inputHidden = filaComentarioActual.querySelector(".comentario");
+        inputHidden.value = texto;
+
+        // Cambiar color del ícono si hay comentario
+        const btn = filaComentarioActual.querySelector(".btn-comentario");
+        const icon = btn.querySelector("i");
+        if (texto) {
+            btn.classList.remove("btn-outline-secondary");
+            btn.classList.add("btn-warning");
+            icon.classList.remove("fa-comment-dots");
+            icon.classList.add("fa-comment");
+        } else {
+            btn.classList.remove("btn-warning");
+            btn.classList.add("btn-outline-secondary");
+            icon.classList.remove("fa-comment");
+            icon.classList.add("fa-comment-dots");
+        }
+    }
+
+    bootstrap.Modal.getInstance(document.getElementById("modalComentario")).hide();
+});
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 </script>
 
 {% endblock %}

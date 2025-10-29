@@ -4,7 +4,44 @@
 <style>
 .dataTables_filter {
 display: none;
+}/* === ESTILOS DE ESTADO (versión compacta) === */
+.estado-badge {
+    display: inline-block;
+    padding: 2px 8px;              /* menos padding = más compacto */
+    border-radius: 10px;
+    font-weight: 600;
+    font-size: 0.72rem;            /* letra más chica */
+    text-transform: uppercase;
+    letter-spacing: 0.4px;
+    color: #fff;
+    transition: all 0.3s ease;
+    line-height: 1.2;
 }
+
+/* Colores específicos */
+.estado-pendiente {
+    background-color: #ffc107;  /* amarillo */
+    color: #000;
+}
+
+.estado-autorizado {
+    background-color: #0d6efd;  /* azul */
+}
+
+.estado-en_curso {
+    background-color: #28a745;  /* verde */
+}
+
+.estado-cerrado {
+    background-color: #6f42c1;  /* morado */
+}
+
+.estado-expirado {
+    background-color: #6c757d;  /* gris */
+}
+
+
+
 </style>
 <div class="px-3 px-md-5">
     <div class="d-flex justify-content-between align-items-center mb-3">
@@ -46,12 +83,8 @@ display: none;
                                 <td class="d-none">{{ presupuesto.paciente_dni }}</td> <!-- 👈 -->
                                 <td>{{ presupuesto.medico }}</td>
                                 <td>
-                                    <span class="badge 
-                                        {% if presupuesto.estado == 'pendiente' %} bg-warning 
-                                        {% elif presupuesto.estado == 'concretado' %} bg-success 
-                                        {% elif presupuesto.estado == 'no_concretado' %} bg-danger 
-                                        {% endif %}">
-                                        {{ presupuesto.estado|capfirst }}
+                                    <span class="estado-badge estado-{{ presupuesto.estado }}">
+                                        {{ presupuesto.get_estado_display }}
                                     </span>
                                 </td><!-- 
                                 <td class="sin-redireccion">
@@ -143,7 +176,12 @@ display: none;
         .catch(() => alert("Error de red al intentar eliminar."));
     });
   
-
+    document.addEventListener("visibilitychange", function() {
+        if (document.visibilityState === "visible") {
+            // Si el usuario vuelve a esta pestaña (por ejemplo con "Atrás")
+            location.reload();
+        }
+    });
 
     document.querySelectorAll(".clickable-row").forEach(row => {
         row.addEventListener("click", function (e) {
@@ -179,5 +217,12 @@ display: none;
             tabla.column(0).search(this.value).draw(); // Columna 3 = DNI (oculta)
         });
     });
+
+ document.addEventListener("DOMContentLoaded", () => {
+    document.querySelectorAll(".estado-badge").forEach(el => {
+        el.style.transform = "scale(1.2)";
+        setTimeout(() => el.style.transform = "scale(1)", 300);
+    });
+});   
 </script>
 {% endblock %}

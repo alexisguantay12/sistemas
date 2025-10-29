@@ -43,14 +43,8 @@ class CrearUsuarioForm(forms.ModelForm):
         user.set_password(self.cleaned_data['password'])
         if commit:
             user.save()
-
             # Asignar grupo
             group_name = self.cleaned_data['rol']
             group, _ = Group.objects.get_or_create(name=group_name)
-            user.groups.add(group)
-
-            # Asociar local si es vendedor
-            if group_name == 'vendedor' and self.cleaned_data['ubicacion']:
-                user.ubicacion = self.cleaned_data['ubicacion']
-                user.save()
+            user.groups.add(group) 
         return user

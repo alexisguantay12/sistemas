@@ -47,32 +47,102 @@
 #miTabla th:nth-child(8) {
     text-align: right;
 }
+
+
+
+/* === ESTILOS DE ESTADO (versión compacta) === */
+.estado-badge {
+    display: inline-block;
+    padding: 2px 8px;              /* menos padding = más compacto */
+    border-radius: 10px;
+    font-weight: 600;
+    font-size: 0.60rem;            /* letra más chica */
+    text-transform: uppercase;
+    letter-spacing: 0.4px;
+    color: #fff;
+    transition: all 0.3s ease;
+    line-height: 1.2;
+}
+
+/* Colores específicos */
+.estado-pendiente {
+    background-color: #ffc107;  /* amarillo */
+    color: #000;
+}
+
+.estado-autorizado {
+    background-color: #0d6efd;  /* azul */
+}
+
+.estado-en_curso {
+    background-color: #28a745;  /* verde */
+}
+
+.estado-cerrado {
+    background-color: #6f42c1;  /* morado */
+}
+
+.estado-expirado {
+    background-color: #6c757d;  /* gris */
+}
+
+
+
+
+
+
+
 </style>
 
 <div class="container my-4">
+       <div class="d-flex flex-wrap justify-content-between align-items-center mb-3 gap-2">
+        <!-- Izquierda -->
+        <div class="d-flex align-items-center gap-2">
+            
+            <h3 class="text-primary mb-0">
+                <i class="fas fa-file-medical me-1"></i> Presupuesto N°{{ presupuesto.id }}
+            </h3>
 
-    <!-- Encabezado -->
-    <div class="d-flex justify-content-between align-items-center mb-3">
-        <h3 class="text-primary">
-            <i class="fas fa-file-medical"></i> Presupuesto #{{ presupuesto.id }}
-        </h3>
-        <div>
-            <a href="{% url 'presupuestos_app:imprimir_presupuesto' presupuesto.id %}" class="btn btn-info me-2">
-                <i class="fas fa-print"></i> Imprimir
+        </div>
+
+        <!-- Derecha -->
+        <div class="d-flex flex-wrap gap-2">
+            <a href="{% url 'presupuestos_app:presupuestos' %}" class="btn btn-outline-secondary btn-sm">
+                <i class="fas fa-arrow-left"></i> Volver al listado
             </a>
-            <a href="{% url 'presupuestos_app:editar_presupuesto' presupuesto.id %}" class="btn btn-warning me-2">
-                <i class="fas fa-edit"></i> Editar
-            </a>
-            <a href="#modalPago" class="btn btn-success me-2" data-bs-toggle="modal">
-                <i class="fas fa-cash-register"></i> Registro de Pagos
-            </a> 
-            <a href="#modalHistorial" 
-                class="btn btn-info" 
-                data-bs-toggle="modal">
-                <i class="fas fa-history"></i> Ver historial
-            </a>
+            {% if presupuesto.estado != 'expirado' %} 
+                {% if presupuesto.estado == 'en_curso' %}
+                <a href="#modalCerrar" class="btn btn-danger btn-sm" data-bs-toggle="modal">
+                    <i class="fas fa-lock"></i> Cerrar
+                </a>
+                {% endif %}
+                {% if presupuesto.estado == 'pendiente' and request.user|is_in_group:"administrador" %}
+                    <a href="#modalAutorizar" class="btn btn-info btn-sm" data-bs-toggle="modal">
+                        <i class="fas fa-cash-register"></i> Autorizar
+                    </a>
+                {% endif %}
+                {% if presupuesto.estado != 'pendiente' %}
+                    <a href="{% url 'presupuestos_app:imprimir_presupuesto' presupuesto.id %}" class="btn btn-info btn-sm">
+                        <i class="fas fa-print"></i> Imprimir
+                    </a>
+                {% endif %}
+                {% if presupuesto.estado != 'cerrado' %}
+                    <a href="{% url 'presupuestos_app:editar_presupuesto' presupuesto.id %}" class="btn btn-warning btn-sm">
+                        <i class="fas fa-edit"></i> Editar
+                    </a>
+                {% endif %}
+                {% if presupuesto.estado != 'pendiente' %}
+                    <a href="#modalPago" class="btn btn-success btn-sm" data-bs-toggle="modal">
+                        <i class="fas fa-cash-register"></i> Pagos
+                    </a> 
+                {% endif %} 
+                <a href="#modalHistorial" class="btn btn-info btn-sm" data-bs-toggle="modal">
+                    <i class="fas fa-history"></i> Ver historial
+                </a>
+            {% endif %}
         </div>
     </div>
+
 
     <!-- Datos del paciente -->
     <div class="card shadow-sm mb-2">
@@ -89,10 +159,17 @@
             </div>
         </div>
         <div class="card-body">
-            <h5 class="card-title">Datos Médicos</h5>
+            <h5 class="card-title">Datos Adicionales</h5>
             <div class="row g-2">
                 <div class="col-md-6"><strong>Médico:</strong> {{ presupuesto.medico }}</div>
                 <div class="col-md-6"><strong>Diagnóstico:</strong> {{ presupuesto.diagnostico }}</div>
+                <div class="col-md-6"><strong>Observaciones:</strong> {{ presupuesto.motivo_no_concretado }}</div>
+                <div class="col-md-6">
+                    <strong>Saldo:</strong> 
+                    <span class="badge bg-secondary fs-8" id="saldo-detalle">
+                        ${{ saldo|moneda_ar }}
+                    </span>
+                </div>
             </div>
         </div>
     </div>
@@ -136,7 +213,7 @@
             <div class="mt-3">
                 <h6 class="mb-1">Seguimiento</h6>
                 <div class="small">
-                    <div><strong>Estado:</strong> {{ presupuesto.get_estado_display }}</div>
+                    <div><strong>Estado:</strong> <span id="estado-presupuesto" class="estado-badge estado-{{ presupuesto.estado }}">{{ presupuesto.get_estado_display }}</span></div>
                     <div><strong>Creado:</strong> {{ presupuesto.fecha_creacion|date:"d/m/Y H:i" }} por <strong> {{ presupuesto.user_made.first_name }} {{ presupuesto.user_made.last_name }}</strong></div>
                     <div><strong>Actualizado:</strong> {{ presupuesto.updated_at|date:"d/m/Y H:i" }} por<strong>{{ presupuesto.user_updated.first_name }} {{ presupuesto.user_updated.last_name }}</strong></div>
                 </div>
@@ -163,6 +240,7 @@
                 
                 <div class="modal-body">
                     <!-- Formulario de nuevo pago -->
+                     {%if presupuesto.estado != 'cerrado'%}
                     <form id="formRegistroPago" method="post" action="{% url 'presupuestos_app:registrar_pago' presupuesto.id %}">
                     {% csrf_token %}
                     <div class="row g-3">
@@ -170,20 +248,19 @@
                             <label class="form-label">Monto</label>
                             <input type="number" step="0.01" class="form-control" name="monto" required>
                         </div>
-                        <div class="col-md-4">
+                        <div class="col-md-3">
                             <label class="form-label">Medio de Pago</label>
                             <select name="medio_pago" class="form-select" required>
                                 <option value="efectivo">Efectivo</option>
+                                <option value="cajab">Caja B</option>
                                 <option value="transferencia">Transferencia</option>
-                                <option value="tarjeta">Tarjeta</option>
+                                <option value="tarjeta_debito">Tarjeta Debito</option>
+                                <option value="tarjeta_credito">Tarjeta Credito</option> 
                             </select>
                         </div>
-                        <div class="col-md-4">
-                            <label class="form-label">Caja</label>
-                            <select name="caja" class="form-select" required>
-                                <option value="Caja A">Caja A</option>
-                                <option value="Caja B">Caja B</option>
-                            </select>
+                        <div class="col-md-5">
+                            <label class="form-label">Comentario</label> 
+                            <input type="text" class="form-control" name="observacion_pago">
                         </div>
                     </div>
 
@@ -191,7 +268,7 @@
                         <button type="submit" class="btn btn-success">Guardar Pago</button>
                     </div>
                 </form>
-
+                {%endif%}
                 <hr>
                 <h6>Pagos registrados</h6>
                 <table class="table table-sm table-striped">
@@ -199,8 +276,7 @@
                         <tr>
                             <th>Fecha</th>
                             <th>Monto</th>
-                            <th>Medio</th>
-                            <th>Caja</th>
+                            <th>Medio</th> 
                             <th>Registró</th>
                             <th>Acción</th>
                         </tr>
@@ -219,6 +295,28 @@
             </div>
         </div>
     </div>
+
+    <!-- Modal Confirmar cierre -->
+    <div class="modal fade" id="modalCerrar" tabindex="-1" aria-labelledby="modalCerrarLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow-sm">
+        <div class="modal-header bg-danger text-white">
+            <h6 class="modal-title" id="modalCerrarLabel"><i class="fas fa-lock me-2"></i> Cerrar presupuesto</h6>
+            <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+        </div>
+        <div class="modal-body text-center">
+            <p>¿Deseás cerrar este presupuesto? No podrás editarlo ni agregar pagos.</p>
+        </div>
+        <div class="modal-footer justify-content-center border-0">
+            <button type="button" class="btn btn-light btn-sm" data-bs-dismiss="modal">Cancelar</button>
+            <button type="button" class="btn btn-danger btn-sm" id="btnCerrarPresupuesto" data-presupuesto-id="{{ presupuesto.id }}">
+            <i class="fas fa-lock"></i> Confirmar cierre
+            </button>
+        </div>
+        </div>
+    </div>
+    </div>
+
 
     <!-- Modal Historial -->
     <div class="modal fade" id="modalHistorial" tabindex="-1" aria-labelledby="modalHistorialLabel" aria-hidden="true">
@@ -279,6 +377,28 @@
         </div>
     </div>
 
+    <!-- Modal Confirmar autorizacion -->
+    <div class="modal fade" id="modalAutorizar" tabindex="-1" aria-labelledby="modalAutorizarLabel" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content border-0 shadow-sm">
+                <div class="modal-header bg-success text-white">
+                    <h6 class="modal-title" id="modalAutorizarLabel">
+                        <i class="fas fa-money-bill-wave me-2"></i> Confirmar autorizacion
+                    </h6>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+                </div>
+                <div class="modal-body text-center">
+                    <p class="mb-2">¿Deseás autorizar este presupuesto?</p> 
+                </div>
+                <div class="modal-footer justify-content-center border-0">
+                    <button type="button" class="btn btn-light btn-sm" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="button" class="btn btn-success btn-sm" id="btnAutorizar" data-presupuesto-id="{{ presupuesto.id }}">
+                        <i class="fas fa-check"></i> Confirmar
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
 
     <!-- Modal Confirmar Eliminación de Pago -->
     <div class="modal fade" id="modalEliminarPago" tabindex="-1" aria-labelledby="modalEliminarPagoLabel" aria-hidden="true">
@@ -308,7 +428,18 @@
 
 </div>
 <script>
+(function() {
+    // 🔹 Paso 1: Reemplaza la entrada actual, eliminando la de edición del historial
+    window.history.replaceState(null, "", window.location.href);
 
+    // 🔹 Paso 2: Empuja una nueva entrada "limpia"
+    window.history.pushState(null, "", window.location.href);
+    console.log("Aca si estoy entrando aunque no creas")
+    // 🔹 Paso 3: Si intenta volver atrás, redirige al listado
+    window.addEventListener("popstate", function () {
+        window.location.replace("{% url 'presupuestos_app:presupuestos' %}");
+    });
+})();
 document.addEventListener("DOMContentLoaded", function() {
     const vistaListado = document.getElementById("vistaListadoHistorial");
     const vistaDetalle = document.getElementById("vistaDetalleHistorial");
@@ -432,7 +563,9 @@ document.addEventListener("DOMContentLoaded", function() {
         vistaListado.style.display = "flex";
     });
 
-    
+ 
+
+
     const form = document.getElementById("formRegistroPago");
     const tablaPagosBody = document.getElementById("tablaPagosBody");
 
@@ -471,6 +604,8 @@ document.addEventListener("DOMContentLoaded", function() {
                 .then((data) => {
                     if (data.success) {
                         actualizarListadoPagos(data.pagos_html,data.total_pagado,data.saldo);
+                        actualizarEstadoPresupuesto(data.estado);
+                        actualizarSaldoDetalle(data.saldo);
                         form.reset();
                     } else {
                         alert(data.error || "Error al registrar el pago.");
@@ -506,8 +641,10 @@ document.addEventListener("DOMContentLoaded", function() {
                 })
                     .then((resp) => resp.json())
                     .then((data) => {
-                        if (data.success) {
+                        if (data.success) { 
+                            actualizarEstadoPresupuesto(data.estado);
                             actualizarListadoPagos(data.pagos_html,data.total_pagado,data.saldo);
+                            actualizarSaldoDetalle(data.saldo);
                         } else {
                             alert(data.error || "No se pudo eliminar el pago.");
                         }
@@ -540,7 +677,161 @@ document.addEventListener("DOMContentLoaded", function() {
         return entero + "," + decimal;
     }
 
+
+
+    const btnAutorizar = document.getElementById("btnAutorizar");
+    const modalAutorizar = new bootstrap.Modal(document.getElementById("modalAutorizar"));
+    const estadoSpan = document.getElementById("estado-presupuesto");
+
+    btnAutorizar.onclick = function () {
+        const presupuestoId = btnAutorizar.dataset.presupuestoId;
+        const url = "{% url 'presupuestos_app:autorizar_presupuesto' 0 %}".replace("0", presupuestoId);
+
+        modalAutorizar.hide();
+
+        fetch(url, {
+            method: "POST",
+            headers: {
+                "X-CSRFToken": "{{ csrf_token }}",
+                "X-Requested-With": "XMLHttpRequest"
+            }
+        })
+        .then(resp => resp.json())
+        .then(data => {
+            if (data.success) {
+                // Cambia el texto del estado sin recargar la página
+                estadoSpan.textContent = data.nuevo_estado;
+                actualizarEstadoPresupuesto(data.nuevo_estado);
+                Swal.fire({
+                    icon: "success",
+                    title: "Presupuesto autorizado",
+                    text: "El estado se actualizó a: " + data.nuevo_estado,
+                    timer: 1500,
+                    showConfirmButton: false
+                }).then(() => {
+                // 🔹 Recargar después del cierre del Swal 
+                location.reload();
+            });
+            } else {
+                Swal.fire({
+                    icon: "error",
+                    title: "Error",
+                    text: data.error || "No se pudo autorizar el presupuesto."
+                });
+            }
+        })
+        .catch(err => {
+            Swal.fire({
+                icon: "error",
+                title: "Error de conexión",
+                text: err
+            });
+        });
+    };
+    
+    function actualizarSaldoDetalle(saldo){
+        const saldoElem = document.getElementById("saldo-detalle");
+        saldoElem.textContent = "$" + formatearNumeroAR(saldo);
+    }
+    function actualizarEstadoPresupuesto(nuevoEstadoTexto) {
+        const estadoSpan = document.getElementById("estado-presupuesto");
+
+        // Limpia todas las clases previas de estilo
+        estadoSpan.className = "estado-badge";
+
+        // Define colores y estilos según el estado
+        switch (nuevoEstadoTexto.toLowerCase()) {
+            case "pendiente":
+                estadoSpan.style.backgroundColor = "#ffc107"; // amarillo
+                estadoSpan.style.color = "#000";
+                break;
+            case "autorizado":
+                estadoSpan.style.backgroundColor = "#17a2b8"; // celeste
+                estadoSpan.style.color = "#fff";
+                break;
+            case "en curso":
+                estadoSpan.style.backgroundColor = "#28a745"; // a 
+                estadoSpan.style.color = "#fff";
+                break;
+            case "cerrado":
+                estadoSpan.style.backgroundColor = "#6f42c1"; // verde
+                estadoSpan.style.color = "#fff";
+                break;
+            case "expirado":
+                estadoSpan.style.backgroundColor = "#dc3545"; // rojo
+                estadoSpan.style.color = "#fff";
+                break;
+            default:
+                estadoSpan.style.backgroundColor = "#6c757d"; // gris
+                estadoSpan.style.color = "#fff";
+        }
+
+        // Agrega efecto visual de transición suave
+        estadoSpan.style.transition = "all 0.5s ease";
+        estadoSpan.style.transform = "scale(1.2)";
+        setTimeout(() => {
+            estadoSpan.style.transform = "scale(1)";
+        }, 300);
+
+        // Actualiza el texto del estado
+        estadoSpan.textContent = nuevoEstadoTexto;
+    }
 });
+
+
+const btnCerrar = document.getElementById("btnCerrarPresupuesto");
+const modalCerrar = new bootstrap.Modal(document.getElementById("modalCerrar"));
+const estadoSpan = document.getElementById("estado-presupuesto");
+
+if (btnCerrar) {
+    btnCerrar.onclick = function() {
+        const id = btnCerrar.dataset.presupuestoId;
+        const url = "{% url 'presupuestos_app:cerrar_presupuesto' 0 %}".replace("0", id);
+
+        fetch(url, {
+            method: "POST",
+            headers: {
+                "X-CSRFToken": "{{ csrf_token }}",
+                "X-Requested-With": "XMLHttpRequest"
+            }
+        })
+        .then(resp => resp.json())
+        .then(data => {
+            modalCerrar.hide();
+            if (data.success) {
+                Swal.fire({
+                    icon: "success",
+                    title: "Presupuesto cerrado",
+                    text: "Ya no se puede modificar este presupuesto.",
+                    timer: 2000,
+                    showConfirmButton: false
+                });
+                estadoSpan.textContent = data.nuevo_estado;
+                estadoSpan.className = "badge bg-purple";
+                document.querySelectorAll(".btn-warning, .btn-success, .btn-info").forEach(b => b.disabled = true);
+                // 🔹 Recarga la página luego de un breve delay
+                setTimeout(() => {
+                    location.reload();
+                }, 2000);
+            } else {
+                Swal.fire({
+                    icon: "error",
+                    title: "Error",
+                    text: data.error
+                });
+            }
+        })
+        .catch(err => {
+            Swal.fire({
+                icon: "error",
+                title: "Error de conexión",
+                text: err
+            });
+        });
+    };
+}
+
+
 </script>
 
 <style>

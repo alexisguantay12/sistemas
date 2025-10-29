@@ -42,10 +42,12 @@ class ObraSocial(models.Model):
 class Presupuesto(BaseAbstractWithUser):
     ESTADOS = [
         ('pendiente', 'Pendiente'),
-        ('concretado', 'Concretado'),
-        ('no_concretado', 'No Concretado'),
+        ('autorizado', 'Autorizado'),
+        ('en_curso', 'En curso'),
+        ('cerrado', 'Cerrado'),
+        ('expirado', 'Expirado'),
+        ('anulado','Anulado')
     ]
-
     
     # Datos del paciente
     paciente_nombre = models.CharField(max_length=200)
@@ -63,7 +65,7 @@ class Presupuesto(BaseAbstractWithUser):
     fecha_creacion = models.DateTimeField()
     estado = models.CharField(max_length=20, choices=ESTADOS, default='pendiente')
     motivo_no_concretado = models.TextField(blank=True, null=True)
-
+ 
 
     # Usuario que lo cargó 
 
@@ -84,8 +86,10 @@ class Presupuesto(BaseAbstractWithUser):
 class Pago(BaseAbstractWithUser):
     MEDIOS_PAGO = [
         ("efectivo", "Efectivo"),
+        ("cajab","Caja B"),
         ("transferencia", "Transferencia"),
-        ("tarjeta", "Tarjeta"),
+        ("tarjeta_credito", "Tarjeta Credito"),
+        ("tarjeta_debito","Tarjeta Debito")
     ]
 
     TIPO_CAJA = [
@@ -99,6 +103,7 @@ class Pago(BaseAbstractWithUser):
     observaciones = models.CharField(max_length=300, null=True,blank=True)
     caja = models.CharField(max_length=50,choices= TIPO_CAJA,  blank=True, null=True) 
     fecha = models.DateTimeField(auto_now_add=True) 
+    observaciones = models.CharField(max_length=300,null=True, blank=True)
     def __str__(self):
         return f"Pago {self.monto} - {self.presupuesto.id}"
 
@@ -127,6 +132,7 @@ class PresupuestoItem(models.Model):
     importe = models.DecimalField(max_digits=10, decimal_places=2, default=0)  # cantidad * precio
     iva = models.DecimalField(max_digits=10, decimal_places=2, default=0)      # monto de IVA
     subtotal = models.DecimalField(max_digits=10, decimal_places=2, default=0) # total con IVA
+    comentario = models.CharField(max_length=500,null=True,blank=True)
     TIPO_CHOICES = [
         ('gastos', 'Gastos'),
         ('especialista', 'Especialista'),

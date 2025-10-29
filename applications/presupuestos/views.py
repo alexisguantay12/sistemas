@@ -22,7 +22,7 @@ from reportlab.platypus import Table, TableStyle
 from reportlab.lib.styles import getSampleStyleSheet
 from reportlab.lib.utils import ImageReader
 from django.contrib.auth.decorators import login_required
-
+from django.views.decorators.cache import never_cache
 from .models import (
     Presupuesto, PresupuestoItem, Prestacion, PresupuestoHistorial, Pago, Medico, ObraSocial
 )
@@ -46,33 +46,55 @@ from django.template.loader import render_to_string
 from django.utils import timezone
 from django.http import JsonResponse
 
+
 def registrar_pago(request, pk):
     presupuesto = get_object_or_404(Presupuesto, id=pk)
 
     if request.method == 'POST' and request.headers.get('X-Requested-With') == 'XMLHttpRequest':
         monto = request.POST.get('monto')
         medio = request.POST.get('medio_pago')
-        caja = request.POST.get('caja')
+        comentario = request.POST.get('observaciones_pago')
 
         if not monto:
             return JsonResponse({'success': False, 'error': 'Monto inválido'})
 
-        Pago.objects.create(
-            presupuesto=presupuesto,
-            monto=monto,
-            medio_pago=medio,
-            caja=caja,
-            user_made=request.user
-        )
+        try:
+            with transaction.atomic():
+                # Crear el pago
+                Pago.objects.create(
+                    presupuesto=presupuesto,
+                    monto=monto,
+                    medio_pago=medio,
+                    observaciones=comentario,
+                    user_made=request.user
+                )
 
-        pagos = presupuesto.pagos.all().order_by('-fecha')
-        for p in pagos:
-            p.puede_eliminar = (timezone.now() - p.fecha).total_seconds() < 900 and p.user_made==request.user
+                # Cambiar estado del presupuesto
+                if presupuesto.estado != "en_curso":
+                    presupuesto.estado = "en_curso"
+                    presupuesto.save()
 
-        pagos_html = render_to_string('presupuestos/partials/_tabla_pagos.html', {'pagos': pagos})
-        total_pagado = sum(pago.monto for pago in presupuesto.pagos.all())
-        saldo = presupuesto.total - (total_pagado or 0)  # previene None
-        return JsonResponse({'success': True, 'pagos_html': pagos_html,'total_pagado':total_pagado,'saldo':saldo})
+            # Actualizar listado de pagos
+            pagos = presupuesto.pagos.all().order_by('-fecha')
+            for p in pagos:
+                p.puede_eliminar = (
+                    (timezone.now() - p.fecha).total_seconds() < 900 and p.user_made == request.user
+                ) or request.user.groups.filter(name='administrador').exists()
+
+            pagos_html = render_to_string('presupuestos/partials/_tabla_pagos.html', {'pagos': pagos})
+            total_pagado = sum(pago.monto for pago in presupuesto.pagos.all())
+            saldo = presupuesto.total - (total_pagado or 0)
+
+            return JsonResponse({
+                'success': True,
+                'pagos_html': pagos_html,
+                'total_pagado': total_pagado,
+                'saldo': saldo,
+                'estado':presupuesto.get_estado_display()
+            })
+
+        except Exception as e:
+            return JsonResponse({'success': False, 'error': f'Error al registrar el pago: {str(e)}'})
 
     return JsonResponse({'success': False, 'error': 'Petición no válida'})
 # ============================================================
@@ -84,19 +106,66 @@ from django.views.decorators.http import require_POST
 @require_POST
 def eliminar_pago(request, pk):
     pago = get_object_or_404(Pago, id=pk)
- 
     presupuesto = pago.presupuesto
-    pago.user_deleted=request.user
-    pago.delete()
 
-    pagos = presupuesto.pagos.all().order_by('-fecha')
-    for p in pagos:
-        p.puede_eliminar = (timezone.now() - p.fecha).total_seconds() < 900 and p.user_made==request.user
-    total_pagado = sum(pago.monto for pago in presupuesto.pagos.all())
-    saldo = presupuesto.total - (total_pagado or 0)  # previene None
-    pagos_html = render_to_string('presupuestos/partials/_tabla_pagos.html', {'pagos': pagos})
-    return JsonResponse({'success': True, 'pagos_html': pagos_html,'total_pagado':total_pagado,'saldo':saldo})
+    try:
+        with transaction.atomic():
+            # Marcar usuario que eliminó y borrar el pago
+            pago.user_deleted = request.user
+            pago.delete()
 
+            # Si no quedan pagos, actualizar estado del presupuesto
+            if not presupuesto.pagos.exists():
+                presupuesto.estado = "autorizado"
+                presupuesto.save()
+
+        # Actualizar datos de respuesta
+        pagos = presupuesto.pagos.all().order_by('-fecha')
+        for p in pagos:
+            p.puede_eliminar = (
+                (timezone.now() - p.fecha).total_seconds() < 900 and p.user_made == request.user
+            ) or request.user.groups.filter(name='administrador').exists()
+
+        total_pagado = sum(pago.monto for pago in presupuesto.pagos.all())
+        saldo = presupuesto.total - (total_pagado or 0)
+
+        pagos_html = render_to_string('presupuestos/partials/_tabla_pagos.html', {'pagos': pagos})
+
+        return JsonResponse({
+            'success': True,
+            'pagos_html': pagos_html,
+            'total_pagado': total_pagado,
+            'saldo': saldo,
+            'estado':presupuesto.get_estado_display()
+        })
+
+    except Exception as e:
+        return JsonResponse({'success': False, 'error': f'Error al eliminar el pago: {str(e)}'})
+
+
+@require_POST
+def cerrar_presupuesto(request, pk):
+    presupuesto = get_object_or_404(Presupuesto, id=pk)
+
+    if presupuesto.estado == "cerrado":
+        return JsonResponse({
+            "success": False,
+            "error": "El presupuesto ya está cerrado."
+        })
+
+    try:
+        with transaction.atomic():
+            presupuesto.estado = "cerrado"
+            presupuesto.save()
+        return JsonResponse({
+            "success": True,
+            "nuevo_estado": presupuesto.get_estado_display()
+        })
+    except Exception as e:
+        return JsonResponse({
+            "success": False,
+            "error": f"Error al cerrar el presupuesto: {e}"
+        })
 
 
 @login_required
@@ -107,7 +176,7 @@ def detalle_presupuesto(request, pk):
     total_pagado = sum(pago.monto for pago in presupuesto.pagos.all())
     saldo = presupuesto.total - (total_pagado or 0)  # previene None
     for p in pagos:
-        p.puede_eliminar = (timezone.now() - p.fecha).total_seconds() < 900 and p.user_made==request.user
+        p.puede_eliminar = (((timezone.now() - p.fecha).total_seconds() < 900 and p.user_made==request.user) or request.user.groups.filter(name='administrador').exists()) and presupuesto.estado!='cerrado'
     historial_json = []
     for h in historial:
         datos = h.datos  # dict con todos los datos guardados
@@ -231,16 +300,41 @@ def detalle_historial(request, historial_id):
     historial = get_object_or_404(PresupuestoHistorial, id=historial_id)
     return render(request, "presupuestos/detalle_historial.html", {"historial": historial})
 
+def autorizar_presupuesto(request, pk):
+    if request.method != "POST":
+        return JsonResponse({"success": False, "error": "Método no permitido"}, status=405)
 
+    presupuesto = get_object_or_404(Presupuesto, id=pk)
+
+    if presupuesto.estado == "pendiente":
+        # ✅ Si tiene pagos, pasa a "en curso"
+        if presupuesto.pagos.exists():
+            presupuesto.estado = "en_curso"
+        else:
+            presupuesto.estado = "autorizado"
+
+        presupuesto.save()
+        estado_nuevo = presupuesto.get_estado_display()
+        return JsonResponse({"success": True, "nuevo_estado": estado_nuevo})
+    else:
+        return JsonResponse({
+            "success": False,
+            "error": f"No se puede autorizar un presupuesto con estado '{presupuesto.get_estado_display()}'."
+        })
 # ============================================================
 # ✏️ Edición de Presupuesto
 # ============================================================
-
+@never_cache
 @login_required
 def editar_presupuesto(request, pk):
     presupuesto = get_object_or_404(Presupuesto, pk=pk)
     tiene_iva = presupuesto.items.filter(iva__gt=0).exists()
-
+    print("Entre aqui")
+        # 🚫 Bloquear acceso a edición según estado
+    if presupuesto.estado in ["cerrado", "expirado"]:
+        messages.error(request, "No se puede editar un presupuesto cerrado o expirado.")
+        return redirect("presupuestos_app:detalle_presupuesto", pk=presupuesto.pk)
+    
     if request.method == "POST":
         # Guardar historial antes de modificar
         try:
@@ -253,9 +347,12 @@ def editar_presupuesto(request, pk):
                 presupuesto.paciente_telefono = request.POST.get("paciente_telefono")
                 presupuesto.paciente_email = request.POST.get("paciente_email") 
                 presupuesto.diagnostico = request.POST.get("diagnostico")
+                presupuesto.motivo_no_concretado = request.POST.get("observaciones")
+                presupuesto.episodio = request.POST.get("episodio")
+                presupuesto.estado = 'pendiente'
                 presupuesto.user_updated = request.user
                 presupuesto.save()
-
+                print("Entre aqui")
                 # Eliminar items anteriores
                 presupuesto.items.all().delete()
 
@@ -289,7 +386,7 @@ def editar_presupuesto(request, pk):
                 return redirect("presupuestos_app:detalle_presupuesto", pk=presupuesto.pk)
         except Exception as e:
             # Manejo de errores
-            print("Error al crear presupuesto y pago:", e)
+            print("Error al editar presupuesto y pago:", e)
             return None, None
         
     #Esta parte del codigo ordena por codigo antes de presentarlo en la tabla de presupuesto
@@ -350,6 +447,8 @@ def agregar_presupuesto(request):
                     obra_social=obra_social,
                     medico=medico,
                     diagnostico=request.POST.get("diagnostico"),
+                    motivo_no_concretado = request.POST.get("observaciones"),
+                    episodio = request.POST.get("episodio"),
                     fecha_creacion = fecha_final,
                     user_made=request.user,
                     user_updated=request.user
@@ -364,7 +463,8 @@ def agregar_presupuesto(request):
                 importes = request.POST.getlist("importe")
                 ivas = request.POST.getlist("iva")
                 subtotales = request.POST.getlist("subtotal")
-
+                comentarios = request.POST.getlist("comentario")
+                print(comentarios)
                 with transaction.atomic():
                     for i in range(len(prestaciones)):
                         if not prestaciones[i].strip():
@@ -379,8 +479,9 @@ def agregar_presupuesto(request):
                             importe=float(importes[i].replace('.', '').replace(',', '.')) if importes[i] else 0,
                             iva=float(ivas[i].replace('.', '').replace(',', '.')) if ivas[i] else 0,
                             subtotal=float(subtotales[i].replace('.', '').replace(',', '.')) if subtotales[i] else 0,
+                            comentario = comentarios[i] or "",
                         )
-                return render(request, "presupuestos/redirigir_pdf.html", {"presupuesto_id": presupuesto.id})
+                return redirect("presupuestos_app:presupuestos")
         except Exception as e:
             # Manejo de errores
             print("Error al crear presupuesto y pago:", e)
@@ -416,6 +517,7 @@ def get_prestacion(request, codigo):
         "prestacion": prestacion.codigo,
         "nombre": prestacion.nombre,
         "precio": float(precio_u),
+        "tipo": prestacion.tipo or "",
     }
     return JsonResponse(data)
 
@@ -481,66 +583,97 @@ def parse_price(value):
     except (InvalidOperation, ValueError):
         return Decimal("0.00")
 
+
 @login_required
 def cargar_nomenclador(request):
-    """Carga o actualiza prestaciones desde un archivo Excel."""
-    resumen = {'creadas': 0, 'actualizadas': 0, 'errores': []}
+    """Carga o actualiza prestaciones desde un archivo Excel y expira presupuestos antiguos."""
+    resumen = {'creadas': 0, 'actualizadas': 0, 'errores': [], 'expirados': 0}
 
     if request.method == "POST":
         form = NomencladorUploadForm(request.POST, request.FILES)
         if form.is_valid():
             archivo = form.cleaned_data['archivo']
 
-            def procesar_fila(row_index, cells):
-                try:
-                    if all((c is None or (isinstance(c, str) and c.strip() == "")) for c in cells):
-                        return
-                    codigo = str(cells[0]).strip() if len(cells) >= 1 and cells[0] else None
-                    nombre = str(cells[1]).strip() if len(cells) >= 2 and cells[1] else None
-                    especialista = parse_price(cells[2]) if len(cells) >= 3 else None
-                    gastos = parse_price(cells[5]) if len(cells) >= 6 else None
-                    if not codigo or not nombre:
-                        raise ValueError(f"Fila {row_index}: falta código o nombre")
-                    if especialista is None or gastos is None:
-                        raise ValueError(f"Fila {row_index}: faltan valores de especialista o gastos")
-
-                    prest = Prestacion.objects.filter(codigo__iexact=codigo).first()
-                    if not prest and not codigo:
-                        prest = Prestacion.objects.filter(nombre__iexact=nombre).first()
-
-                    if prest:
-                        prest.nombre = nombre
-                        prest.codigo = codigo
-                        prest.especialista = especialista
-                        prest.gastos = gastos
-                        prest.save()
-                        resumen['actualizadas'] += 1
-                    else:
-                        Prestacion.objects.create(
-                            nombre=nombre,
-                            codigo=codigo,
-                            especialista=especialista,
-                            gastos=gastos
-                        )
-                        resumen['creadas'] += 1
-
-                except Exception as ex:
-                    resumen['errores'].append(f"Fila {row_index}: {str(ex)}")
-
             try:
-                with transaction.atomic():
+                with transaction.atomic():  # ⛔ Bloquea todo el proceso en una única transacción
+                    # === PROCESAR NOMENCLADOR ===
                     wb = load_workbook(filename=archivo, read_only=True, data_only=True)
                     ws = wb.active
+
                     for i, row in enumerate(ws.iter_rows(values_only=True), start=1):
                         if i < 4:
                             continue
-                        procesar_fila(i, list(row))
-            except Exception as ex:
-                resumen['errores'].append(f"Error general: {str(ex)}")
 
+                        try:
+                            # --- Procesar fila individual ---
+                            if all((c is None or (isinstance(c, str) and c.strip() == "")) for c in row):
+                                continue
+
+                            codigo = str(row[0]).strip() if len(row) >= 1 and row[0] else None
+                            nombre = str(row[1]).strip() if len(row) >= 2 and row[1] else None
+                            especialista = parse_price(row[2]) if len(row) >= 3 else None
+                            gastos = parse_price(row[5]) if len(row) >= 6 else None
+
+                            if not codigo or not nombre:
+                                raise ValueError(f"Fila {i}: falta código o nombre")
+                            if especialista is None or gastos is None:
+                                raise ValueError(f"Fila {i}: faltan valores de especialista o gastos")
+
+                            prest = Prestacion.objects.filter(codigo__iexact=codigo).first()
+                            if not prest and not codigo:
+                                prest = Prestacion.objects.filter(nombre__iexact=nombre).first()
+
+                            if prest:
+                                prest.nombre = nombre
+                                prest.codigo = codigo
+                                prest.especialista = especialista
+                                prest.gastos = gastos
+                                prest.save()
+                                resumen['actualizadas'] += 1
+                            else:
+                                Prestacion.objects.create(
+                                    nombre=nombre,
+                                    codigo=codigo,
+                                    especialista=especialista,
+                                    gastos=gastos
+                                )
+                                resumen['creadas'] += 1
+
+                        except Exception as ex:
+                            resumen['errores'].append(f"Fila {i}: {str(ex)}")
+                    from datetime import timedelta
+                    from django.utils import timezone
+                    # === EXPIRAR PRESUPUESTOS ANTIGUOS ===
+                    fecha_limite = timezone.now() - timedelta(days=10)
+
+                    presupuestos_a_expirar = Presupuesto.objects.filter(
+                        estado__in=["pendiente", "autorizado"],
+                        pagos__isnull=True,
+                        updated_at__lte=fecha_limite
+                    ).distinct()
+
+                    resumen['expirados'] = presupuestos_a_expirar.count()
+
+                    # 🧾 Se actualizan todos dentro de la misma transacción
+                    for p in presupuestos_a_expirar:
+                        p.estado = "expirado"
+                        p.updated_at = timezone.now()
+                        p.save()
+
+            except Exception as ex:
+                resumen['errores'].append(f"Error general en la transacción: {str(ex)}")
+                messages.error(request, "Ocurrió un error al procesar el archivo. No se realizaron cambios.")
+                return render(request, 'presupuestos/cargar_nomenclador.html', {
+                    'form': NomencladorUploadForm(),
+                    'resumen': resumen
+                })
+
+            # ✅ Solo se llega aquí si todo fue exitoso
             messages.success(
                 request,
-                f"Nomenclador procesado. Creadas: {resumen['creadas']}, Actualizadas: {resumen['actualizadas']}."
+                f"Nomenclador procesado correctamente. "
+                f"Creadas: {resumen['creadas']}, Actualizadas: {resumen['actualizadas']}, "
+                f"Expiradas: {resumen['expirados']}."
             )
             return render(request, 'presupuestos/cargar_nomenclador.html', {
                 'form': NomencladorUploadForm(),
@@ -630,7 +763,13 @@ def format_num(n):
 @login_required
 def imprimir_presupuesto(request, pk):
     presupuesto = Presupuesto.objects.get(pk=pk) 
-
+    if presupuesto.estado == 'pendiente' or presupuesto.estado=='expirado':
+        return HttpResponse(
+            "<h3 style='color:red; text-align:center; margin-top:50px;'>"
+            "❌ No se puede imprimir un presupuesto pendiente."
+            "</h3>",
+            content_type="text/html"
+        )
     items= (
         presupuesto.items
         .annotate(
@@ -676,8 +815,8 @@ def imprimir_presupuesto(request, pk):
     from django.conf import settings
     logo_path = os.path.join(settings.BASE_DIR, "static", "fotos", "hpsca_logo.jpg")
 
-    logo_width = 25 * mm   # ancho del logo
-    logo_height = 25 * mm  # alto del logo
+    logo_width = 29 * mm   # ancho del logo
+    logo_height = 29 * mm  # alto del logo
     try:
         logo = ImageReader(logo_path)
         c.drawImage(
@@ -693,7 +832,7 @@ def imprimir_presupuesto(request, pk):
         print("No se pudo cargar el logo:", e)
 
     c.setFont("Helvetica-Bold", 11) 
-    texto = "PRESUPUESTO"
+    texto = f"PRESUPUESTO Nº {presupuesto.id}"
     ancho_pagina = A4[0]
 
     # Calcular ancho del texto para centrarlo
@@ -714,12 +853,12 @@ def imprimir_presupuesto(request, pk):
 
 
     # --- Datos generales ---
-    c.setFont("Helvetica", 10)
+    c.setFont("Helvetica", 9)
     c.drawString(margen_izq, y_actual, f"Fecha: {presupuesto.fecha_creacion.strftime('%d/%m/%Y')}")
     c.drawString(width/2, y_actual, f"Obra Social: {presupuesto.obra_social}")
     y_actual -= 6*mm
     c.drawString(margen_izq, y_actual, f"Paciente: {presupuesto.paciente_nombre}")
-    c.drawString(width/2, y_actual, f"Edad: {presupuesto.paciente_edad or ''}   DNI: {presupuesto.paciente_dni or ''}")
+    c.drawString(width/2, y_actual, f"Edad: {presupuesto.paciente_edad or '  '}                 DNI: {presupuesto.paciente_dni or ''}")
     y_actual -= 6*mm
     c.drawString(margen_izq, y_actual, f"Dirección: {presupuesto.paciente_direccion or ''}")
     c.drawString(width/2, y_actual, f"Teléfono: {presupuesto.paciente_telefono or ''}")
@@ -734,7 +873,7 @@ def imprimir_presupuesto(request, pk):
     for item in items:
         data.append([
             item.codigo or "",
-            item.prestacion or "",
+            item.prestacion.capitalize() or "",
             item.cantidad,
             format_num(item.precio),
             format_num(item.importe),
@@ -762,40 +901,113 @@ def imprimir_presupuesto(request, pk):
     # Actualizar y_actual después de dibujar la tabla
     y_actual -= table_height + 10*mm
         # --- Totales ---
+    # --- Totales y Pagos (lado a lado) ---
+
     c.setFont("Helvetica-Bold", 9)
-    c.drawRightString(width - margen_der, y_actual, f"Subtotal: $ {format_num(presupuesto.total)}")
-    y_actual -= 6*mm
-    c.drawRightString(width - margen_der, y_actual, f"IVA (21%): ${format_num(presupuesto.iva)}")
-    y_actual -= 6*mm
-    c.drawRightString(width - margen_der, y_actual, f"Total Presupuesto: ${format_num(presupuesto.total)} ")
-    y_actual -= 10*mm
+
+    # === Columna izquierda: pagos parciales ===
+    x_pagos = margen_izq
+    y_pagos = y_actual
+
+    c.drawString(x_pagos, y_pagos+2*mm, "Pagos Parciales:")
+    c.setFont("Helvetica", 8)
+    y_pagos -= 5*mm
+
+    # 🔹 ejemplo de pagos (puedes reemplazar por tus datos reales)
+    pagos = [
+        (p.fecha.strftime("%d/%m/%Y"), float(p.monto))
+        for p in presupuesto.pagos.all().order_by("fecha")
+    ]
+    for fecha, monto in pagos:
+        c.drawString(x_pagos , y_pagos, f"{fecha}:")
+        c.drawRightString(width/2 - 6*mm, y_pagos, f"$ {format_num(monto)}")
+        y_pagos -= 4*mm
+
+    # Calcular total de pagos y saldo pendiente
+    total_pagos = sum((p.monto for p in presupuesto.pagos.all()), Decimal("0"))
+    saldo = presupuesto.total - total_pagos
+
+    # Línea divisoria visual entre columnas
+    c.setStrokeColor(colors.lightgrey)
+    c.setLineWidth(0.4)
+    c.line(width/2, y_actual + 2*mm, width/2, y_actual - 20*mm)  # línea vertical separadora
+
+    # === Columna derecha: totales ===
+    x_totales = width - margen_der
+    y_totales = y_actual
+
+    c.setFont("Helvetica-Bold", 9)
+    c.drawRightString(x_totales, y_totales, f"Subtotal (sin IVA): $ {format_num(presupuesto.subtotal)}")
+    y_totales -= 6*mm
+    c.drawRightString(x_totales, y_totales, f"IVA (21%): $ {format_num(presupuesto.iva)}")
+    y_totales -= 6*mm
+    c.drawRightString(x_totales, y_totales, f"Total Presupuesto: $ {format_num(presupuesto.total)}")
+
+    # 💰 Saldo pendiente destacado
+    y_totales -= 8*mm
+    c.setFont("Helvetica-Bold", 10) 
+    c.drawRightString(x_totales, y_totales, f"Saldo pendiente: $ {format_num(saldo)}")
+    c.setFillColor(colors.black)
 
     # --- Observaciones ---
+    y_actual = y_totales - 8*mm
+    c.setFont("Helvetica-Bold", 10)
+    c.drawString(margen_izq, y_actual, "OBSERVACIONES:")
+    c.setFont("Helvetica", 9)
+    y_actual -= 5*mm
     texto_obs = """\
-El presente presupuesto tiene una validez de 7 días.
+El presente presupuesto tiene una validez de 7 días habiles.
+El presupuesto debe estar abonado en forma previa al ingreso del paciente.
 NO INCLUYE Honorarios Médicos.
 NO INCLUYE Honorarios Anestesistas (Dirigirse a Sra. Viviana Baigorria 152-259689)
 NO INCLUYE Honorarios por Transfusiones de Sangre. En caso de necesitar, dirigirse a BANCO DE SANGRE.
-El monto presupuestado es ESTIMATIVO, el valor final dependerá de la medicación indicada y de los días de internación adicionales.
-EXCLUYE prácticas no detalladas."""
+NO INCLUYE prácticas no detalladas.
+El monto presupuestado es ESTIMATIVO y no incluye medicamentos de alto costo.
+Puede consultar su liquidación final 72hs habiles posteriores al alta."""
     text_obj = c.beginText(margen_izq, y_actual)
     text_obj.setFont("Helvetica", 8)
     for line in texto_obs.split("\n"):
         text_obj.textLine(line)
         y_actual -= 4*mm  # Ajuste vertical por línea
     c.drawText(text_obj)
-    y_actual -= 10*mm
+    y_actual -= 3*mm
 
     # --- Formas de pago ---
     c.setFont("Helvetica-Bold", 10)
     c.drawString(margen_izq, y_actual, "FORMAS DE PAGO:")
     y_actual -= 6*mm
     c.setFont("Helvetica", 9)
-    c.drawString(margen_izq, y_actual, "Efectivo, tarjeta de crédito, débito o cheque a la orden de Hospital Privado Santa Clara de Asís S.A.")
+    c.drawString(margen_izq, y_actual, "Efectivo, tarjeta de crédito, débito o transferencia (CBU: 2850100630000800105391 ALIAS:SOGA.BOLSA.COBRE)")
+    y_actual -= 5*mm
+    c.drawString(margen_izq, y_actual, "Hospital Privado Santa Clara de Asís S.A.")
     y_actual -= 25*mm
-
     # --- Firma ---
-    c.drawString(margen_izq, y_actual, f"Confecciono: {presupuesto.user_updated.first_name},{presupuesto.user_updated.last_name}")
+    from datetime import datetime
+    # --- Fecha y hora de impresión ---
+    fecha_impresion = datetime.now().strftime("%d/%m/%Y %H:%M")
+    c.setFont("Helvetica", 9)
+    c.drawString(margen_izq, y_actual + 5*mm, f"Fecha y hora de impresión: {fecha_impresion}")
+
+
+    c.drawString(margen_izq, y_actual, f"Confeccionó: {presupuesto.user_updated.first_name},{presupuesto.user_updated.last_name}")
+    # --- Firma digital autorizada ---
+    firma_path = os.path.join(settings.BASE_DIR, "static", "fotos", "paolaulloa.jpg")
+    firma_width = 55 * mm   # ancho deseado de la firma
+    firma_height = 25 * mm  # alto deseado de la firma
+
+    try:
+        firma_img = ImageReader(firma_path)
+        c.drawImage(
+            firma_img,
+            width - margen_der - 53*mm,  # mismo eje X que la línea de firma
+            y_actual - 1*mm,             # un poco arriba de la línea
+            width=firma_width,
+            height=firma_height,
+            preserveAspectRatio=True,
+            mask='auto'
+        )
+    except Exception as e:
+        print("No se pudo cargar la firma digital:", e)
     c.drawString(width-margen_der-50*mm, y_actual, "_________________________")
     c.drawString(width-margen_der-40*mm, y_actual-6*mm, "Firma Autorizado")
 

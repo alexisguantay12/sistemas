@@ -53,7 +53,7 @@
         button {
             width: 100%;
             padding: 14px;
-            background-color: #c4a24f;
+            background-color: #3128df;
             border: none;
             color: white;
             font-weight: bold;
@@ -81,12 +81,12 @@
 <div class="login-container">
     <h2>Iniciar Sesión</h2>
 
-    {% if messages %}
+    {% if form.non_field_errors %}
         <div class="error">
-            {% for message in messages %}
-                <p>{{ message }}</p>
+            {% for error in form.non_field_errors %}
+                <p><i class="fas fa-times-circle"></i> {{ error }}</p>
             {% endfor %}
-        </div>
+        </div> 
     {% endif %}
 
     <form method="post">

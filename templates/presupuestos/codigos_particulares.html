@@ -133,6 +133,20 @@ document.getElementById("btnLimpiar").addEventListener("click", () => {
   document.getElementById("codigo").readOnly = false;
 });
 
+
+document.getElementById("formPrestacion").addEventListener("submit", function(e) {
+  const codigo = document.getElementById("codigo").value.trim();
+
+  // Regex: al menos una letra (mayúscula o minúscula)
+  const tieneLetra = /[a-zA-Z]/.test(codigo);
+
+  if (!tieneLetra) {
+    e.preventDefault();
+    alert("El código debe contener al menos una letra.");
+    document.getElementById("codigo").focus();
+  }
+});
+
 // --- CONFIRMAR ELIMINAR ---
 document.querySelectorAll(".eliminar-btn").forEach(btn => {
   btn.addEventListener("click", e => {

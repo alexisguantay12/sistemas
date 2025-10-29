@@ -20,7 +20,7 @@
                 <code>Código</code>, <code>Nombre</code>, y <code>Precio</code>.
             </div>
 
-            <form method="post" enctype="multipart/form-data" class="mt-3">
+            <form id="formNomenclador" method="post" enctype="multipart/form-data" class="mt-3">
                 {% csrf_token %}
                 <div class="row align-items-center g-3">
                     <div class="col-md-8 col-lg-6">
@@ -31,7 +31,7 @@
                         </div>
                     </div>
                     <div class="col-md-4 col-lg-3">
-                        <button class="btn btn-primary w-100 shadow-sm">
+                        <button type="submit" class="btn btn-primary w-100 shadow-sm" id="btnSubir">
                             <i class="fas fa-upload me-1"></i> Subir y procesar
                         </button>
                     </div>
@@ -72,7 +72,9 @@
             {% if resumen.errores %}
             <hr>
             <div class="mt-3">
-                <h6 class="fw-bold text-danger"><i class="fas fa-exclamation-triangle me-2"></i> Detalles de errores</h6>
+                <h6 class="fw-bold text-danger">
+                    <i class="fas fa-exclamation-triangle me-2"></i> Detalles de errores
+                </h6>
                 <p class="text-muted mb-2">Se muestran los primeros 50:</p>
                 <ul class="list-group small" style="max-height:250px; overflow:auto;">
                     {% for e in resumen.errores|slice:":50" %}
@@ -89,6 +91,36 @@
     {% endif %}
 </div>
 
+<!-- 🔹 Modal de confirmación -->
+<div class="modal fade" id="modalConfirmarSubida" tabindex="-1" aria-labelledby="modalConfirmarSubidaLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow-lg">
+            <div class="modal-header bg-warning text-dark">
+                <h5 class="modal-title fw-bold" id="modalConfirmarSubidaLabel">
+                    <i class="fas fa-exclamation-triangle me-2"></i> Confirmar acción
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+            </div>
+            <div class="modal-body text-center">
+                <p class="fw-semibold mb-2">¿Desea subir un nuevo nomenclador?</p>
+                <p class="text-muted small mb-0">
+                    Recuerde que al subir se actualizarán los precios existentes.<br>
+                    Además, los presupuestos en <strong>pendiente</strong> o <strong>recibido</strong> con más de 
+                    <strong>7 días hábiles</strong> pasarán automáticamente a estado <strong>expirado</strong>.
+                </p>
+            </div>
+            <div class="modal-footer justify-content-center border-0">
+                <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">
+                    <i class="fas fa-times me-1"></i> Cancelar
+                </button>
+                <button type="button" class="btn btn-primary btn-sm" id="btnConfirmarSubida">
+                    <i class="fas fa-check me-1"></i> Confirmar y subir
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
 <!-- 💅 Estilos propios -->
 <style>
 .card {
@@ -101,4 +133,34 @@ input[type="file"] {
     background-color: #f9fafb;
 }
 </style>
+
+<!-- 🧠 Script funcional -->
+<script>
+document.addEventListener("DOMContentLoaded", function() {
+    const form = document.getElementById("formNomenclador");
+    const modal = new bootstrap.Modal(document.getElementById("modalConfirmarSubida"));
+    const btnConfirmar = document.getElementById("btnConfirmarSubida");
+
+    form.addEventListener("submit", function(e) {
+        e.preventDefault();
+        const archivo = form.querySelector('input[type="file"]').value;
+
+        if (!archivo) {
+            Swal.fire({
+                icon: "warning",
+                title: "Sin archivo seleccionado",
+                text: "Por favor seleccione un archivo antes de continuar.",
+                confirmButtonColor: "#c4a24f"
+            });
+            return;
+        }
+        modal.show();
+    });
+
+    btnConfirmar.addEventListener("click", function() {
+        modal.hide();
+        setTimeout(() => form.submit(), 300);
+    });
+});
+</script>
 {% endblock %}
