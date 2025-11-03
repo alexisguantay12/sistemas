@@ -956,21 +956,32 @@ def imprimir_presupuesto(request, pk):
     c.setFont("Helvetica", 9)
     y_actual -= 5*mm
     texto_obs = """\
+El monto presupuestado es ESTIMATIVO.    
 El presente presupuesto tiene una validez de 7 días habiles.
 El presupuesto debe estar abonado en forma previa al ingreso del paciente.
+
 NO INCLUYE Honorarios Médicos.
 NO INCLUYE Honorarios Anestesistas (Dirigirse a Sra. Viviana Baigorria 152-259689)
 NO INCLUYE Honorarios por Transfusiones de Sangre. En caso de necesitar, dirigirse a BANCO DE SANGRE.
 NO INCLUYE prácticas no detalladas.
-El monto presupuestado es ESTIMATIVO y no incluye medicamentos de alto costo.
+NO INCLUYE medicamentos de alto costo.
+
 Puede consultar su liquidación final 72hs habiles posteriores al alta."""
     text_obj = c.beginText(margen_izq, y_actual)
     text_obj.setFont("Helvetica", 8)
+
     for line in texto_obs.split("\n"):
-        text_obj.textLine(line)
-        y_actual -= 4*mm  # Ajuste vertical por línea
+        if line.strip() == "":
+            # Dibuja una línea horizontal corta en lugar del salto vacío
+            c.drawString(margen_izq + 20, y_actual, "" * 20)  # Línea visual corta
+            y_actual -= 0.8 * mm  # Pequeño espacio debajo
+        else:
+            text_obj.setTextOrigin(margen_izq, y_actual)
+            text_obj.textLine(line)
+            y_actual -= 4 * mm
+    
     c.drawText(text_obj)
-    y_actual -= 3*mm
+    y_actual -= 4 * mm
 
     # --- Formas de pago ---
     c.setFont("Helvetica-Bold", 10)
@@ -989,7 +1000,7 @@ Puede consultar su liquidación final 72hs habiles posteriores al alta."""
     c.drawString(margen_izq, y_actual + 5*mm, f"Fecha y hora de impresión: {fecha_impresion}")
 
 
-    c.drawString(margen_izq, y_actual, f"Confeccionó: {presupuesto.user_updated.first_name},{presupuesto.user_updated.last_name}")
+    c.drawString(margen_izq, y_actual, f"Confeccionó: {presupuesto.user_updated.last_name}, {presupuesto.user_updated.first_name}")
     # --- Firma digital autorizada ---
     firma_path = os.path.join(settings.BASE_DIR, "static", "fotos", "paolaulloa.jpg")
     firma_width = 55 * mm   # ancho deseado de la firma
