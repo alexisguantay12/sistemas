@@ -812,7 +812,10 @@ document.getElementById("tabla-prestaciones").addEventListener("change", e => {
 // Botones agregar/eliminar fila
 document.getElementById("agregar-fila").addEventListener("click", agregarFila);
 document.addEventListener("click", e => {
-    if (e.target.classList.contains("eliminar-fila")) eliminarFila(e.target.closest("tr"));
+    const btn = e.target.closest(".eliminar-fila");
+    if (btn) {
+        eliminarFila(btn.closest("tr"));
+    }
 });
 
 // Cambio de IVA incluido
