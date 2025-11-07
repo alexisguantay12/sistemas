@@ -190,6 +190,7 @@
                             <th>Importe</th>
                             <th>IVA</th>
                             <th>Total</th>
+                            <th class="text-center"><i class="fas fa-comment-dots"></i></th>
                         </tr>
                     </thead>
                     <tbody>
@@ -203,6 +204,19 @@
                             <td>${{ item.importe|floatformat:2|moneda_ar }}</td>
                             <td>${{ item.iva|floatformat:2|moneda_ar  }}</td>
                             <td>${{ item.subtotal|floatformat:2 |moneda_ar }}</td>
+                            <td class="text-center">
+                            {% if item.comentario %}
+                                <i class="fas fa-comment-dots text-warning cursor-pointer" 
+                                data-bs-toggle="modal" 
+                                data-bs-target="#modalVerComentario" 
+                                data-comentario="{{ item.comentario|escapejs }}"></i>
+                            {% else %}
+                                <i class="fas fa-comment-dots text-muted cursor-pointer" 
+                                data-bs-toggle="modal" 
+                                data-bs-target="#modalVerComentario" 
+                                data-comentario=""></i>
+                            {% endif %}
+                        </td>
                         </tr>
                         {% endfor %}
                     </tbody>
@@ -227,6 +241,28 @@
             </div>
         </div>
     </div>
+
+
+    <!-- Modal ver comentario (solo visualización) -->
+    <div class="modal fade" id="modalVerComentario" tabindex="-1" aria-labelledby="modalVerComentarioLabel" aria-hidden="true">
+        <div class="modal-dialog modal-sm modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header bg-info text-white py-2">
+                    <h6 class="modal-title" id="modalVerComentarioLabel">
+                        <i class="fas fa-comment-dots me-2"></i> Comentario del ítem
+                    </h6>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <textarea id="textoComentarioVer" class="form-control" rows="3" readonly></textarea>
+                </div>
+                <div class="modal-footer py-2">
+                    <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Cerrar</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
 
     <!-- Modal Registro de Pago -->
     <div class="modal fade" id="modalPago" tabindex="-1" aria-labelledby="modalPagoLabel" aria-hidden="true">
@@ -568,7 +604,14 @@ document.addEventListener("DOMContentLoaded", function() {
         vistaListado.style.display = "flex";
     });
 
- 
+    // === Modal de visualización de comentario ===
+    const modalVerComentario = document.getElementById("modalVerComentario");
+    modalVerComentario.addEventListener("show.bs.modal", function (event) {
+        const button = event.relatedTarget;
+        const comentario = button.getAttribute("data-comentario") || "";
+        const textarea = modalVerComentario.querySelector("#textoComentarioVer");
+        textarea.value = comentario;
+    });
 
 
     const form = document.getElementById("formRegistroPago");
