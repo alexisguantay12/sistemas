@@ -365,7 +365,7 @@ def editar_presupuesto(request, pk):
                 importes = request.POST.getlist("importe")
                 ivas = request.POST.getlist("iva")
                 subtotales = request.POST.getlist("subtotal")
-
+                comentarios = request.POST.getlist("comentario")
                 for i in range(len(codigos)):
                     if codigos[i].strip() == "" and prestaciones[i].strip() == "":
                         continue
@@ -380,6 +380,7 @@ def editar_presupuesto(request, pk):
                         importe=float(importes[i].replace('.', '').replace(',', '.')) if importes[i] else 0,
                         iva=float(ivas[i].replace('.', '').replace(',', '.')) if ivas[i] else 0,
                         subtotal=float(subtotales[i].replace('.', '').replace(',', '.')) if subtotales[i] else 0,
+                        comentario=comentarios[i] or "",
                     )
 
                 messages.success(request, "Presupuesto actualizado correctamente")

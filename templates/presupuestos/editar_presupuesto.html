@@ -278,7 +278,7 @@ td {
                                     </button>
 
                                     <!-- Input oculto donde se guardará el comentario -->
-                                    <input type="hidden" value="{{ item.comentario }}"  name="comentario" class="comentario">
+                                    <input type="hidden" value="{{ item.comentario|default_if_none:''  }}"  name="comentario" class="comentario">
                                 </td>
                             </tr>
                             {% empty %}
