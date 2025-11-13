@@ -19,7 +19,7 @@ class Ubicacion(models.Model):
 
 class Terminal(BaseAbstractWithUser):
     nombre = models.CharField(max_length=100,unique=True)
-    nombre_descriptivo = models.CharField(max_length=100,unique=True)
+    nombre_descriptivo = models.CharField(max_length=100,blank=True,null=True)
     mac = models.CharField(max_length=100)
     descripcion = models.TextField(blank=True)
     ubicacion = models.ForeignKey(Ubicacion, on_delete=models.SET_NULL, null=True)
