@@ -135,6 +135,7 @@ def agregar_pc(request):
 
         nombre = request.POST.get('nombre')
         mac = request.POST.get('mac')
+        nombre_descriptivo = request.POST.get('nombre-descriptivo')
         descripcion = request.POST.get('descripcion-pc')
         ubicacion_id = request.POST.get('ubicacion')
         estado = request.POST.get('estado-pc')
@@ -160,6 +161,7 @@ def agregar_pc(request):
             with transaction.atomic():
                 terminal = Terminal.objects.create(
                     nombre=nombre,
+                    nombre_descriptivo= nombre_descriptivo,
                     mac=mac,
                     descripcion=descripcion,
                     ubicacion_id=ubicacion_id,

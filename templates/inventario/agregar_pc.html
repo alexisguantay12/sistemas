@@ -12,8 +12,13 @@
                 {% csrf_token %}
                 <div class="row g-3">
                     <div class="col-md-4">
-                        <label class="form-label">Nombre</label>
+                        <label class="form-label">Hostname</label>
                         <input type="text" id="nombre" name="nombre" class="form-control" autocomplete="off" required>
+                        <div class="form-text text-danger" id="nombre-error"></div>
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label">Nombre Descriptivo</label>
+                        <input type="text" id="nombre-descriptivo" name="nombre-descriptivo" class="form-control" autocomplete="off" required>
                         <div class="form-text text-danger" id="nombre-error"></div>
                     </div>
                     <div class="col-md-4">
