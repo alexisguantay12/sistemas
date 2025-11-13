@@ -14,6 +14,7 @@ urlpatterns = [
     
     path('ubicaciones/', views.obtener_ubicaciones, name='obtener_ubicaciones'),
 
+    path("clientes/", views.ver_clientes_unifi, name="unifi_clientes"),
 
     path('componentes/agregar/', views.agregar_componente, name='agregar_componente'),
     path('componentes/', views.listar_componentes, name='listar_componentes'),

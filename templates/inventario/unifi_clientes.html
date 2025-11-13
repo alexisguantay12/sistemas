@@ -1,0 +1,32 @@
+{% extends "base.html" %}
+{% block content %}
+<h2>Clientes activos UniFi</h2>
+
+<pre>
+{{ clientes|safe }}
+</pre>
+
+<table class="table table-bordered">
+    <thead>
+        <tr>
+            <th>Hostname</th>
+            <th>MAC</th>
+            <th>IP</th>
+            <th>Vendor</th>
+            <th>Uptime</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for cli in clientes %}
+        <tr>
+            <td>{{ cli.hostname|default:"-" }}</td>
+            <td>{{ cli.mac }}</td>
+            <td>{{ cli.ip }}</td>
+            <td>{{ cli.oui|default:"-" }}</td>
+            <td>{{ cli.uptime|default:"0" }} seg</td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+
+{% endblock %}

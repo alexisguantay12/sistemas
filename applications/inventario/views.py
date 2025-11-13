@@ -13,10 +13,30 @@ def listar_pcs(request):
 
 
 
+
 from django.shortcuts import render, get_object_or_404, redirect
 from django.contrib import messages
 from django.db import transaction
 from .models import Terminal, Componente, ComponenteStock, Ubicacion
+
+
+from django.shortcuts import render 
+import requests 
+from .unifi import login, get_api_key, get_clients_active  # ← acá sí existe
+
+def ver_clientes_unifi(request):
+    session = requests.Session()
+
+    try:
+        login(session)
+        api_key = get_api_key(session)
+        clientes = get_clients_active(session, api_key)
+    except Exception as e:
+        clientes = []
+        print("Error:", e)
+
+    return render(request, "inventario/unifi_clientes.html", {"clientes": clientes})
+
 
 def editar_pc(request, pk):
     terminal = get_object_or_404(Terminal, id=pk)
@@ -185,10 +205,48 @@ def verificar_nombre_terminal(request):
 def detalle_pc(request, pk):
     terminal = get_object_or_404(Terminal, pk=pk)
     componentes = Componente.objects.filter(terminal=terminal)
+
+    # === Obtener información desde UniFi ===
+    unifi_info = {
+        "conectado": False,
+        "ip": "-",
+        "tipo": "-"
+    }
+
+    try:
+        session = requests.Session()
+        login(session)
+        api_key = get_api_key(session)
+        clientes = get_clients_active(session, api_key)
+
+        # Buscar coincidencia exacta entre hostname y nombre de tu PC
+        for cli in clientes:
+            hostname = cli.get("hostname", "").strip().lower()
+            mac = cli.get("mac", "").strip().lower()
+
+            if (
+                hostname == terminal.nombre.lower().strip()
+                or mac == (terminal.mac or "").lower().strip()
+            ):
+                unifi_info = {
+                    "conectado": True,
+                    "ip": cli.get("ip", "-"),
+                    "tipo": "Cable" if cli.get("type") == 'WIRED' else "WiFi"
+                }
+                break
+
+    except Exception as e:
+        print("Error consultando UniFi:", e)
+
+    # Render
+
+    print("IPS", unifi_info["ip"])
     return render(request, 'inventario/detalles_pc.html', {
         'terminal': terminal,
-        'componentes': componentes
+        'componentes': componentes,
+        'unifi': unifi_info
     })
+
 
 @csrf_exempt
 @login_required
