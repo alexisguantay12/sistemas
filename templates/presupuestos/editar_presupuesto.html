@@ -727,7 +727,7 @@ document.getElementById("btn-medicamentos").addEventListener("click", function()
     // --- Procesamos códigos fijos ---
     procesarCodigoBase("430101", "medint", "Medicamentos y descartables en Internado");
     procesarCodigoBase("400101", "meduti", "Medicamentos y descartables en UTI");
-
+    procesarCodigoBase("TQ", "medtq", "Medicamentos y descartables en derecho quirurgico");
     // --- Nueva lógica para generar MEDQUIR ---
     Array.from(tbody.querySelectorAll("tr")).forEach(fila => {
         const codigo = fila.querySelector(".codigo").value.trim();
