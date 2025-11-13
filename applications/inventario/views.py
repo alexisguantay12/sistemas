@@ -5,14 +5,42 @@ from django.views.decorators.csrf import csrf_exempt
 from django.db import transaction
 from .models import Terminal, Componente, Servidor,Ubicacion,Sector
 from .forms import TerminalForm
-
 @login_required
 def listar_pcs(request):
-    pcs = Terminal.objects.all()
+    pcs = list(Terminal.objects.all())  # lo convertimos en list para poder modificarlo
+
+    # Obtener clientes unifi
+    hostnames = set()
+    macs = set()
+
+    try:
+        session = requests.Session()
+        login(session)
+        api_key = get_api_key(session)
+        clientes = get_clients_active(session, api_key)
+
+        for cli in clientes:
+            hostname = (cli.get("hostname") or "").lower().strip()
+            mac = (cli.get("mac") or "").lower().replace("-", ":").strip()
+
+            if hostname:
+                hostnames.add(hostname)
+            macs.add(mac)
+
+    except Exception as e:
+        print("ERROR UNIFI:", e)
+
+    # Añadir atributo dinámico conectado
+    for pc in pcs:
+        h = pc.nombre.lower().strip()
+        m = (pc.mac or "").lower().replace("-", ":").strip()
+
+        if h in hostnames or m in macs:
+            pc.conectado = "CONECTADO"
+        else:
+            pc.conectado = "DESCONECTADO"
+
     return render(request, 'inventario/terminales.html', {'pcs': pcs})
-
-
-
 
 from django.shortcuts import render, get_object_or_404, redirect
 from django.contrib import messages
@@ -50,6 +78,7 @@ def editar_pc(request, pk):
                 terminal.ubicacion_id = request.POST.get('ubicacion')
                 terminal.estado = request.POST.get('estado')
                 terminal.descripcion = request.POST.get('descripcion')
+                terminal.nombre_descriptivo= request.POST.get('nombre-descriptivo')
                 terminal.save()
 
                 # --- Actualización del estado de los componentes asociados ---

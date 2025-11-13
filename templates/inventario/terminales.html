@@ -16,9 +16,10 @@
                     <table id="tabla-pcs" class="table table-hover align-middle">
                         <thead class="table-light">
                             <tr> 
-                                <th>Nombre</th>
+                                <th>Hostname</th>
+                                <th>Nombre Desc</th>
                                 <th>Ubicación</th>
-                                <th>Responsable</th>
+                                <th>Red</th>
                                 <th>Estado</th>
                                 <th class="sin-redireccion">Acciones</th>
                             </tr>
@@ -27,8 +28,14 @@
                             {% for pc in pcs %}
                             <tr id="pc-{{ pc.id }}" class="clickable-row" data-url="{% url 'inventario:pc_detalle' pc.id %}" style="cursor:pointer;">
                                 <td>{{ pc.nombre }}</td>
+                                <td>{{ pc.nombre_descriptivo }}</td>
                                 <td>{{ pc.ubicacion.nombre }}</td>
-                                <td>{{ pc.ubicacion.sector.responsable }}</td>
+                                <td>                        <span class="badge 
+                                    {% if pc.conectado == 'CONECTADO' %} bg-success 
+                                    {% else %} bg-danger
+                                    {% endif %}">
+                                    {{ pc.conectado }}
+                                </span></td>
                                 <td>                        <span class="badge 
                                     {% if pc.estado == 'BUENO' %} bg-success
                                     {% elif pc.estado == 'PERFECTO'%} bg-success
