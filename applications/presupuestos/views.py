@@ -509,6 +509,9 @@ def get_prestacion(request, codigo):
     elif codigo == '400101':
         p_desc = get_object_or_404(Prestacion, codigo='431002')
         precio_u = (prestacion.gastos + prestacion.especialista) + (p_desc.gastos + p_desc.especialista)
+    elif codigo == '430130':
+        p_desc = get_object_or_404(Prestacion, codigo='431001')
+        precio_u = (prestacion.gastos + prestacion.especialista) + (p_desc.gastos + p_desc.especialista)
     elif codigo == '340907':
         precio_u = (prestacion.gastos + prestacion.especialista) * 3
     else:
@@ -544,6 +547,9 @@ def get_tipo(request, codigo):
             precio = (prestacion.gastos + prestacion.especialista) + (p_desc.gastos + p_desc.especialista)
         elif codigo == '400101':
             p_desc = get_object_or_404(Prestacion, codigo='431002')
+            precio = (prestacion.gastos + prestacion.especialista) + (p_desc.gastos + p_desc.especialista)
+        elif codigo == '430130':
+            p_desc = get_object_or_404(Prestacion, codigo='431001')
             precio = (prestacion.gastos + prestacion.especialista) + (p_desc.gastos + p_desc.especialista)
         elif codigo == '340907':
             precio = (prestacion.gastos + prestacion.especialista) * 3 
