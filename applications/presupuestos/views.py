@@ -412,32 +412,55 @@ def editar_presupuesto(request, pk):
     })
 
 
+import uuid
+from datetime import datetime
+from django.views.decorators.cache import never_cache
+
 # ============================================================
 # ➕ Agregar Presupuesto Nuevo
 # ============================================================
 @login_required
+@never_cache
 def agregar_presupuesto(request):
     if request.method == "POST":
-        try: 
+        form_token = request.POST.get("form_token")
+
+        # 🛡️ 1) Validar que venga token
+        if not form_token:
+            messages.error(request, "Formulario inválido.")
+            return redirect("presupuestos_app:presupuestos")
+
+        # 🛡️ 2) Ver si el token sigue activo (no usado)
+        if not request.session.get(f"form_token_{form_token}", False):
+            messages.warning(
+                request,
+                "Este formulario ya fue enviado. No se procesó nuevamente."
+            )
+            return redirect("presupuestos_app:presupuestos")
+
+        # 🔒 3) Marcar token como usado
+        request.session[f"form_token_{form_token}"] = False
+
+        try:
             with transaction.atomic():
                 medico_id = request.POST.get("medico")
                 obra_social_id = request.POST.get("obra_social")
-                from datetime import datetime
-            # 1️⃣ Recuperar el valor del input <input type="date" name="fecha_presupuesto">
+
+                # 1️⃣ Recuperar el valor del input <input type="date" name="fecha_presupuesto">
                 fecha_str = request.POST.get("fecha_presupuesto")  # ejemplo: "2025-10-17"
 
                 # 2️⃣ Si el usuario ingresó fecha, combinarla con la hora actual
                 if fecha_str:
                     fecha_base = datetime.strptime(fecha_str, "%Y-%m-%d")  # convierte el string a fecha
-                    hora_actual = datetime.now().time()                     # hora actual del sistema
-                    fecha_final = datetime.combine(fecha_base, hora_actual) # une fecha + hora
+                    hora_actual = datetime.now().time()                   # hora actual del sistema
+                    fecha_final = datetime.combine(fecha_base, hora_actual)
                 else:
                     fecha_final = datetime.now()  # si no hay fecha, usar fecha/hora actuales
 
-
                 # Validar que se haya elegido un médico válido
                 medico = get_object_or_404(Medico, id=medico_id)
-                obra_social = get_object_or_404(ObraSocial,id = obra_social_id)
+                obra_social = get_object_or_404(ObraSocial, id=obra_social_id)
+
                 presupuesto = Presupuesto.objects.create(
                     paciente_nombre=request.POST.get("paciente_nombre"),
                     paciente_dni=request.POST.get("paciente_dni"),
@@ -448,9 +471,9 @@ def agregar_presupuesto(request):
                     obra_social=obra_social,
                     medico=medico,
                     diagnostico=request.POST.get("diagnostico"),
-                    motivo_no_concretado = request.POST.get("observaciones"),
-                    episodio = request.POST.get("episodio"),
-                    fecha_creacion = fecha_final,
+                    motivo_no_concretado=request.POST.get("observaciones"),
+                    episodio=request.POST.get("episodio"),
+                    fecha_creacion=fecha_final,
                     user_made=request.user,
                     user_updated=request.user
                 )
@@ -465,33 +488,108 @@ def agregar_presupuesto(request):
                 ivas = request.POST.getlist("iva")
                 subtotales = request.POST.getlist("subtotal")
                 comentarios = request.POST.getlist("comentario")
-                print(comentarios)
-                with transaction.atomic():
-                    for i in range(len(prestaciones)):
-                        if not prestaciones[i].strip():
-                            continue
-                        PresupuestoItem.objects.create(
-                            presupuesto=presupuesto,
-                            codigo=codigos[i] or "",
-                            tipo=tipos[i] or "",
-                            prestacion=prestaciones[i],
-                            cantidad=int(cantidades[i]) if cantidades[i] else 1,
-                            precio=float(precios[i].replace(',', '.')) if precios[i] else 0,
-                            importe=float(importes[i].replace('.', '').replace(',', '.')) if importes[i] else 0,
-                            iva=float(ivas[i].replace('.', '').replace(',', '.')) if ivas[i] else 0,
-                            subtotal=float(subtotales[i].replace('.', '').replace(',', '.')) if subtotales[i] else 0,
-                            comentario = comentarios[i] or "",
-                        )
+
+                for i in range(len(prestaciones)):
+                    if not prestaciones[i].strip():
+                        continue
+                    PresupuestoItem.objects.create(
+                        presupuesto=presupuesto,
+                        codigo=codigos[i] or "",
+                        tipo=tipos[i] or "",
+                        prestacion=prestaciones[i],
+                        cantidad=int(cantidades[i]) if cantidades[i] else 1,
+                        precio=float(precios[i].replace(',', '.')) if precios[i] else 0,
+                        importe=float(importes[i].replace('.', '').replace(',', '.')) if importes[i] else 0,
+                        iva=float(ivas[i].replace('.', '').replace(',', '.')) if ivas[i] else 0,
+                        subtotal=float(subtotales[i].replace('.', '').replace(',', '.')) if subtotales[i] else 0,
+                        comentario=comentarios[i] or "",
+                    )
+
                 return redirect("presupuestos_app:presupuestos")
         except Exception as e:
-            # Manejo de errores
-            print("Error al crear presupuesto y pago:", e)
-            return None, None
+            print("Error al crear presupuesto:", e)
+            messages.error(request, "Ocurrió un error al crear el presupuesto.")
+            return redirect("presupuestos_app:presupuestos")
+
+    # GET → generar token nuevo
+    form_token = str(uuid.uuid4())
+    request.session[f"form_token_{form_token}"] = True
 
     prestaciones = Prestacion.objects.all()
     medicos = Medico.objects.all().order_by('nombre')
     obras_sociales = ObraSocial.objects.all().order_by('nombre')
-    return render(request, "presupuestos/agregar_presupuesto.html", {"obras_sociales":obras_sociales,"prestaciones": prestaciones,"medicos":medicos})
+
+    return render(
+        request,
+        "presupuestos/agregar_presupuesto.html",
+        {
+            "obras_sociales": obras_sociales,
+            "prestaciones": prestaciones,
+            "medicos": medicos,
+            "form_token": form_token,
+        }
+    )
+
+
+from django.shortcuts import render, get_object_or_404
+from django.db.models import Q
+from django.contrib.auth.decorators import login_required
+
+from .models import ObraSocial
+
+@login_required
+def gestion_clausulas(request):
+    mensaje_clausula = None
+    error_clausula = None
+
+    if request.method == "POST":
+        accion = request.POST.get("accion")
+        obra_id = request.POST.get("obra_id_edit")
+        porcentaje = request.POST.get("porcentaje")
+        obra_select = request.POST.get("obra_social")
+
+        # -------------------------
+        # BORRAR (poner porcentaje en 0)
+        # -------------------------
+        if accion == "borrar":
+            obra = get_object_or_404(ObraSocial, id=obra_id)
+            obra.porcentaje = 0
+            obra.save()
+            mensaje_clausula = f"Se eliminó la cláusula de {obra.nombre}."
+        
+        # -------------------------
+        # GUARDAR / EDITAR
+        # -------------------------
+        elif accion == "guardar":
+            try:
+                porcentaje = int(porcentaje)
+            except:
+                error_clausula = "El porcentaje debe ser un número entero."
+            else:
+                if porcentaje < 0 or porcentaje > 100:
+                    error_clausula = "El porcentaje debe estar entre 0 y 100."
+
+            if not error_clausula:
+                if obra_id:  # editar
+                    obra = get_object_or_404(ObraSocial, id=obra_id)
+                else:  # crear
+                    obra = get_object_or_404(ObraSocial, id=obra_select)
+
+                obra.porcentaje = porcentaje
+                obra.save()
+                mensaje_clausula = f"Cláusula guardada para {obra.nombre}."
+
+    obras_con_clausula = ObraSocial.objects.filter(porcentaje__gt=0)
+    obras_sin_clausula = ObraSocial.objects.filter(
+        Q(porcentaje__isnull=True) | Q(porcentaje=0)
+    ).order_by("nombre")
+
+    return render(request, "presupuestos/clausulas.html", {
+        "obras_con_clausula": obras_con_clausula,
+        "obras_sin_clausula": obras_sin_clausula,
+        "mensaje_clausula": mensaje_clausula,
+        "error_clausula": error_clausula,
+    })
 
 
 # ============================================================
@@ -517,6 +615,15 @@ def get_prestacion(request, codigo):
     else:
         precio_u = prestacion.gastos
 
+    obra_id = request.GET.get("obra_social")
+    # aplicar cláusula
+    if obra_id:
+        try:
+            obra = ObraSocial.objects.get(id=obra_id)
+            if obra.porcentaje and obra.porcentaje > 0:
+                precio_u = precio_u + (precio_u * obra.porcentaje / 100)
+        except:
+            pass
     data = {
         "prestacion": prestacion.codigo,
         "nombre": prestacion.nombre,
@@ -554,9 +661,18 @@ def get_tipo(request, codigo):
         elif codigo == '340907':
             precio = (prestacion.gastos + prestacion.especialista) * 3 
     
-
+    
     except Prestacion.DoesNotExist:
         return JsonResponse({"error": "Código no encontrado"}, status=404)
+    obra_id = request.GET.get("obra_social")
+    # aplicar cláusula
+    if obra_id:
+        try:
+            obra = ObraSocial.objects.get(id=obra_id)
+            if obra.porcentaje and obra.porcentaje > 0:
+                precio = precio + (precio * obra.porcentaje / 100)
+        except:
+            pass
     return JsonResponse({"precio": precio})
 
 

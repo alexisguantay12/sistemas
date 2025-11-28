@@ -118,19 +118,37 @@
                     <a class="nav-link" href="{% url 'presupuestos_app:presupuestos' %}">
                         <i class="fas fa-file-invoice-dollar me-1"></i> Presupuestos
                     </a>
-                </li>
-                {% if request.user|is_in_group:"administrador" %}
+                </li>{% if request.user|is_in_group:"administrador" %}
                 <li class="nav-item">
                     <a class="nav-link" href="{% url 'presupuestos_app:cargar_nomenclador' %}">
                         <i class="fas fa-database me-1"></i> Cargar Nomenclador
                     </a>
                 </li>
-                <li class="nav-item">
-                    <a class="nav-link" href="{% url 'presupuestos_app:codigos_particulares' %}">
-                        <i class="fas fa-tags me-1"></i> Códigos Especiales
+
+                <!-- 🔽 Dropdown para Códigos Especiales -->
+                <li class="nav-item dropdown">
+                    <a class="nav-link dropdown-toggle" href="#" id="codigosDropdown" role="button"
+                    data-bs-toggle="dropdown" aria-expanded="false">
+                        <i class="fas fa-tags me-1"></i> Códigos y Cláusulas
                     </a>
+                    <ul class="dropdown-menu" aria-labelledby="codigosDropdown">
+                        <!-- Opción actual -->
+                        <li>
+                            <a class="dropdown-item" href="{% url 'presupuestos_app:codigos_particulares' %}">
+                                Códigos Especiales
+                            </a>
+                        </li>
+
+                        <!-- Ejemplos de más opciones (podés cambiar URLs y textos) -->
+                        <li>
+                            <a class="dropdown-item" href="{% url 'presupuestos_app:gestion_clausulas' %}">
+                                Clausulas Obras Sociales
+                            </a>
+                        </li>  
+                    </ul>
                 </li>
-                {% endif %}
+            {% endif %}
+
                 <li class="nav-item dropdown">
                     <a class="nav-link dropdown-toggle d-flex align-items-center" href="#" id="userDropdown" role="button"
                        data-bs-toggle="dropdown" aria-expanded="false">

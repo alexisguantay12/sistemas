@@ -177,6 +177,8 @@ td {
                     <div class="col-md-3">
                         <label>Obra Social</label>
                         <input disabled type="text" name="obra_social" class="form-control" value="{{ presupuesto.obra_social }}">
+                        <!-- Guarda el ID real para usar en JS -->
+                        <input type="hidden" id="obra_social_id" value="{{ presupuesto.obra_social.id }}">
                     </div>
                 </div>
             </div>
@@ -479,9 +481,11 @@ document.getElementById("tabla-prestaciones").addEventListener("blur", async e =
 
     const fila = e.target.closest("tr");
     try {
+        const obraSocialId = document.getElementById("obra_social_id").value;
+
         const url = "{% url 'presupuestos_app:get_prestacion' codigo='__codigo__' %}"
             .replace("__codigo__", encodeURIComponent(codigo));
-        const resp = await fetch(url);
+        const resp = await fetch(`${url}?obra_social=${obraSocialId}`);
         if (!resp.ok) throw new Error();
         const data = await resp.json();
 
@@ -567,10 +571,12 @@ async function seleccionarItem(item) {
     fila.querySelector(".codigo").value = item.codigo;
 
     try {
+        const obraSocialId = document.getElementById("obra_social_id").value;
+
         const url = "{% url 'presupuestos_app:get_prestacion' codigo='__codigo__' %}"
             .replace("__codigo__", encodeURIComponent(item.codigo));
 
-        const resp = await fetch(url);
+        const resp = await fetch(`${url}?obra_social=${obraSocialId}`);
         if (!resp.ok) throw new Error("Error en la respuesta del servidor");
         const data = await resp.json();
 
@@ -794,11 +800,12 @@ document.getElementById("tabla-prestaciones").addEventListener("change", e => {
     const fila = e.target.closest("tr");
     const codigo = fila.querySelector(".codigo").value;
     const tipo = e.target.value;
+    const obraSocialId = document.getElementById("obra_social_id").value;
 
     const url = "{% url 'presupuestos_app:get_tipo' codigo='__codigo__' %}"
         .replace("__codigo__", encodeURIComponent(codigo));
 
-    fetch(`${url}?tipo=${tipo}`)
+    fetch(`${url}?tipo=${tipo}&obra_social=${obraSocialId}`)
         .then(r => r.json())
         .then(data => { 
             const cantidad = parseFloat(fila.querySelector(".cantidad").value) || 1;

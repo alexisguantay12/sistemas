@@ -20,5 +20,5 @@ urlpatterns = [
     path("codigos-particulares/eliminar/<int:pk>/", views.eliminar_codigo_particular, name="eliminar_codigo_particular"),
     path("autorizar/<int:pk>/", views.autorizar_presupuesto, name="autorizar_presupuesto"),
     path('cerrar/<int:pk>/', views.cerrar_presupuesto, name='cerrar_presupuesto'),
-
+    path("clausulas/",views.gestion_clausulas,name="gestion_clausulas"),
 ]

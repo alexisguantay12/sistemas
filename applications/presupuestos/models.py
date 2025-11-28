@@ -32,12 +32,14 @@ class Prestacion(BaseAbstractWithUser):
     
 class ObraSocial(models.Model):
     nombre = models.CharField(max_length=200)
+    porcentaje = models.IntegerField(null=True,blank=True)
     def __str__(self):
         # Convierte "ALEXIS RAMON" → "Alexis Ramon"
         if self.nombre:
             return self.nombre.title().strip()
         return ""
     
+ 
 
 class Presupuesto(BaseAbstractWithUser):
     ESTADOS = [

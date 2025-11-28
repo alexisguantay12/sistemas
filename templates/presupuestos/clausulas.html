@@ -1,0 +1,208 @@
+{% extends 'base2.html' %}
+{% load static %}
+
+{% block content %}
+<div class="container-fluid mt-4 mb-4">
+  <div class="card shadow-lg border-0">
+    <div class="card-header bg-light border-bottom">
+      <h4 class="mb-0 text-primary fw-bold">
+        <i class="fas fa-file-signature"></i> Gestión de Cláusulas por Obra Social
+      </h4>
+    </div>
+
+    <div class="card-body bg-white">
+      <div class="row g-4">
+
+        <!-- 🧩 FORMULARIO -->
+        <div class="col-md-4 border-end">
+          <h6 class="text-success fw-bold mb-3">
+            <i class="fas fa-plus-circle"></i> Nueva / Editar cláusula
+          </h6>
+
+          {% if error_clausula %}
+          <div class="alert alert-danger py-2">{{ error_clausula }}</div>
+          {% endif %}
+          {% if mensaje_clausula %}
+          <div class="alert alert-success py-2">{{ mensaje_clausula }}</div>
+          {% endif %}
+
+          <form method="post" id="formClausula" action="{% url 'presupuestos_app:gestion_clausulas' %}">
+            {% csrf_token %}
+            <input type="hidden" name="obra_id_edit" id="obra_id_edit">
+            <input type="hidden" name="accion" id="accion" value="guardar">
+
+            <div class="mb-3">
+              <label class="form-label">Obra Social</label>
+              <select name="obra_social" id="obra_social" class="form-select form-select-sm" required>
+                <option value="">Seleccione...</option>
+                {% for o in obras_sin_clausula %}
+                  <option value="{{ o.id }}">{{ o.nombre }}</option>
+                {% endfor %}
+              </select>
+            </div>
+
+            <div class="mb-3">
+              <label class="form-label">Porcentaje (%)</label>
+              <input type="number" step="1" min="0" max="100"
+                     name="porcentaje" id="porcentaje"
+                     class="form-control form-control-sm" required>
+            </div>
+
+            <button type="button" class="btn btn-success btn-sm w-100" id="btnAbrirGuardar">
+              <i class="fas fa-save"></i> Guardar cláusula
+            </button>
+
+            <button type="button" class="btn btn-secondary btn-sm mt-2 w-100" id="btnLimpiarClausula">
+              <i class="fas fa-undo"></i> Limpiar
+            </button>
+          </form>
+        </div>
+
+        <!-- 📋 LISTADO -->
+        <div class="col-md-8">
+          <h6 class="text-primary fw-bold mb-3">
+            <i class="fas fa-list"></i> Obras Sociales con cláusula cargada
+          </h6>
+
+          <div class="table-responsive">
+            <table class="table table-hover table-sm align-middle">
+              <thead class="table-light">
+                <tr>
+                  <th>Obra Social</th>
+                  <th class="text-end">Porcentaje</th>
+                  <th class="text-center">Acciones</th>
+                </tr>
+              </thead>
+              <tbody>
+                {% for o in obras_con_clausula %}
+                <tr>
+                  <td>{{ o.nombre }}</td>
+                  <td class="text-end">{{ o.porcentaje }}</td>
+                  <td class="text-center">
+                    <button class="btn btn-sm btn-outline-secondary editar-clausula-btn"
+                            data-id="{{ o.id }}"
+                            data-nombre="{{ o.nombre }}"
+                            data-porcentaje="{{ o.porcentaje }}">
+                      <i class="fas fa-edit"></i>
+                    </button>
+
+                    <button class="btn btn-sm btn-outline-danger borrar-clausula-btn"
+                            data-id="{{ o.id }}"
+                            data-nombre="{{ o.nombre }}">
+                      <i class="fas fa-trash"></i>
+                    </button>
+                  </td>
+                </tr>
+                {% empty %}
+                <tr><td colspan="3" class="text-center text-muted">No hay cláusulas cargadas.</td></tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+
+<!-- 🟦 MODAL GUARDAR -->
+<div class="modal fade" id="modalGuardar" tabindex="-1">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content">
+      <div class="modal-header bg-success text-white">
+        <h5 class="modal-title">Confirmar guardado</h5>
+      </div>
+      <div class="modal-body">
+        ¿Desea guardar esta cláusula?
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+        <button type="button" class="btn btn-success" id="btnConfirmarGuardar">Guardar</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- 🟥 MODAL BORRAR -->
+<div class="modal fade" id="modalBorrar" tabindex="-1">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content">
+      <div class="modal-header bg-danger text-white">
+        <h5 class="modal-title">Eliminar cláusula</h5>
+      </div>
+      <div class="modal-body" id="textoBorrar"></div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+        <button type="button" class="btn btn-danger" id="btnConfirmarBorrar">Eliminar</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+// -------------------------
+// EDITAR
+// -------------------------
+document.querySelectorAll(".editar-clausula-btn").forEach(btn => {
+  btn.addEventListener("click", () => {
+    document.getElementById("obra_id_edit").value = btn.dataset.id;
+    document.getElementById("porcentaje").value = btn.dataset.porcentaje;
+
+    const select = document.getElementById("obra_social");
+    select.innerHTML = "";
+    let opt = document.createElement("option");
+    opt.value = btn.dataset.id;
+    opt.textContent = btn.dataset.nombre + " (editando)";
+    opt.selected = true;
+    select.appendChild(opt);
+    select.disabled = true;
+  });
+});
+
+// -------------------------
+// LIMPIAR
+// -------------------------
+document.getElementById("btnLimpiarClausula").addEventListener("click", () => {
+  document.getElementById("formClausula").reset();
+  document.getElementById("obra_id_edit").value = "";
+  document.getElementById("obra_social").disabled = false;
+});
+
+// -------------------------
+// MODAL GUARDAR
+// -------------------------
+document.getElementById("btnAbrirGuardar").addEventListener("click", () => {
+  let modal = new bootstrap.Modal(document.getElementById("modalGuardar"));
+  modal.show();
+});
+
+document.getElementById("btnConfirmarGuardar").addEventListener("click", () => {
+  document.getElementById("accion").value = "guardar";
+  document.getElementById("formClausula").submit();
+});
+
+// -------------------------
+// MODAL BORRAR
+// -------------------------
+let obraAEliminar = null;
+
+document.querySelectorAll(".borrar-clausula-btn").forEach(btn => {
+  btn.addEventListener("click", () => {
+    obraAEliminar = btn.dataset.id;
+    document.getElementById("textoBorrar").innerHTML =
+      `¿Seguro que desea eliminar la cláusula de <strong>${btn.dataset.nombre}</strong>?`;
+    
+    let modal = new bootstrap.Modal(document.getElementById("modalBorrar"));
+    modal.show();
+  });
+});
+
+document.getElementById("btnConfirmarBorrar").addEventListener("click", () => {
+  document.getElementById("accion").value = "borrar";
+  document.getElementById("obra_id_edit").value = obraAEliminar;
+  document.getElementById("formClausula").submit();
+});
+</script>
+{% endblock %}
