@@ -2,6 +2,22 @@
 {% load static %}
 
 {% block content %}
+
+<style>
+  /* Contenedor con scroll cuando hay muchas filas */
+  .clausulas-scroll {
+      max-height: 350px;      /* ajustá hasta que sean aprox 8 filas */
+      overflow-y: auto;
+  }
+
+  /* Opcional: que el header quede siempre visible */
+  .clausulas-scroll thead th {
+      position: sticky;
+      top: 0;
+      background-color: #f8f9fa; /* mismo color que .table-light */
+      z-index: 2;
+  }
+</style>
 <div class="container-fluid mt-4 mb-4">
   <div class="card shadow-lg border-0">
     <div class="card-header bg-light border-bottom">
@@ -64,8 +80,8 @@
             <i class="fas fa-list"></i> Obras Sociales con cláusula cargada
           </h6>
 
-          <div class="table-responsive">
-            <table class="table table-hover table-sm align-middle">
+    <div class="table-responsive clausulas-scroll">
+        <table class="table table-hover table-sm align-middle">
               <thead class="table-light">
                 <tr>
                   <th>Obra Social</th>
