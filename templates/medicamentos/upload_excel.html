@@ -1,0 +1,99 @@
+{% extends "base2.html" %}
+
+{% block content %}
+    <div class="card p-4 mb-5">
+        <h1>Subir archivo Excel y generar informe</h1>
+        <form method="post" enctype="multipart/form-data" id="upload-form">
+            {% csrf_token %}
+            <div class="row mx-4">
+                <!-- Input para subir el archivo Excel -->
+                <div class="col-md-6 mb-3">
+                    <label for="file">Selecciona un archivo Excel:</label>
+                    <input type="file" name="file" id="file" class="form-control" accept=".xlsx, .xls">
+                </div>
+
+                <!-- Select para elegir el tipo de formato -->
+                <div class="col-md-6 mb-3">
+                    <label for="formato">Selecciona el paso de transformación IPS:</label>
+                    <select name="select-paso" id="select-paso" class="form-control">
+                        <option value="preanexo">Generar Preanexo</option>
+                        <option value="medicamentos-osuthgra">Generar Medicamentos osuthgra</option>
+                        <option value="anexo-ambulatorio">Generar anexo ambulatorio</option>
+                        <option value="anexo-internado">Generar anexo internado</option>
+                        <option value="anexo-internado-momentaneo">Generar anexo internado momentaneo</option>
+                    </select>
+                </div>
+            </div>
+
+            <!-- Botón para subir y generar el informe -->
+            <div class="row mx-4">
+                <div class="col-md-12">
+                    <button type="submit" id="submit-btn" class="btn btn-success">Subir y Generar Excel</button>
+                </div>
+            </div>
+        </form>
+
+        <!-- Cargador en espera -->
+        <div id="loader" class="d-none text-center mt-4">
+            <div class="spinner-border text-primary" role="status">
+                <span class="sr-only">Cargando...</span>
+            </div>
+            <p>Cargando el archivo, por favor espera...</p>
+        </div>
+
+        <!-- Mostrar mensajes de éxito o error -->
+        {% if messages %}
+            <div class="alert alert-info mt-4">
+                <ul>
+                    {% for message in messages %}
+                        <li>{{ message }}</li>
+                    {% endfor %}
+                </ul>
+            </div>
+        {% endif %}
+    </div>
+{% endblock %} 
+{% block extra_js0 %}
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            const fileInput = document.getElementById('file');
+            const loader = document.getElementById('loader');
+
+            // Mostrar spinner inmediatamente al interactuar con el selector de archivos
+            fileInput.addEventListener('click', function () {
+                loader.classList.remove('d-none');
+            });
+
+            // Ocultar spinner después de que el archivo esté cargado
+            fileInput.addEventListener('change', function () {
+                if (this.files.length > 0) {
+                    // Simular un retraso pequeño para finalizar la carga
+                    setTimeout(() => {
+                        loader.classList.add('d-none');
+                    }, 1000); // Ajusta según el tiempo promedio de carga
+                } else {
+                    // Si no se selecciona archivo, oculta el spinner
+                    loader.classList.add('d-none');
+                }
+            }); ;
+            const submitBtn = document.getElementById('submit-btn');
+
+            if (!fileInput || !submitBtn) {
+                console.error("Elementos necesarios no encontrados en el DOM. Verifica los IDs.");
+                return;
+            }
+
+            // Desactivar el botón inicialmente
+            submitBtn.disabled = true;
+
+            // Habilitar el botón solo si hay un archivo seleccionado
+            fileInput.addEventListener('change', function () {
+                if (this.files.length > 0) {
+                    submitBtn.disabled = false; // Habilitar el botón
+                } else {
+                    submitBtn.disabled = true; // Deshabilitar si no hay archivo
+                }
+            });
+        });
+    </script>
+{% endblock extra_js0 %}

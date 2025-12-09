@@ -1084,7 +1084,7 @@ El presente presupuesto tiene una validez de 7 días habiles.
 El presupuesto debe estar abonado en forma previa al ingreso del paciente.
 
 NO INCLUYE Honorarios Médicos.
-NO INCLUYE Honorarios Anestesistas (Dirigirse a Sra. Viviana Baigorria 152-259689)
+NO INCLUYE Honorarios Anestesistas (Dirigirse a Sra. Viviana Baigorria 3872259689)
 NO INCLUYE Honorarios por Transfusiones de Sangre. En caso de necesitar, dirigirse a BANCO DE SANGRE.
 NO INCLUYE prácticas no detalladas.
 NO INCLUYE medicamentos de alto costo.

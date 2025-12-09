@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Subir y procesar archivo TXT</title>
+</head>
+<body>
+    <h1>Subir y procesar archivo TXT</h1>
+
+    {% if error %}
+        <p style="color: red;">{{ error }}</p>
+    {% endif %}
+
+    <form method="post" enctype="multipart/form-data">
+        {% csrf_token %}
+        {{ form.as_p }}
+        <button type="submit">Subir</button>
+    </form>
+
+    {% if data %}
+        <h2>Contenido del archivo: {{ uploaded_file_name }}</h2>
+        <ul>
+            {% for line in data %}
+                <li>{{ line }}</li>
+            {% endfor %}
+        </ul>
+    {% endif %}
+</body>
+</html>
