@@ -45,166 +45,16 @@ def medicamentos(request):
     return render(request, 'medicamentos/reporte.html', {'datos': datos})
 
 
-
-from django.shortcuts import render 
-from django.urls import reverse   
-from django.db.models import Q, F
-# Create your views here.
-from .models import *
-
-
-from django.shortcuts import render, redirect
-from django.http import JsonResponse 
-
-def extract_from_excel1(df):
-    pacientes = []
-    current_patient = None
-    current_total = None
-
-    for index, row in df.iterrows():
-        # Identificar pacientes
-        if "Paciente:" in str(row.iloc[0]):
-            current_patient = row.iloc[1].replace("Paciente:", "").strip()
-        
-        # Identificar total del paciente
-        if "Total:" in str(row.iloc[3]):
-            current_total = row.iloc[4]
-            if current_patient:
-                pacientes.append((current_patient, float(current_total)))
-
-    return pacientes
-
-def extract_from_excel2(df):
-    pacientes = []
-    current_patient = None
-    for index, row in df.iterrows():
-        # Identificar paciente por "Afiliado N°"
-        if 'Afiliado N°: ' in str(row.iloc[0]): 
-            current_patient = row.iloc[1]
-        
-        # Identificar el total del paciente
-        if pd.isna(row.iloc[0:11]).all():  # Verifica que los primeros 12 campos estén vacíos
-            current_total = row.iloc[12]
-            if current_patient:
-                current_total = float(current_total)
-                # Verificar si el paciente ya está en la lista
-                for i, (paciente, total) in enumerate(pacientes):
-                    if paciente == current_patient:
-                        # Si el paciente existe, sumamos el total
-                        pacientes[i] = (paciente, total + current_total)
-                        break
-                else:
-                    # Si el paciente no está, lo agregamos
-                    pacientes.append((current_patient, current_total))
-
-    return pacientes
-
-
-from io import BytesIO
-import pandas as pd
-import openpyxl
-# Función para generar el archivo Excel
-def generate_excel(pacientes1, pacientes2):
-    # Crear un libro de Excel en memoria
-    output = BytesIO()
-    workbook = openpyxl.Workbook()
-    sheet = workbook.active
-    sheet.title = "Comparación de Pacientes"
-
-    # Agregar encabezados
-    sheet.append(["Paciente Excel 1", "Total Excel 1", "Paciente Excel 2", "Total Excel 2"])
-
-    # Determinar la longitud máxima entre ambas listas
-    max_len = max(len(pacientes1), len(pacientes2))
-
-    # Llenar los datos
-    for i in range(max_len):
-        paciente1 = pacientes1[i][0] if i < len(pacientes1) else ""
-        total1 = pacientes1[i][1] if i < len(pacientes1) else ""
-        paciente2 = pacientes2[i][0] if i < len(pacientes2) else ""
-        total2 = pacientes2[i][1] if i < len(pacientes2) else ""
-        sheet.append([paciente1, total1, paciente2, total2])
-
-    # Guardar el archivo en memoria
-    workbook.save(output)
-    output.seek(0)
-
-    return output
-
-# Función principal que procesa los archivos y genera el informe
-def compare_patients(request):
-    if request.method == "POST":
-        file1 = request.FILES.get('excel1')
-        file2 = request.FILES.get('excel2')
-
-        # Verificar que ambos archivos se hayan cargado
-        if not file1 or not file2:
-            return HttpResponse("Por favor sube ambos archivos Excel.", status=400)
-
-        try:
-            # Procesar los archivos usando pandas
-            df1 = pd.read_excel(file1)
-            df2 = pd.read_excel(file2)
-        except Exception as e:
-            return HttpResponse(f"Error al leer los archivos Excel: {e}", status=500)
-
-        # Extraer pacientes
-        pacientes1 = extract_from_excel1(df1)
-        pacientes2 = extract_from_excel2(df2)
-
-        # Generar el archivo Excel automáticamente y devolverlo como respuesta
-        excel_file = generate_excel(pacientes1, pacientes2)
-        response = HttpResponse(excel_file, content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
-        response['Content-Disposition'] = 'attachment; filename=comparacion_pacientes.xlsx'
-        return response
-
-        # Comparar pacientes y generar informe (como tabla en HTML)
-        return render(request, 'inventaries/PC/compare.html', {
-            'pacientes1': pacientes1,
-            'pacientes2': pacientes2
-        })
-
-    # Si no es un POST, simplemente mostrar el formulario
-    else:
-        return render(request, 'inventaries/PC/compare.html')
-
-
-
-
-
-
-
-import os
-import pandas as pd
+ 
+import os 
 from django.http import HttpResponse
 from django.core.files.storage import FileSystemStorage
 from io import BytesIO 
 import pandas as pd
-from django.shortcuts import render
-from django.http import HttpResponse
-from django.core.files.storage import FileSystemStorage
-from io import BytesIO
+from django.shortcuts import render 
 from django.contrib import messages
-
-import pandas as pd
-from io import BytesIO
-from django.http import HttpResponse
-from django.core.files.storage import FileSystemStorage
-from django.shortcuts import render
-from django.contrib import messages
-
-# Función para procesar el archivo Excel
-# Función para procesar el archivo Excel
-# Función para procesar el archivo Excel
-import pandas as pd
-from io import BytesIO
-from django.http import HttpResponse
-from django.shortcuts import render
-from django.contrib import messages
-from django.core.files.storage import FileSystemStorage
-
-import pandas as pd
-from io import BytesIO
+   
+ 
 
 def procesar_excel(df):
     try:
@@ -350,6 +200,45 @@ def upload_excel(request):
 
 from django.templatetags.static import static
 
+
+
+def normalizar_codigo(codigo: str) -> int:
+    if not codigo:
+        return 0
+
+    codigo = codigo.strip().upper()
+
+    # Si empieza con DES → descartar
+    if codigo.startswith("DES"):
+        return 0
+
+    # Si tiene X, tomar lo anterior
+    if "X" in codigo:
+        codigo = codigo.split("X")[0]
+
+    # Convertir a int si es numérico
+    return int(codigo) if codigo.isdigit() else 0
+
+from datetime import date
+
+MESES = [
+    'Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio',
+    'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'
+]
+
+hoy = date.today()
+
+# calcular mes anterior
+if hoy.month == 1:
+    mes = 12
+    anio = hoy.year - 1
+else:
+    mes = hoy.month - 1
+    anio = hoy.year
+
+mes_anio_texto = f"{MESES[mes - 1]} {anio}"
+
+
 def process_excel_osuthgra(df):
      # Crear un buffer para el archivo en memoria
     output = BytesIO()
@@ -362,17 +251,15 @@ def process_excel_osuthgra(df):
     # Formatos
     bold_format = workbook.add_format({'bold': True})
     header_format = workbook.add_format({'bold': True, 'border': 1, 'align': 'center', 'bg_color': '#D9D9D9'})
-    border_format = workbook.add_format({'border': 1})
-    date_format = workbook.add_format({'num_format': 'dd/mm/yyyy', 'border': 1})
+    border_format = workbook.add_format({'border': 1}) 
     money_format = workbook.add_format({'num_format': '#,##0.00', 'border': 1})
     total_format = workbook.add_format({'bold': True, 'num_format': '#,##0.00', 'border': 1, 'bg_color': '#FFFFCC'})
     title_format = workbook.add_format({'bold': True, 'font_size': 14})
     general_total_label_format = workbook.add_format({'bold': True, 'font_size': 12, 'align': 'right'})
-    subtotal_label_format = workbook.add_format({'bold': True, 'align': 'right'})
-    description_format = workbook.add_format({'bold': False, })
+    subtotal_label_format = workbook.add_format({'bold': True, 'align': 'right'}) 
 
     # Cargar logo desde la carpeta estática
-    logo_path = static('fotos/logo-santa-clara.jpg')  # Ajusta el path según tu estructura de archivos
+    logo_path = static('fotos/logo-santa-clara.png')  # Ajusta el path según tu estructura de archivos
     logo_full_path = os.path.join(os.getcwd(), logo_path.lstrip('/'))  # Convertir a ruta absoluta
 
     # Insertar logo en las primeras filas
@@ -382,9 +269,9 @@ def process_excel_osuthgra(df):
         worksheet.write('A1', 'Logo no encontrado', bold_format)
 
     # Escribir descripción del hospital 
-    worksheet.write('D2', 'HOSPITAL PRIVADO SANTA CLARA DE ASIS', title_format)
-    worksheet.write('D3', 'Obra Social: Instituto Provincial de Salud', title_format)
-    worksheet.write('D4', 'Facturacion Internado Noviembre 2024', title_format)
+    worksheet.write('C2', 'HOSPITAL PRIVADO SANTA CLARA DE ASIS', title_format)
+    worksheet.write('C3', 'Obra Social: OSUTHGRA', title_format)
+    worksheet.write('C4', f'Facturación Internado Medicamentos {mes_anio_texto}', title_format)
 
     row = 6  # Fila inicial después del encabezado principal
 
@@ -397,12 +284,10 @@ def process_excel_osuthgra(df):
     df['Numero'] = df['Numero'].astype(str)
 
     # Ahora puedes usar 'df_medicamentos' para realizar cualquier operación adicional
-    total_general_gastos = df['Gastos'].sum()
-    total_general_honorarios = df['Honorarios'].sum() 
-    total_general_valor_promedio = 0
+    total_general_gastos = df['Gastos'].sum() 
 
     grupos = df.groupby(['Afiliado', 'Episodio'])
-
+ 
     # Iterar sobre cada grupo
     for (paciente, episodio), data_paciente in grupos: 
         # Filtrar datos del paciente
@@ -435,16 +320,20 @@ def process_excel_osuthgra(df):
             worksheet.write(row, 1, fila['Descripcion'], border_format)
             worksheet.write(row, 0, fila['Codigo'], border_format)
             worksheet.write(row, 2, fila['Cantidad'], border_format)
-
+            print("El codigo es : ", fila['Codigo'])
+            print("El codigo formateado es:", normalizar_codigo(fila['Codigo']))
+            codigo_normalizado = normalizar_codigo(fila['Codigo'])
+            porcentaje = ListadoOsuthgra.obtener_porcentaje_por_codigo(codigo_normalizado)
             subtotal = fila['Total']
             cantidad = fila['Cantidad']
-            subtotal_sin_descuento = subtotal/(1-0.1)
+            print("Porcentaje:",porcentaje)
+            subtotal_sin_descuento = subtotal/(1-porcentaje)
             valor_unitario= subtotal_sin_descuento/cantidad
             valor_unitario_descuento = valor_unitario * 0.9
             worksheet.write(row, 3, valor_unitario, money_format)
-            worksheet.write(row, 4, 10, border_format)  # Recargo modificado (faltante a 100)
-            worksheet.write(row, 5, valor_unitario * 0.1, money_format)
-            worksheet.write(row, 6,valor_unitario*0.9, money_format)
+            worksheet.write(row, 4, porcentaje*100, border_format)  # Recargo modificado (faltante a 100)
+            worksheet.write(row, 5, valor_unitario * porcentaje, money_format)
+            worksheet.write(row, 6,valor_unitario*(1-porcentaje), money_format)
             worksheet.write(row, 7, subtotal, money_format)  # Valor Promedio calculado
 
             # Actualizar el subtotal y valor promedio del paciente
@@ -903,41 +792,7 @@ def process_excel_ips_ambulatorio(df):
     return output
 
 
-"""
-def upload_excel(request):
-    if request.method == 'POST':
-        excel_file = request.FILES.get('file')
-
-        if not excel_file:
-            messages.error(request, "Por favor, sube un archivo Excel.")
-            return render(request, 'upload_excel.html')
-
-        fs = FileSystemStorage()
-        filename = fs.save(excel_file.name, excel_file)
-        file_path = fs.path(filename)
-
-        try:
-            # Leer el archivo Excel con pandas
-            df = pd.read_excel(file_path)
-            # Generar el archivo Excel
-            excel_output = procesar_excel(df)
-
-            # Devolver el archivo como respuesta
-            response = HttpResponse(
-                excel_output, 
-                content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
-            )
-            response['Content-Disposition'] = 'attachment; filename="facturacion_pacientes.xlsx"'
-            return response
-
-        except Exception as e:
-            messages.error(request, f"Error al procesar el archivo: {str(e)}")
-
-    return render(request, 'inventaries/PC/upload_excel.html')
-
-"""
-
-
+ 
 
 
 
@@ -945,34 +800,7 @@ def upload_excel(request):
 
 from django.contrib import messages
 from django.core.files.storage import FileSystemStorage
-
-"""
-def upload_excel(request):
-    if request.method == 'POST':
-        excel_file = request.FILES.get('file')
-
-        if not excel_file:
-            messages.error(request, "Por favor, sube un archivo Excel.")
-            return render(request, 'upload_excel.html')
-
-        fs = FileSystemStorage()
-        filename = fs.save(excel_file.name, excel_file)
-        file_path = fs.path(filename)
-
-        try:
-            # Leer el archivo Excel con pandas
-            df = pd.read_excel(file_path)
-            # Procesar el archivo 
-            process_excel_osutgra2(df)
-            messages.success(request, "Archivos generados exitosamente.")
-        except Exception as e:
-            messages.error(request, f"Error al procesar el archivo: {str(e)}")
-
-    return render(request, 'inventaries/PC/upload_excel.html')
  
- 
-
-"""
 def process_excel_ips(df):
     # Crear una carpeta para guardar los archivos de salida
     output_dir = 'output_excels'
@@ -1046,535 +874,6 @@ def process_excel_ips(df):
 
     return "Archivo Excel generado exitosamente con todos los pacientes y total general."
 
-"""
-
-import os
-def process_excel_sancor(df):
-    # Crear una carpeta para guardar los archivos de salida
-    output_dir = 'output_excels'
-    if not os.path.exists(output_dir):
-        os.makedirs(output_dir)
-
-    # Iterar sobre cada grupo de pacientes
-    for paciente in df['Paciente'].unique():
-        # Filtrar los datos por el paciente actual
-        data_paciente = df[df['Paciente'] == paciente]
-
-        # Calcular la nueva columna "Subtotal" como Cantidad * Precio
-        data_paciente['Subtotal'] = data_paciente['Cantidad'] * data_paciente['Precio']
-
-        # Calcular el total financiador (suma de la columna "Subtotal")
-        total_financiador = data_paciente['Subtotal'].sum()
-
-        # Crear un archivo Excel para el paciente
-        file_path = os.path.join(output_dir, f'{paciente}.xlsx')
-
-        # Usar `pandas` con `xlsxwriter` para crear un archivo Excel
-        writer = pd.ExcelWriter(file_path, engine='xlsxwriter')
-        workbook  = writer.book
-        worksheet = workbook.add_worksheet('Medicamentos')
-
-        # Formatos para el archivo Excel
-        bold_format = workbook.add_format({'bold': True})  # Negrita
-        border_format = workbook.add_format({'border': 1})  # Borde alrededor de la tabla
-        header_format = workbook.add_format({'bold': True, 'border': 1})  # Negrita y borde para el encabezado
-        title_format = workbook.add_format({'bold': True, 'font_size': 14})  # Negrita y tamaño de fuente 14 para el título
-
-        # Obtener los valores de obra social
-        obra_social = data_paciente['OS'].iloc[0] if 'OS' in data_paciente.columns else "No disponible"
-
-        # Encabezado personalizado
-        worksheet.write('A1', 'Hospital Privado Santa Clara de Asís', title_format)  # Nombre del hospital en tamaño 14
-        worksheet.write('A2', 'Obra social:', bold_format)
-        worksheet.write('B2', obra_social)
-
-        worksheet.write('A3', 'Paciente:', bold_format)
-        worksheet.write('B3', paciente)
-
-        # Eliminar las columnas 'Paciente' y 'OS' del DataFrame antes de escribir la tabla
-        data_paciente = data_paciente.drop(columns=['Paciente', 'OS'], errors='ignore')
-
-        # Ajustar la escritura del DataFrame justo después del encabezado
-        start_row = 5  # La tabla comenzará desde la fila 6
-        for col_num, value in enumerate(data_paciente.columns.values):
-            worksheet.write(start_row, col_num, value, header_format)  # Escribir los nombres de las columnas con negrita y borde
-
-        for row_num, row_data in enumerate(data_paciente.values, start=start_row + 1):
-            for col_num, value in enumerate(row_data):
-                worksheet.write(row_num, col_num, value, border_format)  # Escribir los valores con borde
-
-        # Ajustar el ancho de las columnas automáticamente
-        for col_num, col in enumerate(data_paciente.columns):
-            max_len = max(data_paciente[col].astype(str).map(len).max(), len(col)) + 2  # Encontrar la longitud máxima
-            worksheet.set_column(col_num, col_num, max_len)  # Ajustar el ancho de la columna
-
-        # Añadir totales en la última fila con formato en negrita
-        total_row = len(data_paciente) + start_row + 2
-        worksheet.write(f'D{total_row}', 'Total', bold_format)  # Leyenda "Total" en negrita
-        worksheet.write(f'E{total_row}', total_financiador, bold_format)  # Total en negrita
-
-        # Guardar y cerrar el archivo Excel
-        writer.close()
-
-    return "Archivos Excel generados exitosamente."
-
-
-def process_excel_osutgra(df):
-    # Crear una carpeta para guardar los archivos de salida
-    output_dir = 'output_excels'
-    if not os.path.exists(output_dir):
-        os.makedirs(output_dir)
-
-    # Iterar sobre cada grupo de pacientes
-    for paciente in df['Paciente'].unique():
-        # Filtrar los datos por el paciente actual
-        data_paciente = df[df['Paciente'] == paciente]
-
-        # Columna de porcentaje de descuento fijo en 10%
-        data_paciente['Porcentaje Descuento'] = 10  # 10%
-
-        # Columna del valor a descontar (10% del Precio unitario)
-        data_paciente['Valor Descuento'] = (data_paciente['Precio'] * (data_paciente['Porcentaje Descuento'] / 100)).round(2)
-
-        # Columna del Precio unitario con descuento
-        data_paciente['Precio con Descuento'] = (data_paciente['Precio'] - data_paciente['Valor Descuento']).round(2)
-
-        # Calcular la nueva columna "Subtotal" como Cantidad * Precio con Descuento
-        data_paciente['Subtotal'] = (data_paciente['Cantidad'] * data_paciente['Precio con Descuento']).round(2)
-
-        # Calcular el total financiador (suma de la columna "Subtotal")
-        total_financiador = round(data_paciente['Subtotal'].sum(), 2)
-
-        # Crear un archivo Excel para el paciente
-        file_path = os.path.join(output_dir, f'{paciente}.xlsx')
-
-        # Usar `pandas` con `xlsxwriter` para crear un archivo Excel
-        writer = pd.ExcelWriter(file_path, engine='xlsxwriter')
-        workbook  = writer.book
-        worksheet = workbook.add_worksheet('Medicamentos')
-
-        # Formatos para el archivo Excel
-        bold_format = workbook.add_format({'bold': True})  # Negrita
-        border_format = workbook.add_format({'border': 1})  # Borde alrededor de la tabla
-        header_format = workbook.add_format({'bold': True, 'border': 1})  # Negrita y borde para el encabezado
-        title_format = workbook.add_format({'bold': True, 'font_size': 14})  # Negrita y tamaño de fuente 14 para el título
-        money_format = workbook.add_format({'num_format': '#,##0.00'})  # Formato de dos decimales
-
-        # Obtener los valores de obra social
-        obra_social = data_paciente['OS'].iloc[0] if 'OS' in data_paciente.columns else "No disponible"
-
-        # Encabezado personalizado
-        worksheet.write('A1', 'Hospital Privado Santa Clara de Asís', title_format)  # Nombre del hospital en tamaño 14
-        worksheet.write('A2', 'Obra social:', bold_format)
-        worksheet.write('B2', obra_social)
-
-        worksheet.write('A3', 'Paciente:', bold_format)
-        worksheet.write('B3', paciente)
-
-        # Eliminar las columnas 'Paciente' y 'OS' del DataFrame antes de escribir la tabla
-        data_paciente = data_paciente.drop(columns=['Paciente', 'OS'], errors='ignore')
-
-        # Ajustar la escritura del DataFrame justo después del encabezado
-        start_row = 5  # La tabla comenzará desde la fila 6
-        for col_num, value in enumerate(data_paciente.columns.values):
-            worksheet.write(start_row, col_num, value, header_format)  # Escribir los nombres de las columnas con negrita y borde
-
-        for row_num, row_data in enumerate(data_paciente.values, start=start_row + 1):
-            for col_num, value in enumerate(row_data):
-                if isinstance(value, float):
-                    worksheet.write(row_num, col_num, round(value, 2), border_format)  # Valores redondeados a dos decimales
-                else:
-                    worksheet.write(row_num, col_num, value, border_format)  # Otros valores con borde
-
-        # Ajustar el ancho de las columnas automáticamente
-        for col_num, col in enumerate(data_paciente.columns):
-            max_len = max(data_paciente[col].astype(str).map(len).max(), len(col)) + 2  # Encontrar la longitud máxima
-            worksheet.set_column(col_num, col_num, max_len)  # Ajustar el ancho de la columna
-
-        # Añadir totales en la última fila con formato en negrita
-        total_row = len(data_paciente) + start_row + 2
-        worksheet.write(f'G{total_row}', 'Total', bold_format)  # Leyenda "Total" en negrita
-        worksheet.write(f'H{total_row}', total_financiador, bold_format)  # Total redondeado a dos decimales
-
-        # Guardar y cerrar el archivo Excel
-        writer.close()
-
-    return "Archivos Excel generados exitosamente."
-
-
-def process_excel_boreal(df):
-   
-
-    # Crear una carpeta para guardar los archivos de salida
-    output_dir = 'output_excels'
-    if not os.path.exists(output_dir):
-        os.makedirs(output_dir)
-
-    # Iterar sobre cada grupo de pacientes
-    for paciente in df['Paciente'].unique():
-        # Filtrar los datos por el paciente actual
-        data_paciente = df[df['Paciente'] == paciente]
-
-        # Dividir los datos entre medicamentos y descartables
-        medicamentos = data_paciente[~data_paciente['Código'].str.startswith('DES')]
-        descartables = data_paciente[data_paciente['Código'].str.startswith('DES')]
-
-        descartables['Precio'] = descartables['Precio'] * 0.9
-        # Concatenar los medicamentos y los descartables
-        data_paciente_ordenado = pd.concat([medicamentos, descartables])
-
-        # Calcular la nueva columna "Subtotal" como Cantidad * Precio
-        data_paciente_ordenado['Subtotal'] = data_paciente_ordenado['Cantidad'] * data_paciente_ordenado['Precio']
-
-        # Redondear todas las columnas numéricas a 2 decimales
-        data_paciente_ordenado = data_paciente_ordenado.round(2)
-
-        # Calcular el total financiador (suma de la columna "Subtotal"), redondeado a 2 decimales
-        total_financiador = round(data_paciente_ordenado['Subtotal'].sum(), 2)
-
-        # Calcular el 10% del total financiador, redondeado a 2 decimales
-        descuento_kairox = round(total_financiador * 0.1, 2)
-
-        # Calcular el total general con el descuento aplicado, redondeado a 2 decimales
-        total_general = round(total_financiador - descuento_kairox, 2)
-
-        # Crear un archivo Excel para el paciente
-        file_path = os.path.join(output_dir, f'{paciente}.xlsx')
-
-        # Usar pandas con xlsxwriter para crear un archivo Excel
-        writer = pd.ExcelWriter(file_path, engine='xlsxwriter')
-        workbook = writer.book
-        worksheet = workbook.add_worksheet('Medicamentos')
-
-        # Formatos para el archivo Excel
-        bold_format = workbook.add_format({'bold': True})  # Negrita
-        border_format = workbook.add_format({'border': 1})  # Borde alrededor de la tabla
-        header_format = workbook.add_format({'bold': True, 'border': 1})  # Negrita y borde para el encabezado
-        title_format = workbook.add_format({'bold': True, 'font_size': 14})  # Negrita y tamaño de fuente 14 para el título
-
-        # Obtener los valores de obra social
-        obra_social = data_paciente_ordenado['OS'].iloc[0] if 'OS' in data_paciente_ordenado.columns else "No disponible"
-
-        # Encabezado personalizado
-        worksheet.write('A1', 'Hospital Privado Santa Clara de Asís', title_format)  # Nombre del hospital en tamaño 14
-        worksheet.write('A2', 'Obra social:', bold_format)
-        worksheet.write('B2', obra_social)
-
-        worksheet.write('A3', 'Paciente:', bold_format)
-        worksheet.write('B3', paciente)
-
-        # Eliminar las columnas 'Paciente' y 'OS' del DataFrame antes de escribir la tabla
-        data_paciente_ordenado = data_paciente_ordenado.drop(columns=['Paciente', 'OS'], errors='ignore')
-
-        # Ajustar la escritura del DataFrame justo después del encabezado
-        start_row = 5  # La tabla comenzará desde la fila 6
-        for col_num, value in enumerate(data_paciente_ordenado.columns.values):
-            worksheet.write(start_row, col_num, value, header_format)  # Escribir los nombres de las columnas con negrita y borde
-
-        for row_num, row_data in enumerate(data_paciente_ordenado.values, start=start_row + 1):
-            for col_num, value in enumerate(row_data):
-                worksheet.write(row_num, col_num, value, border_format)  # Escribir los valores con borde
-
-        # Ajustar el ancho de las columnas automáticamente
-        for col_num, col in enumerate(data_paciente_ordenado.columns):
-            max_len = max(data_paciente_ordenado[col].astype(str).map(len).max(), len(col)) + 2  # Encontrar la longitud máxima
-            worksheet.set_column(col_num, col_num, max_len)  # Ajustar el ancho de la columna
-
-        # Añadir totales en la última fila con formato en negrita
-        total_row = len(data_paciente_ordenado) + start_row + 2
-        worksheet.write(f'D{total_row}', 'Total', bold_format)  # Leyenda "Total" en negrita
-        worksheet.write(f'E{total_row}', total_financiador, bold_format)  # Total en negrita
-
-        # Añadir la fila "KAIROX - (10%)"
-        worksheet.write(f'D{total_row + 1}', 'KAIROS - (10%)', bold_format)  # Leyenda del 10% descuento en negrita
-        worksheet.write(f'E{total_row + 1}', descuento_kairox, bold_format)  # Monto del descuento en negrita
-
-        # Añadir la fila "Total General"
-        worksheet.write(f'D{total_row + 2}', 'Total General', bold_format)  # Leyenda "Total General" en negrita
-        worksheet.write(f'E{total_row + 2}', total_general, bold_format)  # Total general en negrita
-
-        # Guardar y cerrar el archivo Excel
-        writer.close()
-
-    return "Archivos Excel generados exitosamente."
-
- 
-
-def process_excel_osutgra2(df):
-    # Crear una carpeta para guardar los archivos de salida
-    output_dir = 'output_excels'
-    if not os.path.exists(output_dir):
-        os.makedirs(output_dir)
-
-    # Iterar sobre cada grupo de pacientes
-    for paciente in df['Paciente'].unique():
-        # Filtrar los datos por el paciente actual
-        data_paciente = df[df['Paciente'] == paciente].copy()
-
-        # Identificar y ajustar los precios de los descartables antes de aplicar el descuento
-        is_descartable = data_paciente['Código'].str.startswith('DES')
-        data_paciente.loc[is_descartable, 'Precio'] = (data_paciente.loc[is_descartable, 'Precio'] / 0.9).round(2)
-
-        # Columna de porcentaje de descuento fijo en 10%
-        data_paciente['Porcentaje Descuento'] = 10  # 10%
-
-        # Columna del valor a descontar (10% del Precio unitario)
-        data_paciente['Valor Descuento'] = (data_paciente['Precio'] * (data_paciente['Porcentaje Descuento'] / 100)).round(2)
-
-        # Columna del Precio unitario con descuento
-        data_paciente['Precio con Descuento'] = (data_paciente['Precio'] - data_paciente['Valor Descuento']).round(2)
-
-        # Calcular la nueva columna "Subtotal" como Cantidad * Precio con Descuento
-        data_paciente['Subtotal'] = (data_paciente['Cantidad'] * data_paciente['Precio con Descuento']).round(2)
-
-        # Calcular el total financiador (suma de la columna "Subtotal")
-        total_financiador = round(data_paciente['Subtotal'].sum(), 2)
-
-        # Crear un archivo Excel para el paciente
-        file_path = os.path.join(output_dir, f'{paciente}.xlsx')
-
-        # Usar `pandas` con `xlsxwriter` para crear un archivo Excel
-        writer = pd.ExcelWriter(file_path, engine='xlsxwriter')
-        workbook = writer.book
-        worksheet = workbook.add_worksheet('Medicamentos')
-
-        # Formatos para el archivo Excel
-        bold_format = workbook.add_format({'bold': True})  # Negrita
-        border_format = workbook.add_format({'border': 1})  # Borde alrededor de la tabla
-        header_format = workbook.add_format({'bold': True, 'border': 1})  # Negrita y borde para el encabezado
-        title_format = workbook.add_format({'bold': True, 'font_size': 14})  # Negrita y tamaño de fuente 14 para el título
-
-        # Obtener los valores de obra social
-        obra_social = data_paciente['OS'].iloc[0] if 'OS' in data_paciente.columns else "No disponible"
-
-        # Encabezado personalizado
-        worksheet.write('A1', 'Hospital Privado Santa Clara de Asís', title_format)  # Nombre del hospital en tamaño 14
-        worksheet.write('A2', 'Obra social:', bold_format)
-        worksheet.write('B2', obra_social)
-
-        worksheet.write('A3', 'Paciente:', bold_format)
-        worksheet.write('B3', paciente)
-
-        # Eliminar las columnas 'Paciente' y 'OS' del DataFrame antes de escribir la tabla
-        data_paciente = data_paciente.drop(columns=['Paciente', 'OS'], errors='ignore')
-
-        # Ajustar la escritura del DataFrame justo después del encabezado
-        start_row = 5  # La tabla comenzará desde la fila 6
-        for col_num, value in enumerate(data_paciente.columns.values):
-            worksheet.write(start_row, col_num, value, header_format)  # Escribir los nombres de las columnas con negrita y borde
-
-        for row_num, row_data in enumerate(data_paciente.values, start=start_row + 1):
-            for col_num, value in enumerate(row_data):
-                if isinstance(value, float):
-                    worksheet.write(row_num, col_num, round(value, 2), border_format)  # Valores redondeados a dos decimales
-                else:
-                    worksheet.write(row_num, col_num, value, border_format)  # Otros valores con borde
-
-        # Ajustar el ancho de las columnas automáticamente
-        for col_num, col in enumerate(data_paciente.columns):
-            max_len = max(data_paciente[col].astype(str).map(len).max(), len(col)) + 2  # Encontrar la longitud máxima
-            worksheet.set_column(col_num, col_num, max_len)  # Ajustar el ancho de la columna
-
-        # Añadir totales en la última fila con formato en negrita
-        total_row = len(data_paciente) + start_row + 2
-        worksheet.write(f'G{total_row}', 'Total', bold_format)  # Leyenda "Total" en negrita
-        worksheet.write(f'H{total_row}', total_financiador, bold_format)  # Total redondeado a dos decimales
-
-        # Guardar y cerrar el archivo Excel
-        writer.close()
-
-    return "Archivos Excel generados exitosamente."
-
-
-
-def process_excel_avalian(df):
-    # Crear una carpeta para guardar los archivos de salida
-    output_dir = 'output_excels'
-    if not os.path.exists(output_dir):
-        os.makedirs(output_dir)
-
-    # Iterar sobre cada grupo de pacientes
-    for paciente in df['Paciente'].unique():
-        # Filtrar los datos por el paciente actual
-        data_paciente = df[df['Paciente'] == paciente]
-
-        # Calcular la nueva columna "Subtotal" como Cantidad * Precio
-        data_paciente['Subtotal'] = data_paciente['Cantidad'] * data_paciente['Precio']
-
-        # Redondear todas las columnas numéricas a 2 decimales
-        data_paciente = data_paciente.round(2)
-
-        # Calcular el total financiador (suma de la columna "Subtotal"), redondeado a 2 decimales
-        total_financiador = round(data_paciente['Subtotal'].sum(), 2)
-
-        # Calcular el 15% del total financiador, redondeado a 2 decimales
-        descuento_kairox = round(total_financiador * 0.1, 2)
-
-        # Calcular el total general con el descuento aplicado, redondeado a 2 decimales
-        total_general = round(total_financiador - descuento_kairox, 2)
-
-        # Crear un archivo Excel para el paciente
-        file_path = os.path.join(output_dir, f'{paciente}.xlsx')
-
-        # Usar `pandas` con `xlsxwriter` para crear un archivo Excel
-        writer = pd.ExcelWriter(file_path, engine='xlsxwriter')
-        workbook = writer.book
-        worksheet = workbook.add_worksheet('Medicamentos')
-
-        # Formatos para el archivo Excel
-        bold_format = workbook.add_format({'bold': True})  # Negrita
-        border_format = workbook.add_format({'border': 1})  # Borde alrededor de la tabla
-        header_format = workbook.add_format({'bold': True, 'border': 1})  # Negrita y borde para el encabezado
-        title_format = workbook.add_format({'bold': True, 'font_size': 14})  # Negrita y tamaño de fuente 14 para el título
-
-        # Obtener los valores de obra social
-        obra_social = data_paciente['OS'].iloc[0] if 'OS' in data_paciente.columns else "No disponible"
-
-        # Encabezado personalizado
-        worksheet.write('A1', 'Hospital Privado Santa Clara de Asís', title_format)  # Nombre del hospital en tamaño 14
-        worksheet.write('A2', 'Obra social:', bold_format)
-        worksheet.write('B2', obra_social)
-
-        worksheet.write('A3', 'Paciente:', bold_format)
-        worksheet.write('B3', paciente)
-
-        # Eliminar las columnas 'Paciente' y 'OS' del DataFrame antes de escribir la tabla
-        data_paciente = data_paciente.drop(columns=['Paciente', 'OS'], errors='ignore')
-
-        # Ajustar la escritura del DataFrame justo después del encabezado
-        start_row = 5  # La tabla comenzará desde la fila 6
-        for col_num, value in enumerate(data_paciente.columns.values):
-            worksheet.write(start_row, col_num, value, header_format)  # Escribir los nombres de las columnas con negrita y borde
-
-        for row_num, row_data in enumerate(data_paciente.values, start=start_row + 1):
-            for col_num, value in enumerate(row_data):
-                worksheet.write(row_num, col_num, value, border_format)  # Escribir los valores con borde
-
-        # Ajustar el ancho de las columnas automáticamente
-        for col_num, col in enumerate(data_paciente.columns):
-            max_len = max(data_paciente[col].astype(str).map(len).max(), len(col)) + 2  # Encontrar la longitud máxima
-            worksheet.set_column(col_num, col_num, max_len)  # Ajustar el ancho de la columna
-
-        # Añadir totales en la última fila con formato en negrita
-        total_row = len(data_paciente) + start_row + 2
-        worksheet.write(f'D{total_row}', 'Total', bold_format)  # Leyenda "Total" en negrita
-        worksheet.write(f'E{total_row}', total_financiador, bold_format)  # Total en negrita
-
-        # Añadir la fila "KAIROX - (15%)"
-        worksheet.write(f'D{total_row + 1}', 'KAIROS - (10%)', bold_format)  # Leyenda del 15% descuento en negrita
-        worksheet.write(f'E{total_row + 1}', descuento_kairox, bold_format)  # Monto del descuento en negrita
-
-        # Añadir la fila "Total General"
-        worksheet.write(f'D{total_row + 2}', 'Total General', bold_format)  # Leyenda "Total General" en negrita
-        worksheet.write(f'E{total_row + 2}', total_general, bold_format)  # Total general en negrita
-
-        # Guardar y cerrar el archivo Excel
-        writer.close()
-
-    return "Archivos Excel generados exitosamente."
- 
-def process_excel_ospe(df):
-    # Crear una carpeta para guardar los archivos de salida
-    output_dir = 'output_excels'
-    if not os.path.exists(output_dir):
-        os.makedirs(output_dir)
-
-    # Iterar sobre cada grupo de pacientes
-    for paciente in df['Paciente'].unique():
-        # Filtrar los datos por el paciente actual
-        data_paciente = df[df['Paciente'] == paciente]
-
-        # Calcular la nueva columna "Subtotal" como Cantidad * Precio
-        data_paciente['Subtotal'] = data_paciente['Cantidad'] * data_paciente['Precio']
-
-        # Redondear todas las columnas numéricas a 2 decimales
-        data_paciente = data_paciente.round(2)
-
-        # Calcular el total financiador (suma de la columna "Subtotal"), redondeado a 2 decimales
-        total_financiador = round(data_paciente['Subtotal'].sum(), 2)
-
-        # Calcular el 15% del total financiador, redondeado a 2 decimales
-        descuento_kairox = round(total_financiador * 0.15, 2)
-
-        # Calcular el total general con el descuento aplicado, redondeado a 2 decimales
-        total_general = round(total_financiador - descuento_kairox, 2)
-
-        # Crear un archivo Excel para el paciente
-        file_path = os.path.join(output_dir, f'{paciente}.xlsx')
-
-        # Usar `pandas` con `xlsxwriter` para crear un archivo Excel
-        writer = pd.ExcelWriter(file_path, engine='xlsxwriter')
-        workbook = writer.book
-        worksheet = workbook.add_worksheet('Medicamentos')
-
-        # Formatos para el archivo Excel
-        bold_format = workbook.add_format({'bold': True})  # Negrita
-        border_format = workbook.add_format({'border': 1})  # Borde alrededor de la tabla
-        header_format = workbook.add_format({'bold': True, 'border': 1})  # Negrita y borde para el encabezado
-        title_format = workbook.add_format({'bold': True, 'font_size': 14})  # Negrita y tamaño de fuente 14 para el título
-
-        # Obtener los valores de obra social
-        obra_social = data_paciente['OS'].iloc[0] if 'OS' in data_paciente.columns else "No disponible"
-
-        # Encabezado personalizado
-        worksheet.write('A1', 'Hospital Privado Santa Clara de Asís', title_format)  # Nombre del hospital en tamaño 14
-        worksheet.write('A2', 'Obra social:', bold_format)
-        worksheet.write('B2', obra_social)
-
-        worksheet.write('A3', 'Paciente:', bold_format)
-        worksheet.write('B3', paciente)
-
-        # Eliminar las columnas 'Paciente' y 'OS' del DataFrame antes de escribir la tabla
-        data_paciente = data_paciente.drop(columns=['Paciente', 'OS'], errors='ignore')
-
-        # Ajustar la escritura del DataFrame justo después del encabezado
-        start_row = 5  # La tabla comenzará desde la fila 6
-        for col_num, value in enumerate(data_paciente.columns.values):
-            worksheet.write(start_row, col_num, value, header_format)  # Escribir los nombres de las columnas con negrita y borde
-
-        for row_num, row_data in enumerate(data_paciente.values, start=start_row + 1):
-            for col_num, value in enumerate(row_data):
-                worksheet.write(row_num, col_num, value, border_format)  # Escribir los valores con borde
-
-        # Ajustar el ancho de las columnas automáticamente
-        for col_num, col in enumerate(data_paciente.columns):
-            max_len = max(data_paciente[col].astype(str).map(len).max(), len(col)) + 2  # Encontrar la longitud máxima
-            worksheet.set_column(col_num, col_num, max_len)  # Ajustar el ancho de la columna
-
-        # Añadir totales en la última fila con formato en negrita
-        total_row = len(data_paciente) + start_row + 2
-        worksheet.write(f'D{total_row}', 'Total', bold_format)  # Leyenda "Total" en negrita
-        worksheet.write(f'E{total_row}', total_financiador, bold_format)  # Total en negrita
-
-        # Añadir la fila "KAIROX - (15%)"
-        worksheet.write(f'D{total_row + 1}', 'KAIROS - (15%)', bold_format)  # Leyenda del 15% descuento en negrita
-        worksheet.write(f'E{total_row + 1}', descuento_kairox, bold_format)  # Monto del descuento en negrita
-
-        # Añadir la fila "Total General"
-        worksheet.write(f'D{total_row + 2}', 'Total General', bold_format)  # Leyenda "Total General" en negrita
-        worksheet.write(f'E{total_row + 2}', total_general, bold_format)  # Total general en negrita
-
-        # Guardar y cerrar el archivo Excel
-        writer.close()
-
-    return "Archivos Excel generados exitosamente."
-
-
-
- 
-
-
-
-
-
-
-
-
-
-
-
-
-"""
  
 import os
 import pandas as pd
@@ -1783,12 +1082,12 @@ def pdf_filter_view(request):
 
  
 import os
-
+from .forms import UploadFileForm
 # Ruta donde guardar los archivos subidos
 UPLOAD_DIR = 'uploaded_files/'
 
 def upload_txt(request):
-    template_name = 'upload_txt.html'
+    template_name = 'medicamentos/upload_txt.html'
 
     if request.method == 'POST':
         form = UploadFileForm(request.POST, request.FILES)
@@ -1823,7 +1122,7 @@ def upload_txt(request):
                     if len(columns) > 5:
                         col5 = columns[5]
                         start_idx = line.find(col5)
-                        new_value = col5[:-2] + '25'
+                        new_value = col5[:-2] + '26'
                         line_chars[start_idx:start_idx + len(col5)] = new_value.ljust(len(col5))
 
                     # Reconstruir la línea a partir de la lista de caracteres

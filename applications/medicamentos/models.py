@@ -21,3 +21,4 @@ class NomencladorIpsPromedi(models.Model):
         except NomencladorIpsPromedi.DoesNotExist:
             print('codigo no encontrado', codigo)
             return 0
+
