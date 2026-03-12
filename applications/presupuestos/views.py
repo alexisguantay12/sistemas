@@ -1148,3 +1148,252 @@ Puede consultar su liquidación final 72hs habiles posteriores al alta."""
     c.showPage()
     c.save()
     return response
+
+
+
+
+from django.shortcuts import render
+from django.db.models import Q
+from django.http import HttpResponse
+from datetime import datetime
+from openpyxl import Workbook
+from openpyxl.styles import Font, PatternFill, Alignment
+from openpyxl.utils import get_column_letter
+
+from .models import Presupuesto
+
+
+def reporte_presupuestos_fecha(request):
+    presupuestos = Presupuesto.objects.all().select_related(
+        "user_made",
+        "medico",
+    ).order_by("-updated_at")
+
+    fecha_desde = request.GET.get("fecha_desde", "").strip()
+    fecha_hasta = request.GET.get("fecha_hasta", "").strip()
+    estado = request.GET.get("estado", "").strip()
+
+    if fecha_desde:
+        presupuestos = presupuestos.filter(updated_at__date__gte=fecha_desde)
+
+    if fecha_hasta:
+        presupuestos = presupuestos.filter(updated_at__date__lte=fecha_hasta)
+
+    if estado:
+        presupuestos = presupuestos.filter(estado=estado)
+
+    # Exportar Excel
+    if request.GET.get("exportar") == "excel":
+        return exportar_presupuestos_excel(
+            presupuestos=presupuestos,
+            fecha_desde=fecha_desde,
+            fecha_hasta=fecha_hasta,
+            estado=estado,
+        )
+
+    context = {
+        "presupuestos": presupuestos,
+        "fecha_desde": fecha_desde,
+        "fecha_hasta": fecha_hasta,
+        "estado": estado,
+        "estados": [
+            ("pendiente", "Pendiente"),
+            ("autorizado", "Autorizado"),
+            ("expirado", "Expirado"),
+            ("rechazado", "Rechazado"),
+        ],
+        "total_registros": presupuestos.count(),
+    }
+    return render(request, "presupuestos/reporte_presupuestos_fecha.html", context)
+
+
+def exportar_presupuestos_excel(presupuestos, fecha_desde="", fecha_hasta="", estado=""):
+    wb = Workbook()
+    ws = wb.active
+    ws.title = "Reporte Presupuestos"
+
+    # Título
+    ws.merge_cells("A1:E1")
+    ws["A1"] = "Reporte de Presupuestos por Fecha"
+    ws["A1"].font = Font(bold=True, size=14, color="FFFFFF")
+    ws["A1"].fill = PatternFill("solid", fgColor="0D6EFD")
+    ws["A1"].alignment = Alignment(horizontal="center", vertical="center")
+
+    # Subfiltros
+    ws.merge_cells("A2:E2")
+    filtros_texto = f"Desde: {fecha_desde or '-'} | Hasta: {fecha_hasta or '-'} | Estado: {estado or 'Todos'}"
+    ws["A2"] = filtros_texto
+    ws["A2"].font = Font(italic=True)
+    ws["A2"].alignment = Alignment(horizontal="center")
+
+    # Cabeceras
+    headers = ["ID Presupuesto", "Fecha", "Paciente", "Médico", "Estado"]
+    header_row = 4
+
+    for col_num, header in enumerate(headers, 1):
+        cell = ws.cell(row=header_row, column=col_num, value=header)
+        cell.font = Font(bold=True, color="FFFFFF")
+        cell.fill = PatternFill("solid", fgColor="198754")
+        cell.alignment = Alignment(horizontal="center", vertical="center")
+
+    # Datos
+    row = header_row + 1
+    for p in presupuestos:
+        paciente = getattr(p, "paciente", None)
+        medico = getattr(p, "medico", None)
+
+        ws.cell(row=row, column=1, value=p.id)
+        ws.cell(
+            row=row,
+            column=2,
+            value=p.fecha.strftime("%d/%m/%Y %H:%M") if p.fecha else ""
+        )
+        ws.cell(row=row, column=3, value=str(paciente) if paciente else "-")
+        ws.cell(row=row, column=4, value=str(medico) if medico else "-")
+        ws.cell(row=row, column=5, value=p.estado or "-")
+        row += 1
+
+    # Anchos
+    widths = {
+        1: 18,
+        2: 22,
+        3: 30,
+        4: 30,
+        5: 18,
+    }
+
+    for col_idx, width in widths.items():
+        ws.column_dimensions[get_column_letter(col_idx)].width = width
+
+    # Congelar cabecera
+    ws.freeze_panes = "A5"
+
+    filename = "reporte_presupuestos.xlsx"
+    response = HttpResponse(
+        content_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+    )
+    response["Content-Disposition"] = f'attachment; filename="{filename}"'
+    wb.save(response)
+    return response
+
+
+
+
+def reporte_pagos_fecha(request):
+    pagos = Pago.objects.select_related(
+        "presupuesto",
+        "presupuesto__medico",
+        "user_made",
+    ).order_by("-fecha")
+
+    fecha_desde = request.GET.get("fecha_desde", "").strip()
+    fecha_hasta = request.GET.get("fecha_hasta", "").strip()
+    caja = request.GET.get("caja", "").strip()
+
+    if fecha_desde:
+        pagos = pagos.filter(fecha__date__gte=fecha_desde)
+
+    if fecha_hasta:
+        pagos = pagos.filter(fecha__date__lte=fecha_hasta)
+
+    if caja:
+        pagos = pagos.filter(caja=caja)
+
+    if request.GET.get("exportar") == "excel":
+        return exportar_pagos_excel(
+            pagos=pagos,
+            fecha_desde=fecha_desde,
+            fecha_hasta=fecha_hasta,
+            caja=caja,
+        )
+
+    context = {
+        "pagos": pagos,
+        "fecha_desde": fecha_desde,
+        "fecha_hasta": fecha_hasta,
+        "caja": caja,
+        "cajas": Pago.TIPO_CAJA,
+        "total_registros": pagos.count(),
+        "total_importe": sum(p.monto for p in pagos),
+    }
+    return render(request, "presupuestos/reporte_pagos_fecha.html", context)
+
+
+def exportar_pagos_excel(pagos, fecha_desde="", fecha_hasta="", caja=""):
+    wb = Workbook()
+    ws = wb.active
+    ws.title = "Reporte Pagos"
+
+    # Título
+    ws.merge_cells("A1:E1")
+    ws["A1"] = "Reporte de Pagos por Fecha"
+    ws["A1"].font = Font(bold=True, size=14, color="FFFFFF")
+    ws["A1"].fill = PatternFill("solid", fgColor="0D6EFD")
+    ws["A1"].alignment = Alignment(horizontal="center", vertical="center")
+
+    # Filtros
+    ws.merge_cells("A2:E2")
+    filtros_texto = f"Desde: {fecha_desde or '-'} | Hasta: {fecha_hasta or '-'} | Caja: {caja or 'Todas'}"
+    ws["A2"] = filtros_texto
+    ws["A2"].font = Font(italic=True)
+    ws["A2"].alignment = Alignment(horizontal="center")
+
+    # Cabeceras
+    headers = ["Importe", "Fecha", "Caja", "Paciente", "Medio de Pago"]
+    header_row = 4
+
+    for col_num, header in enumerate(headers, 1):
+        cell = ws.cell(row=header_row, column=col_num, value=header)
+        cell.font = Font(bold=True, color="FFFFFF")
+        cell.fill = PatternFill("solid", fgColor="198754")
+        cell.alignment = Alignment(horizontal="center", vertical="center")
+
+    # Datos
+    row = header_row + 1
+    total_importe = 0
+
+    for pago in pagos:
+        paciente = pago.presupuesto.paciente_nombre if pago.presupuesto else "-"
+        caja_display = pago.get_caja_display() if pago.caja else "-"
+        medio_pago_display = pago.get_medio_pago_display() if pago.medio_pago else "-"
+
+        ws.cell(row=row, column=1, value=float(pago.monto))
+        ws.cell(row=row, column=2, value=pago.fecha.strftime("%d/%m/%Y %H:%M") if pago.fecha else "")
+        ws.cell(row=row, column=3, value=caja_display)
+        ws.cell(row=row, column=4, value=paciente)
+        ws.cell(row=row, column=5, value=medio_pago_display)
+
+        total_importe += pago.monto
+        row += 1
+
+    # Fila total
+    ws.cell(row=row + 1, column=1, value="TOTAL")
+    ws.cell(row=row + 1, column=1).font = Font(bold=True)
+    ws.cell(row=row + 1, column=2, value=float(total_importe))
+    ws.cell(row=row + 1, column=2).font = Font(bold=True)
+
+    # Formato moneda columna importe
+    for r in range(header_row + 1, row + 2):
+        ws.cell(row=r, column=1).number_format = '$ #,##0.00'
+
+    # Anchos
+    widths = {
+        1: 18,
+        2: 22,
+        3: 18,
+        4: 35,
+        5: 22,
+    }
+
+    for col_idx, width in widths.items():
+        ws.column_dimensions[get_column_letter(col_idx)].width = width
+
+    ws.freeze_panes = "A5"
+
+    filename = "reporte_pagos.xlsx"
+    response = HttpResponse(
+        content_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+    )
+    response["Content-Disposition"] = f'attachment; filename="{filename}"'
+    wb.save(response)
+    return response

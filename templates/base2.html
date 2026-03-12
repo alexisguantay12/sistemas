@@ -147,6 +147,28 @@
                         </li>  
                     </ul>
                 </li>
+                 <!-- 🔽 Dropdown para Códigos Especiales -->
+                <li class="nav-item dropdown">
+                    <a class="nav-link dropdown-toggle" href="#" id="codigosDropdown" role="button"
+                    data-bs-toggle="dropdown" aria-expanded="false">
+                        <i class="fas fa-tags me-1"></i> Reportes
+                    </a>
+                    <ul class="dropdown-menu" aria-labelledby="codigosDropdown">
+                        <!-- Opción actual -->
+                        <li>
+                            <a class="dropdown-item" href="{% url 'presupuestos_app:reporte_presupuestos_fecha' %}">
+                                Presupuestos por fecha
+                            </a>
+                        </li>
+
+                        <!-- Ejemplos de más opciones (podés cambiar URLs y textos) -->
+                        <li>
+                            <a class="dropdown-item" href="{% url 'presupuestos_app:reporte_pagos_fecha' %}">
+                                Pagos por fecha
+                            </a>
+                        </li>  
+                    </ul>
+                </li>
             {% endif %}
 
                 <li class="nav-item dropdown">

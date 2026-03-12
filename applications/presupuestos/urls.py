@@ -21,4 +21,10 @@ urlpatterns = [
     path("autorizar/<int:pk>/", views.autorizar_presupuesto, name="autorizar_presupuesto"),
     path('cerrar/<int:pk>/', views.cerrar_presupuesto, name='cerrar_presupuesto'),
     path("clausulas/",views.gestion_clausulas,name="gestion_clausulas"),
+    path(
+        "reporte/presupuestos-fecha/",
+        views.reporte_presupuestos_fecha,
+        name="reporte_presupuestos_fecha"
+    ),
+    path("reporte-pagos-fecha/", views.reporte_pagos_fecha, name="reporte_pagos_fecha"),
 ]
