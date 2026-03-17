@@ -1,0 +1,18 @@
+{% load group_tags %}
+{% for reintegro in reintegros %}
+<tr>
+    <td>{{ reintegro.fecha|date:"d/m/Y" }}</td>
+    <td>${{ reintegro.monto|moneda_ar }}</td>
+    <td>{{ reintegro.medio_pago }}</td>
+    <td>{{ reintegro.user_made.first_name }} {{ reintegro.user_made.last_name }}</td>
+    {% if reintegro.puede_eliminar %}
+        <td><span class="badge bg-danger eliminar-reintegro" data-id="{{ reintegro.id }}" style="cursor:pointer;">Eliminar</span></td>
+    {% else %}
+        <td><span class="badge bg-secondary">Bloqueado</span></td>
+    {% endif %}
+</tr>
+{% empty %}
+<tr>
+    <td colspan="5" class="text-center text-muted">No hay reintegros registrados.</td>
+</tr>
+{% endfor %}

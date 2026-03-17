@@ -89,7 +89,34 @@
 
 
 
+/* Mini tabla financiera elegante */
+.tabla-mini {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+    font-size: 0.75rem;
+}
 
+.fila-mini {
+    display: flex;
+    justify-content: space-between;
+    padding: 3px 6px;
+    border-radius: 6px;
+    background-color: #f8f9fa;
+    transition: all 0.2s ease;
+}
+
+.fila-mini:hover {
+    background-color: #e9ecef;
+}
+
+.fila-mini span:first-child {
+    color: #6c757d;
+}
+
+.fila-mini span:last-child {
+    font-weight: 600;
+}
 
 
 </style>
@@ -136,6 +163,11 @@
                         <i class="fas fa-cash-register"></i> Pagos
                     </a> 
                 {% endif %} 
+                {% if presupuesto.estado != 'pendiente' %}
+                    <a href="#modalReintegro" class="btn btn-warning btn-sm" data-bs-toggle="modal">
+                        <i class="fas fa-undo"></i> Reintegros
+                    </a>
+                {% endif %}
                 <a href="#modalHistorial" class="btn btn-info btn-sm" data-bs-toggle="modal">
                     <i class="fas fa-history"></i> Ver historial
                 </a>
@@ -242,7 +274,11 @@
         </div>
     </div>
 
-
+    <div id="resumenMovimientosContainer">
+        {% include 'presupuestos/partials/_resumen_movimientos.html' %}
+    </div>
+    
+    
     <!-- Modal ver comentario (solo visualización) -->
     <div class="modal fade" id="modalVerComentario" tabindex="-1" aria-labelledby="modalVerComentarioLabel" aria-hidden="true">
         <div class="modal-dialog modal-sm modal-dialog-centered">
@@ -280,15 +316,21 @@
                     <form id="formRegistroPago" method="post" action="{% url 'presupuestos_app:registrar_pago' presupuesto.id %}">
                     {% csrf_token %}
                     <div class="row g-3">
-                        <div class="col-md-4">
-                        <label class="form-label">Monto</label>
+                        <div class="col-md-3">
+                            <label class="form-label">Fecha</label>
+                            <input type="date" class="form-control" name="fecha" value="{{ today|date:'Y-m-d' }}" required>
+                        </div>
+
+                        <div class="col-md-3">
+                            <label class="form-label">Monto</label>
                             <div class="input-group input-group-sm form-control">
                                 <input type="number" step="0.01" class="form-control" name="monto" required>
                                 <button class="btn btn-outline-primary" type="button" id="btnCompletarPago" title="Usar saldo restante">
-                                <i class="fas fa-coins"></i>
+                                    <i class="fas fa-coins"></i>
                                 </button>
                             </div>
                         </div>
+
                         <div class="col-md-3">
                             <label class="form-label">Medio de Pago</label>
                             <select name="medio_pago" class="form-select" required>
@@ -299,9 +341,10 @@
                                 <option value="tarjeta_credito">Tarjeta Credito</option> 
                             </select>
                         </div>
-                        <div class="col-md-4">
+
+                        <div class="col-md-3">
                             <label class="form-label">Comentario</label> 
-                            <input type="text" class="form-control" name="observacion_pago">
+                            <input type="text" class="form-control" name="observaciones_pago">
                         </div>
                     </div>
 
@@ -336,6 +379,82 @@
             </div>
         </div>
     </div>
+
+    <!-- Modal Registro de Reintegro -->
+    <div class="modal fade" id="modalReintegro" tabindex="-1" aria-labelledby="modalReintegroLabel" aria-hidden="true">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                
+                <div class="modal-header bg-light">
+                    <h5 class="modal-title" id="modalReintegroLabel">Registro de Reintegro - Presupuesto Nro:{{ presupuesto.id }}</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+                </div>
+                
+                <div class="modal-body">
+                    {% if presupuesto.estado != 'cerrado' %}
+                    <form id="formRegistroReintegro" method="post" action="{% url 'presupuestos_app:registrar_reintegro' presupuesto.id %}">
+                        {% csrf_token %}
+                        <div class="row g-3">
+                            <div class="col-md-3">
+                                <label class="form-label">Fecha</label>
+                                <input type="date" class="form-control" name="fecha" value="{{ today|date:'Y-m-d' }}" required>
+                            </div>
+
+                            <div class="col-md-3">
+                                <label class="form-label">Monto</label>
+                                <div class="input-group input-group-sm">
+                                    <input type="number" step="0.01" class="form-control" name="monto" required>
+                                </div>
+                            </div>
+
+                            <div class="col-md-3">
+                                <label class="form-label">Medio de Pago</label>
+                                <select name="medio_pago" class="form-select" required>
+                                    <option value="efectivo">Efectivo</option>
+                                    <option value="cajab">Caja B</option>
+                                    <option value="transferencia">Transferencia</option>
+                                    <option value="tarjeta_debito">Tarjeta Débito</option>
+                                    <option value="tarjeta_credito">Tarjeta Crédito</option> 
+                                </select>
+                            </div>
+
+                            <div class="col-md-3">
+                                <label class="form-label">Comentario</label> 
+                                <input type="text" class="form-control" name="observaciones_reintegro">
+                            </div>
+                        </div>
+
+                        <div class="mt-4 text-end">
+                            <button type="submit" class="btn btn-warning">Guardar Reintegro</button>
+                        </div>
+                    </form>
+                    {% endif %}
+
+                    <hr>
+                    <h6>Reintegros registrados</h6>
+                    <table class="table table-sm table-striped">
+                        <thead>
+                            <tr>
+                                <th>Fecha</th>
+                                <th>Monto</th>
+                                <th>Medio</th>
+                                <th>Registró</th>
+                                <th>Acción</th>
+                            </tr>
+                        </thead>
+                        <tbody id="tablaReintegrosBody">
+                            {% include 'presupuestos/partials/_tabla_reintegros.html' %}
+                        </tbody>
+                    </table>
+
+                    <div class="d-flex justify-content-between mt-2">
+                        <p><strong id="totalReintegrado">Total reintegrado: ${{ total_reintegrado|moneda_ar }}</strong></p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
 
     <!-- Modal Confirmar cierre -->
     <div class="modal fade" id="modalCerrar" tabindex="-1" aria-labelledby="modalCerrarLabel" aria-hidden="true">
@@ -418,6 +537,32 @@
         </div>
     </div>
 
+
+
+    <!-- Modal Confirmar Registro de Reintegro -->
+    <div class="modal fade" id="modalConfirmarReintegro" tabindex="-1" aria-labelledby="modalConfirmarReintegroLabel" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content border-0 shadow-sm">
+                <div class="modal-header bg-success text-white">
+                    <h6 class="modal-title" id="modalConfirmarReintegroLabel">
+                        <i class="fas fa-undo-alt me-2"></i> Confirmar reintegro
+                    </h6>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+                </div>
+                <div class="modal-body text-center">
+                    <p class="mb-2">¿Deseás registrar este reintegro?</p>
+                    <small class="text-muted">Esta acción guardará el reintegro en el sistema.</small>
+                </div>
+                <div class="modal-footer justify-content-center border-0">
+                    <button type="button" class="btn btn-light btn-sm" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="button" class="btn btn-success btn-sm" id="btnConfirmarReintegro">
+                        <i class="fas fa-check"></i> Confirmar
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- Modal Confirmar autorizacion -->
     <div class="modal fade" id="modalAutorizar" tabindex="-1" aria-labelledby="modalAutorizarLabel" aria-hidden="true">
         <div class="modal-dialog modal-dialog-centered">
@@ -465,58 +610,208 @@
         </div>
     </div>
 
+    <!-- Modal Confirmar Eliminación de Reintegro -->
+    <div class="modal fade" id="modalEliminarReintegro" tabindex="-1" aria-labelledby="modalEliminarReintegroLabel" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content border-0 shadow-sm">
+                <div class="modal-header bg-danger text-white">
+                    <h6 class="modal-title" id="modalEliminarReintegroLabel">
+                        <i class="fas fa-trash-alt me-2"></i> Eliminar reintegro
+                    </h6>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+                </div>
+                <div class="modal-body text-center">
+                    <p class="mb-2">¿Seguro que querés eliminar este reintegro?</p>
+                    <small class="text-muted">Esta acción no se puede deshacer.</small>
+                </div>
+                <div class="modal-footer justify-content-center border-0">
+                    <button type="button" class="btn btn-light btn-sm" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="button" class="btn btn-danger btn-sm" id="btnConfirmarEliminarReintegro">
+                        <i class="fas fa-trash"></i> Eliminar
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
 
-
-</div>
-<script>
-(function() {
-    // 🔹 Paso 1: Reemplaza la entrada actual, eliminando la de edición del historial
+</div><script>
+/* =========================================================
+   MANEJO DEL BOTÓN "ATRÁS" DEL NAVEGADOR
+   - Evita volver a la pantalla anterior de edición/historial
+   - Redirige directamente al listado de presupuestos
+========================================================= */
+(function () {
     window.history.replaceState(null, "", window.location.href);
-
-    // 🔹 Paso 2: Empuja una nueva entrada "limpia"
     window.history.pushState(null, "", window.location.href);
-    console.log("Aca si estoy entrando aunque no creas")
-    // 🔹 Paso 3: Si intenta volver atrás, redirige al listado
+
+    console.log("Control de navegación activado");
+
     window.addEventListener("popstate", function () {
         window.location.replace("{% url 'presupuestos_app:presupuestos' %}");
     });
 })();
-document.addEventListener("DOMContentLoaded", function() {
+
+
+document.addEventListener("DOMContentLoaded", function () {
+    /* =========================================================
+       REFERENCIAS GENERALES DEL DOM
+    ========================================================= */
     const vistaListado = document.getElementById("vistaListadoHistorial");
     const vistaDetalle = document.getElementById("vistaDetalleHistorial");
     const detalleContent = document.getElementById("detalleHistorialContent");
     const btnVolver = document.getElementById("btnVolverListado");
-    const historial = JSON.parse('{{ historial_json|escapejs }}'); 
-    // Generar listado con cards profesionales
-    let listadoHTML = '';
-    historial.forEach((h, index) => {
-        listadoHTML += `
-            <div class="col-md-6 col-lg-4">
-                <div class="card shadow-sm border-0 h-100 hover-shadow cursor-pointer ver-detalle-historial" data-index="${index}">
-                    <div class="card-body">
-                        <h5 class="card-title">Versión ${index+1}</h5>
-                        <p class="card-text mb-1"><strong>Fecha:</strong> ${h.fecha}</p> 
-                        <p class="card-text text-truncate"><strong>Paciente:</strong> ${h.paciente.nombre}</p>
-                        <p class="card-text text-truncate"><strong>Usuario:</strong> ${h.user}</p>
+
+    const modalVerComentario = document.getElementById("modalVerComentario");
+
+    const formPago = document.getElementById("formRegistroPago");
+    const tablaPagosBody = document.getElementById("tablaPagosBody");
+    const totalCalculado = document.getElementById("totalCalculado");
+    const totalSaldo = document.getElementById("totalSaldo");
+
+    const formReintegro = document.getElementById("formRegistroReintegro");
+    const tablaReintegrosBody = document.getElementById("tablaReintegrosBody");
+    const totalReintegrado = document.getElementById("totalReintegrado");
+
+    const btnCompletarPago = document.getElementById("btnCompletarPago");
+
+    const btnAutorizar = document.getElementById("btnAutorizar");
+    const estadoSpan = document.getElementById("estado-presupuesto");
+
+    const historial = JSON.parse('{{ historial_json|escapejs }}');
+
+    let pagoAEliminar = null;
+    let reintegroAEliminar = null;
+
+
+    /* =========================================================
+       FUNCIONES AUXILIARES
+    ========================================================= */
+
+    /**
+     * Formatea un número al estilo argentino.
+     * Ejemplo: 1234.5 -> 1.234,50
+     */
+    function formatearNumeroAR(numero) {
+        if (isNaN(numero)) return "0,00";
+
+        let n = parseFloat(numero).toFixed(2);
+        let partes = n.split(".");
+        let entero = partes[0];
+        let decimal = partes[1];
+
+        entero = entero.replace(/\B(?=(\d{3})+(?!\d))/g, ".");
+
+        return entero + "," + decimal;
+    }
+
+    /**
+     * Actualiza el detalle visual del saldo en la parte superior.
+     */
+    function actualizarSaldoDetalle(saldo) {
+        const saldoElem = document.getElementById("saldo-detalle");
+        if (saldoElem) {
+            saldoElem.textContent = "$" + formatearNumeroAR(saldo);
+        }
+    }
+
+    /**
+     * Actualiza la tabla/listado de pagos y sus totales.
+     */
+    function actualizarListadoPagos(html, total_pagado, saldo) {
+        if (tablaPagosBody) tablaPagosBody.innerHTML = html;
+        if (totalCalculado) totalCalculado.textContent = "Total pagado: $" + formatearNumeroAR(total_pagado);
+        if (totalSaldo) totalSaldo.textContent = "Saldo: $" + formatearNumeroAR(saldo);
+    }
+
+    /**
+     * Actualiza el badge visual del estado del presupuesto.
+     */
+    function actualizarEstadoPresupuesto(nuevoEstadoTexto) {
+        if (!estadoSpan) return;
+
+        estadoSpan.className = "estado-badge";
+
+        switch (nuevoEstadoTexto.toLowerCase()) {
+            case "pendiente":
+                estadoSpan.style.backgroundColor = "#ffc107";
+                estadoSpan.style.color = "#000";
+                break;
+            case "autorizado":
+                estadoSpan.style.backgroundColor = "#17a2b8";
+                estadoSpan.style.color = "#fff";
+                break;
+            case "en curso":
+                estadoSpan.style.backgroundColor = "#28a745";
+                estadoSpan.style.color = "#fff";
+                break;
+            case "cerrado":
+                estadoSpan.style.backgroundColor = "#6f42c1";
+                estadoSpan.style.color = "#fff";
+                break;
+            case "expirado":
+                estadoSpan.style.backgroundColor = "#dc3545";
+                estadoSpan.style.color = "#fff";
+                break;
+            default:
+                estadoSpan.style.backgroundColor = "#6c757d";
+                estadoSpan.style.color = "#fff";
+        }
+
+        estadoSpan.style.transition = "all 0.5s ease";
+        estadoSpan.style.transform = "scale(1.2)";
+
+        setTimeout(() => {
+            estadoSpan.style.transform = "scale(1)";
+        }, 300);
+
+        estadoSpan.textContent = nuevoEstadoTexto;
+    }
+
+
+    function actualizarResumenMovimientos(html) {
+        const contenedor = document.getElementById("resumenMovimientosContainer");
+        if (contenedor) {
+            contenedor.innerHTML = html;
+        }
+    }
+
+
+    /* =========================================================
+       HISTORIAL DEL PRESUPUESTO
+       - Genera cards de versiones
+       - Permite ver detalle de cada versión
+    ========================================================= */
+
+    function renderListadoHistorial() {
+        let listadoHTML = "";
+
+        historial.forEach((h, index) => {
+            listadoHTML += `
+                <div class="col-md-6 col-lg-4">
+                    <div class="card shadow-sm border-0 h-100 hover-shadow cursor-pointer ver-detalle-historial" data-index="${index}">
+                        <div class="card-body">
+                            <h5 class="card-title">Versión ${index + 1}</h5>
+                            <p class="card-text mb-1"><strong>Fecha:</strong> ${h.fecha}</p>
+                            <p class="card-text text-truncate"><strong>Paciente:</strong> ${h.paciente.nombre}</p>
+                            <p class="card-text text-truncate"><strong>Usuario:</strong> ${h.user}</p>
+                        </div>
                     </div>
                 </div>
-            </div>
-        `;
-    });
-    vistaListado.innerHTML = listadoHTML;
+            `;
+        });
 
-    // Click para detalle
-    // Click para detalle
-    document.querySelectorAll(".ver-detalle-historial").forEach(item => {
-        item.addEventListener("click", function(e) {
-            const h = historial[this.dataset.index];
-            let html = `
+        vistaListado.innerHTML = listadoHTML;
+    }
+
+    function mostrarDetalleHistorial(index) {
+        const h = historial[index];
+
+        let html = `
             <div class="card shadow-sm border-0 mb-3">
-                <!-- Encabezado vistoso y compacto -->
                 <div class="card-header bg-primary text-white py-2 px-3 rounded-top">
                     <div class="d-flex justify-content-between align-items-center">
                         <div>
-                            <h6 class="mb-0">Historial Versión ${parseInt(this.dataset.index)+1}</h6>
+                            <h6 class="mb-0">Historial Versión ${parseInt(index) + 1}</h6>
                             <div><small>Fecha: ${h.fecha}</small></div>
                             <div><small>Usuario: ${h.user}</small></div>
                         </div>
@@ -537,12 +832,13 @@ document.addEventListener("DOMContentLoaded", function() {
                             <p class="mb-0"><strong>Email:</strong> ${h.paciente.email}</p>
                             <p class="mb-0"><strong>Obra Social:</strong> ${h.paciente.obra_social}</p>
                         </div>
+
                         <div class="col-md-6">
                             <h6 class="mb-1">Médico</h6>
                             <p class="mb-0">${h.medico}</p>
                             <h6 class="mt-2 mb-1">Estado</h6>
                             <p class="mb-0">${h.estado}</p>
-                            ${h.motivo_no_concretado ? `<p class="mb-0"><strong>Motivo No Concretado:</strong> ${h.motivo_no_concretado}</p>` : ''}
+                            ${h.motivo_no_concretado ? `<p class="mb-0"><strong>Motivo No Concretado:</strong> ${h.motivo_no_concretado}</p>` : ""}
                         </div>
                     </div>
 
@@ -567,114 +863,210 @@ document.addEventListener("DOMContentLoaded", function() {
                                 </tr>
                             </thead>
                             <tbody>
-            `;
-            h.items.forEach(it => {
-                html += `
-                    <tr>
-                        <td>${it.codigo}</td>
-                        <td>${it.tipo}</td>
-                        <td>${it.prestacion}</td>
-                        <td>${it.cantidad}</td>
-                        <td>$${it.precio.toFixed(2)}</td>
-                        <td>$${it.importe.toFixed(2)}</td>
-                        <td>$${it.iva.toFixed(2)}</td>
-                        <td>$${it.subtotal.toFixed(2)}</td>
-                    </tr>
-                `;
-            });
+        `;
+
+        h.items.forEach((it) => {
             html += `
+                <tr>
+                    <td>${it.codigo}</td>
+                    <td>${it.tipo}</td>
+                    <td>${it.prestacion}</td>
+                    <td>${it.cantidad}</td>
+                    <td>$${it.precio.toFixed(2)}</td>
+                    <td>$${it.importe.toFixed(2)}</td>
+                    <td>$${it.iva.toFixed(2)}</td>
+                    <td>$${it.subtotal.toFixed(2)}</td>
+                </tr>
+            `;
+        });
+
+        html += `
                             </tbody>
                         </table>
                     </div>
+
                     <div class="text-end mt-2">
                         <h5><strong>Total:</strong> $${h.total.toFixed(2)}</h5>
                     </div>
                 </div>
             </div>
-            `;
-            detalleContent.innerHTML = html;
-            vistaListado.style.display = "none";
-            vistaDetalle.style.display = "block";
-        }); 
+        `;
 
-    });
+        detalleContent.innerHTML = html;
+        vistaListado.style.display = "none";
+        vistaDetalle.style.display = "block";
+    }
 
-    btnVolver.addEventListener("click", function() {
-        vistaDetalle.style.display = "none";
-        vistaListado.style.display = "flex";
-    });
+    function inicializarEventosHistorial() {
+        document.querySelectorAll(".ver-detalle-historial").forEach((item) => {
+            item.addEventListener("click", function () {
+                mostrarDetalleHistorial(this.dataset.index);
+            });
+        });
 
-    // === Modal de visualización de comentario ===
-    const modalVerComentario = document.getElementById("modalVerComentario");
-    modalVerComentario.addEventListener("show.bs.modal", function (event) {
-        const button = event.relatedTarget;
-        const comentario = button.getAttribute("data-comentario") || "";
-        const textarea = modalVerComentario.querySelector("#textoComentarioVer");
-        textarea.value = comentario;
-    });
-
-
-    const form = document.getElementById("formRegistroPago");
-    const tablaPagosBody = document.getElementById("tablaPagosBody");
-
-    let pagoPendienteMonto = null;
-    let pagoAEliminar = null;
-
-    // === CONFIRMAR REGISTRO DE PAGO ===
-    form.addEventListener("submit", function (e) {
-        e.preventDefault();
-
-        const monto = form.querySelector('input[name="monto"]').value;
-        if (!monto) {
-            alert("Debe ingresar un monto válido.");
-            return;
+        if (btnVolver) {
+            btnVolver.addEventListener("click", function () {
+                vistaDetalle.style.display = "none";
+                vistaListado.style.display = "flex";
+            });
         }
+    }
 
-        pagoPendienteMonto = monto;
 
-        // Mostrar modal de confirmación
-        const modalPago = new bootstrap.Modal(document.getElementById("modalConfirmarPago"));
-        modalPago.show();
+    /* =========================================================
+       MODAL VER COMENTARIO
+    ========================================================= */
+    function inicializarModalComentario() {
+        if (!modalVerComentario) return;
 
-        // Vincular botón confirmar del modal
-        const btnConfirmar = document.getElementById("btnConfirmarPago");
-        btnConfirmar.onclick = function () {
-            modalPago.hide();
+        modalVerComentario.addEventListener("show.bs.modal", function (event) {
+            const button = event.relatedTarget;
+            const comentario = button.getAttribute("data-comentario") || "";
+            const textarea = modalVerComentario.querySelector("#textoComentarioVer");
 
-            const formData = new FormData(form);
+            if (textarea) {
+                textarea.value = comentario;
+            }
+        });
+    }
 
-            fetch(form.action, {
-                method: "POST",
-                headers: { "X-Requested-With": "XMLHttpRequest" },
-                body: formData
-            })
-                .then((resp) => resp.json())
-                .then((data) => {
-                    if (data.success) {
-                        actualizarListadoPagos(data.pagos_html,data.total_pagado,data.saldo);
-                        actualizarEstadoPresupuesto(data.estado);
-                        actualizarSaldoDetalle(data.saldo);
-                        form.reset();
-                    } else {
-                        alert(data.error || "Error al registrar el pago.");
-                    }
+
+    /* =========================================================
+       REGISTRO DE PAGO
+       - Abre modal de confirmación
+       - Envía por AJAX
+       - Refresca tabla, saldo y estado
+    ========================================================= */
+    function inicializarFormularioPago() {
+        if (!formPago) return;
+
+        formPago.addEventListener("submit", function (e) {
+            e.preventDefault();
+
+            const monto = formPago.querySelector('input[name="monto"]').value;
+            const fecha = formPago.querySelector('input[name="fecha"]').value;
+
+            if (!monto || !fecha) {
+                alert("Debe completar fecha y monto.");
+                return;
+            }
+
+            const modalPago = new bootstrap.Modal(document.getElementById("modalConfirmarPago"));
+            modalPago.show();
+
+            const btnConfirmar = document.getElementById("btnConfirmarPago");
+
+            btnConfirmar.onclick = function () {
+                modalPago.hide();
+
+                const formData = new FormData(formPago);
+
+                fetch(formPago.action, {
+                    method: "POST",
+                    headers: { "X-Requested-With": "XMLHttpRequest" },
+                    body: formData
                 })
-                .catch((err) => alert("Error de conexión: " + err));
-        };
-    });
-    const totalCalculado= document.getElementById("totalCalculado");
-    const totalSaldo = document.getElementById('totalSaldo')
-     
-    // === BOTÓN COMPLETAR PAGO ===
-    const btnCompletarPago = document.getElementById("btnCompletarPago");
-    if (btnCompletarPago) {
+                    .then((resp) => resp.json())
+                    .then((data) => {
+                        if (data.success) {
+                            actualizarListadoPagos(data.pagos_html, data.total_pagado, data.saldo);
+                            actualizarEstadoPresupuesto(data.estado);
+                            actualizarSaldoDetalle(data.saldo);
+
+                            if (data.resumen_movimientos_html) {
+                                actualizarResumenMovimientos(data.resumen_movimientos_html);
+                            }
+
+                            formPago.reset();
+                        } else {
+                            alert(data.error || "Error al registrar el pago.");
+                        }
+                    })
+                    .catch((err) => alert("Error de conexión: " + err));
+            };
+        });
+    }
+    /* =========================================================
+       REGISTRO DE REINTEGRO
+       - Envía por AJAX
+       - Refresca tabla de reintegros
+       - Actualiza saldo y estado si corresponde
+    ========================================================= */
+   function inicializarFormularioReintegro() {
+        if (!formReintegro) return;
+
+        formReintegro.addEventListener("submit", function (e) {
+            e.preventDefault();
+
+            const monto = formReintegro.querySelector('input[name="monto"]').value;
+            const fecha = formReintegro.querySelector('input[name="fecha"]').value;
+
+            if (!monto || !fecha) {
+                alert("Debe completar fecha y monto.");
+                return;
+            }
+
+            const modalReintegro = new bootstrap.Modal(document.getElementById("modalConfirmarReintegro"));
+            modalReintegro.show();
+
+            const btnConfirmarReintegro = document.getElementById("btnConfirmarReintegro");
+
+            btnConfirmarReintegro.onclick = function () {
+                modalReintegro.hide();
+
+                const formData = new FormData(formReintegro);
+
+                fetch(formReintegro.action, {
+                    method: "POST",
+                    headers: { "X-Requested-With": "XMLHttpRequest" },
+                    body: formData
+                })
+                    .then((resp) => resp.json())
+                    .then((data) => {
+                        if (data.success) {
+                            if (data.resumen_movimientos_html) {
+                                actualizarResumenMovimientos(data.resumen_movimientos_html);
+                            }
+                            if (tablaReintegrosBody) {
+                                tablaReintegrosBody.innerHTML = data.reintegros_html;
+                            }
+
+                            if (totalReintegrado) {
+                                totalReintegrado.textContent = "Total reintegrado: $" + formatearNumeroAR(data.total_reintegrado);
+                            }
+
+                            if (data.saldo !== undefined) {
+                                actualizarSaldoDetalle(data.saldo);
+                            }
+
+                            formReintegro.reset();
+                        } else {
+                            alert(data.error || "Error al registrar el reintegro.");
+                        }
+                    })
+                    .catch((err) => alert("Error de conexión: " + err));
+            };
+        });
+    }
+
+
+    /* =========================================================
+       BOTÓN "COMPLETAR PAGO"
+       - Carga automáticamente el saldo pendiente en el input monto
+    ========================================================= */
+    function inicializarBotonCompletarPago() {
+        if (!btnCompletarPago) return;
+
         btnCompletarPago.addEventListener("click", () => {
             const saldoText = document.getElementById("totalSaldo")?.textContent || "";
-            const inputMonto = document.querySelector('input[name="monto"]');
+            const inputMonto = document.querySelector('#formRegistroPago input[name="monto"]');
 
             const match = saldoText.match(/[\d\.,]+/);
             if (!match) {
-                Swal.fire({ icon: "warning", text: "No se encontró el saldo actual." });
+                Swal.fire({
+                    icon: "warning",
+                    text: "No se encontró el saldo actual."
+                });
                 return;
             }
 
@@ -687,18 +1079,27 @@ document.addEventListener("DOMContentLoaded", function() {
     }
 
 
+    /* =========================================================
+       ELIMINAR PAGO
+       - Usa modal de confirmación
+       - Elimina por AJAX
+       - Refresca tabla, saldo y estado
+    ========================================================= */
+    function inicializarEliminacionPago() {
+        if (!tablaPagosBody) return;
 
+        tablaPagosBody.addEventListener("click", function (e) {
+            const botonEliminar = e.target.closest(".eliminar-pago");
+            if (!botonEliminar) return;
 
-    // === ELIMINAR PAGO CON MODAL ===
-    tablaPagosBody.addEventListener("click", function (e) {
-        if (e.target.classList.contains("eliminar-pago")) {
             e.preventDefault();
-            pagoAEliminar = e.target.dataset.id;
+            pagoAEliminar = botonEliminar.dataset.id;
 
             const modalEliminar = new bootstrap.Modal(document.getElementById("modalEliminarPago"));
             modalEliminar.show();
 
             const btnEliminar = document.getElementById("btnConfirmarEliminarPago");
+
             btnEliminar.onclick = function () {
                 modalEliminar.hide();
 
@@ -713,150 +1114,172 @@ document.addEventListener("DOMContentLoaded", function() {
                 })
                     .then((resp) => resp.json())
                     .then((data) => {
-                        if (data.success) { 
+                        if (data.success) {
                             actualizarEstadoPresupuesto(data.estado);
-                            actualizarListadoPagos(data.pagos_html,data.total_pagado,data.saldo);
+                            actualizarListadoPagos(data.pagos_html, data.total_pagado, data.saldo);
                             actualizarSaldoDetalle(data.saldo);
+                            if (data.resumen_movimientos_html) {
+                                actualizarResumenMovimientos(data.resumen_movimientos_html);
+                            }
                         } else {
                             alert(data.error || "No se pudo eliminar el pago.");
                         }
                     })
                     .catch((err) => alert("Error de conexión: " + err));
             };
-        }
-    });
-    // === ACTUALIZAR TABLA ===
-    function actualizarListadoPagos(html,total_pagado,saldo) {
-        tablaPagosBody.innerHTML = html;
-        totalCalculado.textContent = 'Total pagado: $'+formatearNumeroAR(total_pagado);
-        totalSaldo.textContent = 'Saldo: $'+formatearNumeroAR(saldo);
-    }
-    function formatearNumeroAR(numero) {
-        if (isNaN(numero)) return "0,00";
-        
-        // Asegurarse de que sea float y redondear a 2 decimales
-        let n = parseFloat(numero).toFixed(2);
-
-        // Separar parte entera y decimal
-        let partes = n.split(".");
-        let entero = partes[0];
-        let decimal = partes[1];
-
-        // Agregar puntos cada 3 dígitos en la parte entera
-        entero = entero.replace(/\B(?=(\d{3})+(?!\d))/g, ".");
-
-        // Combinar con coma para decimales
-        return entero + "," + decimal;
-    }
-
-
-
-    const btnAutorizar = document.getElementById("btnAutorizar");
-    const modalAutorizar = new bootstrap.Modal(document.getElementById("modalAutorizar"));
-    const estadoSpan = document.getElementById("estado-presupuesto");
-
-    btnAutorizar.onclick = function () {
-        const presupuestoId = btnAutorizar.dataset.presupuestoId;
-        const url = "{% url 'presupuestos_app:autorizar_presupuesto' 0 %}".replace("0", presupuestoId);
-
-        modalAutorizar.hide();
-
-        fetch(url, {
-            method: "POST",
-            headers: {
-                "X-CSRFToken": "{{ csrf_token }}",
-                "X-Requested-With": "XMLHttpRequest"
-            }
-        })
-        .then(resp => resp.json())
-        .then(data => {
-            if (data.success) {
-                // Cambia el texto del estado sin recargar la página
-                estadoSpan.textContent = data.nuevo_estado;
-                actualizarEstadoPresupuesto(data.nuevo_estado);
-                Swal.fire({
-                    icon: "success",
-                    title: "Presupuesto autorizado",
-                    text: "El estado se actualizó a: " + data.nuevo_estado,
-                    timer: 1500,
-                    showConfirmButton: false
-                }).then(() => {
-                // 🔹 Recargar después del cierre del Swal 
-                location.reload();
-            });
-            } else {
-                Swal.fire({
-                    icon: "error",
-                    title: "Error",
-                    text: data.error || "No se pudo autorizar el presupuesto."
-                });
-            }
-        })
-        .catch(err => {
-            Swal.fire({
-                icon: "error",
-                title: "Error de conexión",
-                text: err
-            });
         });
-    };
-    
-    function actualizarSaldoDetalle(saldo){
-        const saldoElem = document.getElementById("saldo-detalle");
-        saldoElem.textContent = "$" + formatearNumeroAR(saldo);
     }
-    function actualizarEstadoPresupuesto(nuevoEstadoTexto) {
-        const estadoSpan = document.getElementById("estado-presupuesto");
 
-        // Limpia todas las clases previas de estilo
-        estadoSpan.className = "estado-badge";
+    /* =========================================================
+    ELIMINAR REINTEGRO
+    - Usa modal de confirmación
+    - Elimina por AJAX
+    - Refresca tabla de reintegros
+    - Actualiza saldo y estado si corresponde
+    ========================================================= */
+    function inicializarEliminacionReintegro() {
+        if (!tablaReintegrosBody) return;
 
-        // Define colores y estilos según el estado
-        switch (nuevoEstadoTexto.toLowerCase()) {
-            case "pendiente":
-                estadoSpan.style.backgroundColor = "#ffc107"; // amarillo
-                estadoSpan.style.color = "#000";
-                break;
-            case "autorizado":
-                estadoSpan.style.backgroundColor = "#17a2b8"; // celeste
-                estadoSpan.style.color = "#fff";
-                break;
-            case "en curso":
-                estadoSpan.style.backgroundColor = "#28a745"; // a 
-                estadoSpan.style.color = "#fff";
-                break;
-            case "cerrado":
-                estadoSpan.style.backgroundColor = "#6f42c1"; // verde
-                estadoSpan.style.color = "#fff";
-                break;
-            case "expirado":
-                estadoSpan.style.backgroundColor = "#dc3545"; // rojo
-                estadoSpan.style.color = "#fff";
-                break;
-            default:
-                estadoSpan.style.backgroundColor = "#6c757d"; // gris
-                estadoSpan.style.color = "#fff";
-        }
+        tablaReintegrosBody.addEventListener("click", function (e) {
+            const botonEliminar = e.target.closest(".eliminar-reintegro");
+            if (!botonEliminar) return;
 
-        // Agrega efecto visual de transición suave
-        estadoSpan.style.transition = "all 0.5s ease";
-        estadoSpan.style.transform = "scale(1.2)";
-        setTimeout(() => {
-            estadoSpan.style.transform = "scale(1)";
-        }, 300);
+            e.preventDefault();
+            reintegroAEliminar = botonEliminar.dataset.id;
 
-        // Actualiza el texto del estado
-        estadoSpan.textContent = nuevoEstadoTexto;
+            const modalEliminar = new bootstrap.Modal(document.getElementById("modalEliminarReintegro"));
+            modalEliminar.show();
+
+            const btnEliminar = document.getElementById("btnConfirmarEliminarReintegro");
+
+            btnEliminar.onclick = function () {
+                modalEliminar.hide();
+
+                const url = "{% url 'presupuestos_app:eliminar_reintegro' 0 %}".replace("0", reintegroAEliminar);
+
+                fetch(url, {
+                    method: "POST",
+                    headers: {
+                        "X-CSRFToken": "{{ csrf_token }}",
+                        "X-Requested-With": "XMLHttpRequest"
+                    }
+                })
+                    .then((resp) => resp.json())
+                    .then((data) => {
+                        if (data.success) {
+                            if (tablaReintegrosBody) {
+                                tablaReintegrosBody.innerHTML = data.reintegros_html;
+                            }
+                            if (data.resumen_movimientos_html) {
+                                actualizarResumenMovimientos(data.resumen_movimientos_html);
+                            }
+
+                            if (totalReintegrado) {
+                                totalReintegrado.textContent = "Total reintegrado: $" + formatearNumeroAR(data.total_reintegrado);
+                            }
+
+                            if (data.saldo !== undefined) {
+                                actualizarSaldoDetalle(data.saldo);
+                            }
+
+                            if (data.estado) {
+                                actualizarEstadoPresupuesto(data.estado);
+                            }
+                        } else {
+                            alert(data.error || "No se pudo eliminar el reintegro.");
+                        }
+                    })
+                    .catch((err) => alert("Error de conexión: " + err));
+            };
+        });
     }
+
+    /* =========================================================
+       AUTORIZAR PRESUPUESTO
+       - Cambia el estado vía AJAX
+       - Muestra confirmación
+       - Recarga la pantalla al finalizar
+    ========================================================= */
+    function inicializarAutorizacion() {
+        if (!btnAutorizar) return;
+
+        const modalAutorizar = new bootstrap.Modal(document.getElementById("modalAutorizar"));
+
+        btnAutorizar.onclick = function () {
+            const presupuestoId = btnAutorizar.dataset.presupuestoId;
+            const url = "{% url 'presupuestos_app:autorizar_presupuesto' 0 %}".replace("0", presupuestoId);
+
+            modalAutorizar.hide();
+
+            fetch(url, {
+                method: "POST",
+                headers: {
+                    "X-CSRFToken": "{{ csrf_token }}",
+                    "X-Requested-With": "XMLHttpRequest"
+                }
+            })
+                .then((resp) => resp.json())
+                .then((data) => {
+                    if (data.success) {
+                        estadoSpan.textContent = data.nuevo_estado;
+                        actualizarEstadoPresupuesto(data.nuevo_estado);
+
+                        Swal.fire({
+                            icon: "success",
+                            title: "Presupuesto autorizado",
+                            text: "El estado se actualizó a: " + data.nuevo_estado,
+                            timer: 1500,
+                            showConfirmButton: false
+                        }).then(() => {
+                            location.reload();
+                        });
+                    } else {
+                        Swal.fire({
+                            icon: "error",
+                            title: "Error",
+                            text: data.error || "No se pudo autorizar el presupuesto."
+                        });
+                    }
+                })
+                .catch((err) => {
+                    Swal.fire({
+                        icon: "error",
+                        title: "Error de conexión",
+                        text: err
+                    });
+                });
+        };
+    }
+
+
+    /* =========================================================
+       INICIALIZACIÓN GENERAL
+    ========================================================= */
+    renderListadoHistorial();
+    inicializarEventosHistorial();
+    inicializarModalComentario();
+    inicializarFormularioPago();
+    inicializarFormularioReintegro();
+    inicializarBotonCompletarPago();
+    inicializarEliminacionPago();
+    inicializarEliminacionReintegro();
+    inicializarAutorizacion();
 });
 
 
+/* =========================================================
+   CIERRE DE PRESUPUESTO
+   - Está fuera del DOMContentLoaded porque así lo tenías separado
+   - También podría integrarse adentro si querés unificar todo
+========================================================= */
 const btnCerrar = document.getElementById("btnCerrarPresupuesto");
-const modalCerrar = new bootstrap.Modal(document.getElementById("modalCerrar"));
-const estadoSpan = document.getElementById("estado-presupuesto");
+const modalCerrar = document.getElementById("modalCerrar")
+    ? new bootstrap.Modal(document.getElementById("modalCerrar"))
+    : null;
+const estadoSpanCerrar = document.getElementById("estado-presupuesto");
 
 if (btnCerrar) {
-    btnCerrar.onclick = function() {
+    btnCerrar.onclick = function () {
         const id = btnCerrar.dataset.presupuestoId;
         const url = "{% url 'presupuestos_app:cerrar_presupuesto' 0 %}".replace("0", id);
 
@@ -867,43 +1290,48 @@ if (btnCerrar) {
                 "X-Requested-With": "XMLHttpRequest"
             }
         })
-        .then(resp => resp.json())
-        .then(data => {
-            modalCerrar.hide();
-            if (data.success) {
-                Swal.fire({
-                    icon: "success",
-                    title: "Presupuesto cerrado",
-                    text: "Ya no se puede modificar este presupuesto.",
-                    timer: 2000,
-                    showConfirmButton: false
-                });
-                estadoSpan.textContent = data.nuevo_estado;
-                estadoSpan.className = "badge bg-purple";
-                document.querySelectorAll(".btn-warning, .btn-success, .btn-info").forEach(b => b.disabled = true);
-                // 🔹 Recarga la página luego de un breve delay
-                setTimeout(() => {
-                    location.reload();
-                }, 2000);
-            } else {
+            .then((resp) => resp.json())
+            .then((data) => {
+                if (modalCerrar) modalCerrar.hide();
+
+                if (data.success) {
+                    Swal.fire({
+                        icon: "success",
+                        title: "Presupuesto cerrado",
+                        text: "Ya no se puede modificar este presupuesto.",
+                        timer: 2000,
+                        showConfirmButton: false
+                    });
+
+                    if (estadoSpanCerrar) {
+                        estadoSpanCerrar.textContent = data.nuevo_estado;
+                        estadoSpanCerrar.className = "badge bg-purple";
+                    }
+
+                    document.querySelectorAll(".btn-warning, .btn-success, .btn-info").forEach((b) => {
+                        b.disabled = true;
+                    });
+
+                    setTimeout(() => {
+                        location.reload();
+                    }, 2000);
+                } else {
+                    Swal.fire({
+                        icon: "error",
+                        title: "Error",
+                        text: data.error
+                    });
+                }
+            })
+            .catch((err) => {
                 Swal.fire({
                     icon: "error",
-                    title: "Error",
-                    text: data.error
+                    title: "Error de conexión",
+                    text: err
                 });
-            }
-        })
-        .catch(err => {
-            Swal.fire({
-                icon: "error",
-                title: "Error de conexión",
-                text: err
             });
-        });
     };
 }
-
-
 </script>
 
 <style>

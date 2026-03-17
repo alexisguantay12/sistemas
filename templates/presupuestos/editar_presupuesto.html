@@ -488,7 +488,9 @@ document.getElementById("tabla-prestaciones").addEventListener("blur", async e =
         const resp = await fetch(`${url}?obra_social=${obraSocialId}`);
         if (!resp.ok) throw new Error();
         const data = await resp.json();
-
+        console.log("Estoy aca el precio es", data.precio);
+        console.log("Para la prestacion", data.nombre)
+        console.log("Estoy para codigo :", codigo)
         fila.querySelector(".tipo").value = "gastos";
         fila.querySelector(".prestacion").value = data.nombre || fila.querySelector(".prestacion").value;
         fila.querySelector(".precio").value = (parseFloat(data.precio) || 0).toFixed(DECIMALS);

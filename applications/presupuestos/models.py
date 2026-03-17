@@ -81,6 +81,12 @@ class Presupuesto(BaseAbstractWithUser):
     @property    
     def iva(self):
         return sum([item.iva for item in self.items.all()])
+    
+    @property
+    def saldo(self):
+        pagado = sum([pago.monto for pago in self.pagos.all()])
+        reintegrado = sum([reintegro.monto for reintegro in self.reintegros.all()])
+        return self.total - pagado + reintegrado
 
     def __str__(self):
         return f"Presupuesto {self.id} - {self.paciente_nombre}"
@@ -108,6 +114,26 @@ class Pago(BaseAbstractWithUser):
     observaciones = models.CharField(max_length=300,null=True, blank=True)
     def __str__(self):
         return f"Pago {self.monto} - {self.presupuesto.id}"
+
+
+class Reintegro(BaseAbstractWithUser):
+    MEDIOS_PAGO = [
+        ("efectivo", "Efectivo"),
+        ("cajab","Caja B"),
+        ("transferencia", "Transferencia"),
+        ("tarjeta_credito", "Tarjeta Credito"),
+        ("tarjeta_debito","Tarjeta Debito")
+    ]
+
+    presupuesto = models.ForeignKey("Presupuesto", on_delete=models.CASCADE, related_name="reintegros")
+    fecha = models.DateTimeField()
+    monto = models.DecimalField(max_digits=14, decimal_places=2)
+    medio_pago = models.CharField(max_length=50,choices=MEDIOS_PAGO)
+    observaciones = models.CharField(max_length=255, blank=True, null=True)
+
+    def __str__(self):
+        return f"Reintegro {self.presupuesto_id} - {self.monto}"
+
 
 class Medico(models.Model):
     matricula = models.CharField(max_length=60, blank=True, null=True)

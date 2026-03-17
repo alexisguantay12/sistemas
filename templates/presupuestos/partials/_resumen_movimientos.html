@@ -1,0 +1,48 @@
+{% load group_tags %}
+
+{% if pagos or reintegros %}
+<div class="card shadow-sm mt-2">
+    <div class="card-body py-2">
+        <div class="row">
+            {% if pagos %}
+            <div class="col-md-6 {% if reintegros %}border-end{% endif %}">
+                <h6 class="fw-bold mb-2">
+                    <i class="fas fa-cash-register me-1"></i> Pagos
+                </h6>
+
+                <div class="tabla-mini">
+                    {% for p in pagos %}
+                    <div class="fila-mini">
+                        <span class="fw-semibold">{{ p.fecha|date:"d/m/Y" }}</span>
+                        <span class="fw-semibold">${{ p.monto|moneda_ar }}</span>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+            {% endif %}
+
+            {% if reintegros %}
+            <div class="col-md-6">
+                <h6 class="fw-bold mb-2">
+                    <i class="fas fa-undo me-1"></i> Reintegros
+                </h6>
+
+                <div class="tabla-mini">
+                    {% for r in reintegros %}
+                    <div class="fila-mini">
+                        <span class="fw-semibold">{{ r.fecha|date:"d/m/Y" }}</span>
+                        <span class="fw-semibold">${{ r.monto|moneda_ar }}</span>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+            {% endif %}
+        </div>
+
+        <div class="text-end mt-2 border-top pt-2">
+            <span class="fw-bold text-muted">Saldo actual:</span>
+            <span class="badge bg-dark fs-6 ms-1">${{ saldo|moneda_ar }}</span>
+        </div>
+    </div>
+</div>
+{% endif %}

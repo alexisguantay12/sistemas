@@ -27,4 +27,6 @@ urlpatterns = [
         name="reporte_presupuestos_fecha"
     ),
     path("reporte-pagos-fecha/", views.reporte_pagos_fecha, name="reporte_pagos_fecha"),
+    path("presupuesto/<int:pk>/registrar-reintegro/", views.registrar_reintegro, name="registrar_reintegro"),
+    path('detalle/eliminar-reintegro/<int:pk>/',views.eliminar_reintegro, name = 'eliminar_reintegro'),
 ]

@@ -24,7 +24,7 @@ from reportlab.lib.utils import ImageReader
 from django.contrib.auth.decorators import login_required
 from django.views.decorators.cache import never_cache
 from .models import (
-    Presupuesto, PresupuestoItem, Prestacion, PresupuestoHistorial, Pago, Medico, ObraSocial
+    Presupuesto, PresupuestoItem, Prestacion, PresupuestoHistorial, Pago, Medico, ObraSocial,Reintegro
 )
 from .forms import NomencladorUploadForm
 from django.db.models import Q
@@ -54,7 +54,17 @@ def registrar_pago(request, pk):
         monto = request.POST.get('monto')
         medio = request.POST.get('medio_pago')
         comentario = request.POST.get('observaciones_pago')
+        fecha_str = request.POST.get("fecha")
+                    # 2️⃣ Si el usuario ingresó fecha, combinarla con la hora actual
 
+        print("Pago come",comentario)
+        if fecha_str:
+            fecha_base = datetime.strptime(fecha_str, "%Y-%m-%d")  # convierte el string a fecha
+            hora_actual = datetime.now().time()                   # hora actual del sistema
+            fecha = datetime.combine(fecha_base, hora_actual)
+        else:
+            fecha = datetime.now()  # si no hay fecha, usar fecha/hora actuales
+        
         if not monto:
             return JsonResponse({'success': False, 'error': 'Monto inválido'})
 
@@ -64,6 +74,7 @@ def registrar_pago(request, pk):
                 Pago.objects.create(
                     presupuesto=presupuesto,
                     monto=monto,
+                    fecha=fecha,
                     medio_pago=medio,
                     observaciones=comentario,
                     user_made=request.user
@@ -78,18 +89,33 @@ def registrar_pago(request, pk):
             pagos = presupuesto.pagos.all().order_by('-fecha')
             for p in pagos:
                 p.puede_eliminar = (
-                    (timezone.now() - p.fecha).total_seconds() < 900 and p.user_made == request.user
+                    (timezone.now() - p.created_at).total_seconds() < 900 and p.user_made == request.user
                 ) or request.user.groups.filter(name='administrador').exists()
 
             pagos_html = render_to_string('presupuestos/partials/_tabla_pagos.html', {'pagos': pagos})
             total_pagado = sum(pago.monto for pago in presupuesto.pagos.all())
-            saldo = presupuesto.total - (total_pagado or 0)
+            saldo = presupuesto.saldo
+
+
+            pagos = presupuesto.pagos.all().order_by("-fecha", "-id")
+            reintegros = presupuesto.reintegros.all().order_by("-fecha", "-id")
+
+            resumen_movimientos_html = render_to_string(
+                "presupuestos/partials/_resumen_movimientos.html",
+                {
+                    "pagos": pagos,
+                    "reintegros": reintegros,
+                    "saldo": saldo,
+                },
+                request=request
+            )
 
             return JsonResponse({
                 'success': True,
                 'pagos_html': pagos_html,
+                'resumen_movimientos_html':resumen_movimientos_html,
                 'total_pagado': total_pagado,
-                'saldo': saldo,
+                'saldo': float(saldo),
                 'estado':presupuesto.get_estado_display()
             })
 
@@ -100,6 +126,79 @@ def registrar_pago(request, pk):
 # ============================================================
 # 📜 Detalle de Presupuesto + Historial + Pagos
 # ============================================================
+from django.db.models import Sum
+from datetime import datetime, time
+def registrar_reintegro(request, pk):
+    presupuesto = get_object_or_404(Presupuesto, pk=pk)
+
+    if request.method == "POST":
+        try:
+            monto = Decimal(request.POST.get("monto", "0"))
+            medio_pago = request.POST.get("medio_pago")
+            observaciones = request.POST.get("observaciones_reintegro", "")
+            fecha_str = request.POST.get("fecha")
+ 
+
+            # 2️⃣ Si el usuario ingresó fecha, combinarla con la hora actual
+            if fecha_str:
+                fecha_base = datetime.strptime(fecha_str, "%Y-%m-%d")  # convierte el string a fecha
+                hora_actual = datetime.now().time()                   # hora actual del sistema
+                fecha = datetime.combine(fecha_base, hora_actual)
+            else:
+                fecha = datetime.now()  # si no hay fecha, usar fecha/hora actuales
+ 
+            print(fecha)
+
+            reintegro = Reintegro.objects.create(
+                presupuesto=presupuesto,
+                monto=monto,
+                medio_pago=medio_pago,
+                observaciones=observaciones,
+                fecha=fecha,
+                user_made=request.user
+            )
+            print("Si pase lo anterior ")
+            reintegros = presupuesto.reintegros.all().order_by("-fecha", "-id")
+            total_reintegrado = reintegros.aggregate(total=Sum("monto"))["total"] or Decimal("0") 
+            for r in reintegros:
+                r.puede_eliminar = (
+                    (timezone.now() - r.created_at).total_seconds() < 900 and r.user_made == request.user
+                ) or request.user.groups.filter(name='administrador').exists()
+
+            html = render_to_string(
+                "presupuestos/partials/_tabla_reintegros.html",
+                {"reintegros": reintegros},
+                request=request
+            )
+            
+            
+            pagos = presupuesto.pagos.all().order_by("-fecha", "-id") 
+        
+            resumen_movimientos_html = render_to_string(
+                "presupuestos/partials/_resumen_movimientos.html",
+                {
+                    "pagos": pagos,
+                    "reintegros": reintegros,
+                    "saldo": presupuesto.saldo,
+                },
+                request=request
+            )
+
+            return JsonResponse({
+                "success": True,
+                "reintegros_html": html,
+                "resumen_movimientos_html": resumen_movimientos_html,
+                "total_reintegrado": float(total_reintegrado),
+                "saldo": float(presupuesto.saldo),
+                "estado": presupuesto.get_estado_display(), 
+            })
+            
+        except Exception as e:
+            return JsonResponse({"success": False, "error": str(e)})
+
+    return JsonResponse({"success": False, "error": "Método no permitido"})
+
+
 
 from django.views.decorators.http import require_POST
 
@@ -127,15 +226,83 @@ def eliminar_pago(request, pk):
             ) or request.user.groups.filter(name='administrador').exists()
 
         total_pagado = sum(pago.monto for pago in presupuesto.pagos.all())
-        saldo = presupuesto.total - (total_pagado or 0)
+        saldo = presupuesto.saldo
 
         pagos_html = render_to_string('presupuestos/partials/_tabla_pagos.html', {'pagos': pagos})
+
+        pagos = presupuesto.pagos.all().order_by("-fecha", "-id")
+        reintegros = presupuesto.reintegros.all().order_by("-fecha", "-id")
+
+        resumen_movimientos_html = render_to_string(
+            "presupuestos/partials/_resumen_movimientos.html",
+            {
+                "pagos": pagos,
+                "reintegros": reintegros,
+                "saldo": presupuesto.saldo,
+            },
+            request=request
+        )
+
 
         return JsonResponse({
             'success': True,
             'pagos_html': pagos_html,
+            'resumen_movimiento_html':resumen_movimientos_html,
             'total_pagado': total_pagado,
-            'saldo': saldo,
+            'saldo': float(saldo),
+            'estado':presupuesto.get_estado_display()
+        })
+
+    except Exception as e:
+        return JsonResponse({'success': False, 'error': f'Error al eliminar el pago: {str(e)}'})
+
+
+
+@require_POST
+def eliminar_reintegro(request, pk):
+    reintegro = get_object_or_404(Reintegro, id=pk)
+    presupuesto = reintegro.presupuesto
+
+    try:
+        with transaction.atomic():
+            # Marcar usuario que eliminó y borrar el pago
+            reintegro.user_deleted = request.user
+            reintegro.delete() 
+
+        # Actualizar datos de respuesta
+        reintegros = presupuesto.reintegros.all().order_by('-fecha')
+        for r in reintegros:
+            r.puede_eliminar = (
+                (timezone.now() - r.fecha).total_seconds() < 900 and r.user_made == request.user
+            ) or request.user.groups.filter(name='administrador').exists()
+
+        total_reintegrado = sum(reintegro.monto for reintegro in presupuesto.reintegros.all())
+        saldo = presupuesto.saldo
+
+        reintegros_html = render_to_string('presupuestos/partials/_tabla_reintegros.html', {'reintegros': reintegros})
+
+ 
+
+        pagos = presupuesto.pagos.all().order_by("-fecha", "-id")
+        reintegros = presupuesto.reintegros.all().order_by("-fecha", "-id")
+
+        resumen_movimientos_html = render_to_string(
+            "presupuestos/partials/_resumen_movimientos.html",
+            {
+                "pagos": pagos,
+                "reintegros": reintegros,
+                "saldo": presupuesto.saldo,
+            },
+            request=request
+        )
+
+
+        return JsonResponse({
+            'success': True,
+            'reintegros_html': reintegros_html,
+            'resumen_movimientos_html':resumen_movimientos_html,
+            'total_reintegrado': total_reintegrado,
+            'saldo': float(saldo),
             'estado':presupuesto.get_estado_display()
         })
 
@@ -173,10 +340,15 @@ def detalle_presupuesto(request, pk):
     presupuesto = get_object_or_404(Presupuesto, pk=pk)
     historial = presupuesto.historiales.all().order_by('fecha')
     pagos = presupuesto.pagos.all().order_by('-fecha')
+    reintegros = presupuesto.reintegros.all().order_by('-fecha')
     total_pagado = sum(pago.monto for pago in presupuesto.pagos.all())
-    saldo = presupuesto.total - (total_pagado or 0)  # previene None
+    total_reintegrado = sum(reintegro.monto for reintegro in presupuesto.reintegros.all())
+    saldo = presupuesto.saldo
     for p in pagos:
         p.puede_eliminar = (((timezone.now() - p.fecha).total_seconds() < 900 and p.user_made==request.user) or request.user.groups.filter(name='administrador').exists()) and presupuesto.estado!='cerrado'
+    for r in reintegros:
+        r.puede_eliminar = (((timezone.now()-r.created_at).total_seconds()< 900 and r.user_made == request.user) or request.user.groups.filter(name='administrados').exists()) and presupuesto.estado != 'cerrado'
+ 
     historial_json = []
     for h in historial:
         datos = h.datos  # dict con todos los datos guardados
@@ -227,10 +399,13 @@ def detalle_presupuesto(request, pk):
     ) 
     context = {
         'presupuesto': presupuesto,
+        'today': timezone.now().date(),
         'itemspresupuesto':itemspresupuesto,
         'historial_json': json.dumps(historial_json),
         'pagos': pagos,
+        'reintegros': reintegros,
         'total_pagado':total_pagado,
+        'total_reintegrado':total_reintegrado,
         'saldo':saldo
     } 
     return render(request, 'presupuestos/detalle_presupuesto.html', context)
@@ -457,7 +632,7 @@ def agregar_presupuesto(request):
                 else:
                     fecha_final = datetime.now()  # si no hay fecha, usar fecha/hora actuales
 
-                # Validar que se haya elegido un médico válido
+                # Validar que se haya elegido un mécdico válido
                 medico = get_object_or_404(Medico, id=medico_id)
                 obra_social = get_object_or_404(ObraSocial, id=obra_social_id)
 
