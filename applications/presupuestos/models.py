@@ -63,6 +63,9 @@ class Presupuesto(BaseAbstractWithUser):
     medico = models.ForeignKey("Medico", related_name='medicos',on_delete=models.CASCADE)
     diagnostico = models.CharField(max_length=255, blank=True, null=True)
     episodio = models.CharField(max_length=200,blank=True,null=True)   
+    hc = models.CharField(max_length=200,blank=True,null=True)   
+    fecha_inicio = models.DateTimeField(null=True)
+    fecha_fin = models.DateTimeField(null=True)
     # Seguimiento
     fecha_creacion = models.DateTimeField()
     estado = models.CharField(max_length=20, choices=ESTADOS, default='pendiente')

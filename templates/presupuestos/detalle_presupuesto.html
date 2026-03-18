@@ -47,7 +47,83 @@
 #miTabla th:nth-child(8) {
     text-align: right;
 }
+.modal-premium {
+    border-radius: 16px;
+    overflow: hidden;
+    background: #ffffff;
+}
 
+.modal-premium-header {
+    background: linear-gradient(135deg, #0d6efd 0%, #0b5ed7 55%, #084298 100%);
+    padding: 1.2rem 1.4rem;
+}
+
+.modal-icon-box {
+    width: 46px;
+    height: 46px;
+    border-radius: 12px;
+    background: rgba(255,255,255,0.16);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #fff;
+    font-size: 1.1rem;
+    box-shadow: inset 0 1px 0 rgba(255,255,255,0.08);
+}
+
+.modal-label {
+    font-size: 0.84rem;
+    font-weight: 700;
+    color: #344054;
+    margin-bottom: 0.45rem;
+    display: inline-block;
+}
+
+.modal-input-pro {
+    border-radius: 10px;
+    border: 1px solid #dbe2ea;
+    background: #f8fafc;
+    min-height: 42px;
+    font-size: 0.92rem;
+    transition: all 0.2s ease;
+    box-shadow: none;
+}
+
+.modal-input-pro:focus {
+    background: #ffffff;
+    border-color: #86b7fe;
+    box-shadow: 0 0 0 0.18rem rgba(13, 110, 253, 0.12);
+}
+
+.modal-input-pro::placeholder {
+    color: #98a2b3;
+    font-size: 0.88rem;
+}
+
+.modal-note {
+    border: 1px solid #e2e8f0;
+    background: #f8fafc;
+    color: #475467;
+    border-radius: 10px;
+    padding: 0.8rem 0.9rem;
+    font-size: 0.82rem;
+}
+
+#modalDatosInternacion .btn-light {
+    border: 1px solid #d0d5dd;
+    background: #fff;
+}
+
+#modalDatosInternacion .btn-primary {
+    border-radius: 10px;
+    font-weight: 600;
+}
+
+#modalDatosInternacion .btn-light,
+#modalDatosInternacion .btn-primary {
+    min-width: 130px;
+    height: 40px;
+}
 
 
 /* === ESTILOS DE ESTADO (versión compacta) === */
@@ -181,21 +257,25 @@
         <div class="card-body">
             <h5 class="card-title">Datos del Paciente</h5>
             <div class="row g-2">
-                <div class="col-md-4"><strong>Nombre:</strong> {{ presupuesto.paciente_nombre }}</div>
+                <div class="col-md-4"><strong>Nombre:</strong> {{ presupuesto.paciente_nombre|default:"—" }}</div>
                 <div class="col-md-3"><strong>DNI:</strong> {{ presupuesto.paciente_dni }}</div>
                 <div class="col-md-2"><strong>Edad:</strong> {{ presupuesto.paciente_edad }}</div>
-                <div class="col-md-4"><strong>Dirección:</strong> {{ presupuesto.paciente_direccion }}</div>
-                <div class="col-md-3"><strong>Teléfono:</strong> {{ presupuesto.paciente_telefono }}</div>
-                <div class="col-md-3"><strong>Email:</strong> {{ presupuesto.paciente_email }}</div>
-                <div class="col-md-6"><strong>Obra Social:</strong> {{ presupuesto.obra_social  }}</div>
+                <div class="col-md-4"><strong>Dirección:</strong> {{ presupuesto.paciente_direccion |default:"—"}}</div>
+                <div class="col-md-3"><strong>Teléfono:</strong> {{ presupuesto.paciente_telefono |default:"—"}}</div>
+                <div class="col-md-3"><strong>Email:</strong> {{ presupuesto.paciente_email|default:"—" }}</div>
+                <div class="col-md-6"><strong>Obra Social:</strong> {{ presupuesto.obra_social  |default:"—"}}</div>
             </div>
         </div>
         <div class="card-body">
             <h5 class="card-title">Datos Adicionales</h5>
             <div class="row g-2">
-                <div class="col-md-6"><strong>Médico:</strong> {{ presupuesto.medico }}</div>
-                <div class="col-md-6"><strong>Diagnóstico:</strong> {{ presupuesto.diagnostico }}</div>
-                <div class="col-md-6"><strong>Observaciones:</strong> {{ presupuesto.motivo_no_concretado }}</div>
+                <div class="col-md-4"><strong>Médico:</strong> {{ presupuesto.medico |default:"—"}}</div>
+                <div class="col-md-4"><strong>Diagnóstico:</strong> {{ presupuesto.diagnostico|default:"—" }}</div>
+                <div class="col-md-4" id="episodio"><strong>Episodio:</strong> {{ presupuesto.episodio |default:"—"}}</div>
+                <div class="col-md-4" id="hc"><strong>Nro HC:</strong> {{ presupuesto.hc|default:"—" }}</div>
+                <div class="col-md-4" id="fecha_inicio"><strong>Fecha Ingreso:</strong> {{ presupuesto.fecha_inicio|date:'d/m/Y'|default:"—" }}</div>
+                <div class="col-md-4" id="fecha_fin"><strong>Fecha Egreso:</strong> {{ presupuesto.fecha_fin|date:'d/m/Y'|default:"—" }}</div>
+                <div class="col-md-6"><strong>Observaciones:</strong> {{ presupuesto.observaciones|default:"—"}}</div>
                 <div class="col-md-6">
                     <strong>Saldo:</strong> 
                     <span class="badge bg-secondary fs-8" id="saldo-detalle">
@@ -203,6 +283,9 @@
                     </span>
                 </div>
             </div>
+            <a href="#modalDatosInternacion" class="btn btn-outline-primary btn-sm" data-bs-toggle="modal">
+                <i class="fas fa-notes-medical"></i> Editar Datos Clinicos
+            </a>
         </div>
     </div>
 
@@ -475,6 +558,105 @@
         </div>
         </div>
     </div>
+    </div>
+
+
+    <!-- Modal Datos Clínicos / Administrativos -->
+    <div class="modal fade" id="modalDatosInternacion" tabindex="-1" aria-labelledby="modalDatosInternacionLabel" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered modal-lg">
+            <div class="modal-content modal-premium border-0 shadow-lg">
+                
+                <!-- Header -->
+                <div class="modal-header modal-premium-header border-0">
+                    <div class="d-flex align-items-center">
+                        <div class="modal-icon-box me-3">
+                            <i class="fas fa-file-medical-alt"></i>
+                        </div>
+                        <div>
+                            <h5 class="modal-title mb-0 fw-bold" id="modalDatosInternacionLabel">
+                                Datos complementarios del presupuesto
+                            </h5>
+                            <small class="text-white-50">
+                                Información clínica y administrativa asociada al presupuesto
+                            </small>
+                        </div>
+                    </div>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+                </div>
+
+                <!-- Form -->
+                <form id="formDatosInternacion" method="post" action="{% url 'presupuestos_app:guardar_datos_internacion' presupuesto.id %}">
+                    {% csrf_token %}
+
+                    <div class="modal-body px-4 py-4">
+                        <div class="row g-4">
+
+                            <div class="col-md-6">
+                                <label class="form-label modal-label">
+                                    <i class="fas fa-hashtag me-1 text-primary"></i> Episodio
+                                </label>
+                                <input
+                                    type="text"
+                                    class="form-control modal-input-pro"
+                                    name="episodio"
+                                    value="{{ presupuesto.episodio|default:'' }}"
+                                    placeholder="Ingrese número o referencia de episodio">
+                            </div>
+
+                            <div class="col-md-6">
+                                <label class="form-label modal-label">
+                                    <i class="fas fa-folder-open me-1 text-primary"></i> HC
+                                </label>
+                                <input
+                                    type="text"
+                                    class="form-control modal-input-pro"
+                                    name="hc"
+                                    value="{{ presupuesto.hc|default:'' }}"
+                                    placeholder="Ingrese historia clínica">
+                            </div>
+
+                            <div class="col-md-6">
+                                <label class="form-label modal-label">
+                                    <i class="fas fa-calendar-plus me-1 text-primary"></i> Fecha de ingreso
+                                </label>
+                                <input
+                                    type="date"
+                                    class="form-control modal-input-pro"
+                                    name="fecha_inicio"
+                                    value="{{ presupuesto.fecha_inicio|date:'Y-m-d' }}">
+                            </div>
+
+                            <div class="col-md-6">
+                                <label class="form-label modal-label">
+                                    <i class="fas fa-calendar-minus me-1 text-primary"></i> Fecha de egreso
+                                </label>
+                                <input
+                                    type="date"
+                                    class="form-control modal-input-pro"
+                                    name="fecha_fin"
+                                    value="{{ presupuesto.fecha_fin|date:'Y-m-d' }}">
+                            </div>
+                        </div>
+
+                        <div class="modal-note mt-4">
+                            <i class="fas fa-info-circle me-2"></i>
+                            Todos los campos son opcionales. Podés completar únicamente la información disponible.
+                        </div>
+                    </div>
+
+                    <!-- Footer -->
+                    <div class="modal-footer border-0 px-4 pb-4 pt-0 d-flex justify-content-between">
+                        <button type="button" class="btn btn-light px-4" data-bs-dismiss="modal">
+                            Cancelar
+                        </button>
+
+                        <button type="submit" class="btn btn-primary px-4 shadow-sm">
+                            <i class="fas fa-save me-2"></i> Guardar datos
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
     </div>
 
 
@@ -930,6 +1112,64 @@ document.addEventListener("DOMContentLoaded", function () {
         });
     }
 
+    function inicializarFormularioDatosInternacion() {
+        const form = document.getElementById("formDatosInternacion");
+        if (!form) return;
+
+        form.addEventListener("submit", function (e) {
+            e.preventDefault();
+
+            const formData = new FormData(form);
+
+            fetch(form.action, {
+                method: "POST",
+                headers: {
+                    "X-Requested-With": "XMLHttpRequest"
+                },
+                body: formData
+            })
+            .then(resp => resp.json())
+            .then((data) => {
+                if (data.success) { 
+                    const episodio = document.getElementById("episodio");
+                    const hc = document.getElementById("hc");
+                    const fechaInicio = document.getElementById("fecha_inicio");
+                    const fechaFin = document.getElementById("fecha_fin");
+
+                    if (episodio) {
+                        episodio.innerHTML = `<strong>Episodio:</strong> ${data.episodio || "-"}`;
+                    }
+
+                    if (hc) {
+                        hc.innerHTML = `<strong>Nro HC:</strong> ${data.hc || "-"}`;
+                    }
+
+                    if (fechaInicio) {
+                        fechaInicio.innerHTML = `<strong>Fecha Ingreso:</strong> ${data.fecha_inicio || "-"}`;
+                    }
+
+                    if (fechaFin) {
+                        fechaFin.innerHTML = `<strong>Fecha Egreso:</strong> ${data.fecha_fin || "-"}`;
+                    }
+                    const modal = bootstrap.Modal.getInstance(
+                        document.getElementById("modalDatosInternacion")
+                    );
+                    modal.hide();
+
+                    Swal.fire({
+                        icon: "success",
+                        title: "Datos actualizados",
+                        timer: 1200,
+                        showConfirmButton: false
+                    });
+
+                } else {
+                    alert(data.error || "Error al guardar.");
+                }
+            })
+            .catch(err => alert("Error de conexión: " + err));
+        });
+    }
 
     /* =========================================================
        REGISTRO DE PAGO
@@ -1264,6 +1504,7 @@ document.addEventListener("DOMContentLoaded", function () {
     inicializarEliminacionPago();
     inicializarEliminacionReintegro();
     inicializarAutorizacion();
+    inicializarFormularioDatosInternacion();
 });
 
 

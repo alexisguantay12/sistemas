@@ -38,6 +38,15 @@ def lista_presupuestos(request):
     return render(request, 'presupuestos/presupuestos.html', {'presupuestos': presupuestos})
 
 
+
+
+
+
+
+
+
+
+
 # ============================================================
 # 💰 Registro de Pagos
 # ============================================================
@@ -308,6 +317,53 @@ def eliminar_reintegro(request, pk):
 
     except Exception as e:
         return JsonResponse({'success': False, 'error': f'Error al eliminar el pago: {str(e)}'})
+
+
+@login_required
+def guardar_datos_internacion(request, pk):
+    presupuesto = get_object_or_404(Presupuesto, pk=pk)
+
+    if request.method == "POST":
+        try:
+            episodio = request.POST.get("episodio")
+            hc = request.POST.get("hc")
+            fecha_inicio_str = request.POST.get("fecha_inicio")
+            fecha_fin_str = request.POST.get("fecha_fin")
+
+            presupuesto.episodio = episodio or None
+            presupuesto.hc = hc or None
+
+            presupuesto.fecha_inicio = (
+                timezone.make_aware(datetime.strptime(fecha_inicio_str, "%Y-%m-%d"))
+                if fecha_inicio_str else None
+            )
+
+            presupuesto.fecha_fin = (
+                timezone.make_aware(datetime.strptime(fecha_fin_str, "%Y-%m-%d"))
+                if fecha_fin_str else None
+            )
+
+            presupuesto.user_updated = request.user
+            presupuesto.save()
+
+            return JsonResponse({
+                "success": True,
+                "episodio": presupuesto.episodio,
+                "hc": presupuesto.hc,
+                "fecha_inicio": presupuesto.fecha_inicio.strftime("%d/%m/%Y") if presupuesto.fecha_inicio else "-",
+                "fecha_fin": presupuesto.fecha_fin.strftime("%d/%m/%Y") if presupuesto.fecha_fin else "-"
+            })
+
+        except Exception as e:
+            return JsonResponse({
+                "success": False,
+                "error": str(e)
+            })
+
+    return JsonResponse({
+        "success": False,
+        "error": "Método no permitido"
+    })
 
 
 @require_POST
