@@ -473,8 +473,7 @@
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
                 </div>
                 
-                <div class="modal-body">
-                    {% if presupuesto.estado != 'cerrado' %}
+                <div class="modal-body"> 
                     <form id="formRegistroReintegro" method="post" action="{% url 'presupuestos_app:registrar_reintegro' presupuesto.id %}">
                         {% csrf_token %}
                         <div class="row g-3">
@@ -510,8 +509,7 @@
                         <div class="mt-4 text-end">
                             <button type="submit" class="btn btn-warning">Guardar Reintegro</button>
                         </div>
-                    </form>
-                    {% endif %}
+                    </form> 
 
                     <hr>
                     <h6>Reintegros registrados</h6>
