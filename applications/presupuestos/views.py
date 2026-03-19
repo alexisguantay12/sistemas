@@ -1994,6 +1994,18 @@ def reporte_presupuestos(request):
 
 
 
+
+from datetime import datetime
+from django.shortcuts import render
+from django.db.models import Sum
+from django.http import HttpResponse
+from openpyxl import Workbook
+from openpyxl.styles import Font, PatternFill, Border, Side, Alignment
+from openpyxl.utils import get_column_letter
+
+from applications.presupuestos.models import Pago
+
+
 def reporte_pagos(request):
     pagos = Pago.objects.select_related("presupuesto").all()
 
@@ -2002,6 +2014,7 @@ def reporte_pagos(request):
     paciente = request.GET.get("paciente")
     nro_presupuesto = request.GET.get("nro_presupuesto")
     medio_pago = request.GET.get("medio_pago")
+    exportar = request.GET.get("exportar")
 
     if fecha_desde:
         pagos = pagos.filter(fecha__date__gte=fecha_desde)
@@ -2015,32 +2028,132 @@ def reporte_pagos(request):
     if nro_presupuesto:
         pagos = pagos.filter(presupuesto__id=nro_presupuesto)
 
-    if medio_pago and medio_pago != "todos":
+    if medio_pago:
         pagos = pagos.filter(medio_pago=medio_pago)
 
     pagos = pagos.order_by("-fecha", "-presupuesto__id")
 
     total_pagado = pagos.aggregate(total=Sum("monto"))["total"] or 0
-    total_registros = pagos.count()
 
-    medios_pago = (
-        Pago.objects.exclude(medio_pago__isnull=True)
-        .exclude(medio_pago__exact="")
-        .values_list("medio_pago", flat=True)
-        .distinct()
-        .order_by("medio_pago")
-    )
+    if exportar == "excel":
+        return exportar_reporte_pagos_excel(pagos)
 
     context = {
         "pagos": pagos,
-        "fecha_desde": fecha_desde,
-        "fecha_hasta": fecha_hasta,
-        "paciente": paciente,
-        "nro_presupuesto": nro_presupuesto,
-        "medio_pago": medio_pago,
-        "medios_pago": medios_pago,
         "total_pagado": total_pagado,
-        "total_registros": total_registros,
+        "medios_pago": Pago.MEDIOS_PAGO,
     }
-
     return render(request, "presupuestos/reportes/reporte_pagos.html", context)
+
+
+def exportar_reporte_pagos_excel(pagos):
+    wb = Workbook()
+    ws = wb.active
+    ws.title = "Reporte Pagos"
+
+    hoy = datetime.now().strftime("%d-%m-%Y")
+    nombre_archivo = f"reporte_pagos_{hoy}.xlsx"
+
+    # Estilos
+    borde_fino = Border(
+        left=Side(style="thin", color="000000"),
+        right=Side(style="thin", color="000000"),
+        top=Side(style="thin", color="000000"),
+        bottom=Side(style="thin", color="000000"),
+    )
+
+    fill_header = PatternFill("solid", fgColor="D9EAF7")
+    font_header = Font(bold=True)
+    font_titulo = Font(bold=True, size=14)
+    font_total = Font(bold=True)
+
+    alignment_center = Alignment(horizontal="center", vertical="center")
+    alignment_left = Alignment(horizontal="left", vertical="center")
+    alignment_right = Alignment(horizontal="right", vertical="center")
+
+    # Título
+    ws.merge_cells("A1:F1")
+    ws["A1"] = "Reporte de Pagos"
+    ws["A1"].font = font_titulo
+    ws["A1"].alignment = alignment_center
+
+    # Encabezados
+    headers = [
+        "Fecha de pago",
+        "Nro Presupuesto",
+        "Paciente",
+        "Medio de pago",
+        "Importe",
+        "Observaciones",
+    ]
+
+    fila_header = 3
+    for col_num, header in enumerate(headers, 1):
+        cell = ws.cell(row=fila_header, column=col_num, value=header)
+        cell.font = font_header
+        cell.fill = fill_header
+        cell.border = borde_fino
+        cell.alignment = alignment_center
+
+    # Datos
+    fila = fila_header + 1
+    for pago in pagos:
+        ws.cell(row=fila, column=1, value=pago.fecha.strftime("%d/%m/%Y %H:%M"))
+        ws.cell(row=fila, column=2, value=pago.presupuesto.id)
+        ws.cell(row=fila, column=3, value=pago.presupuesto.paciente_nombre)
+        ws.cell(row=fila, column=4, value=pago.get_medio_pago_display())
+        ws.cell(row=fila, column=5, value=float(pago.monto))
+        ws.cell(row=fila, column=6, value=pago.observaciones or "-")
+
+        for col in range(1, 7):
+            cell = ws.cell(row=fila, column=col)
+            cell.border = borde_fino
+
+            if col == 5:
+                cell.alignment = alignment_right
+                cell.number_format = '$ #,##0.00'
+            elif col in [1, 2, 4]:
+                cell.alignment = alignment_center
+            else:
+                cell.alignment = alignment_left
+
+        fila += 1
+
+    # Total abajo
+    ws.cell(row=fila + 1, column=4, value="Total pagado")
+    ws.cell(row=fila + 1, column=5, value=float(sum(p.monto for p in pagos)))
+
+    ws.cell(row=fila + 1, column=4).font = font_total
+    ws.cell(row=fila + 1, column=5).font = font_total
+    ws.cell(row=fila + 1, column=4).fill = fill_header
+    ws.cell(row=fila + 1, column=5).fill = fill_header
+    ws.cell(row=fila + 1, column=4).border = borde_fino
+    ws.cell(row=fila + 1, column=5).border = borde_fino
+    ws.cell(row=fila + 1, column=4).alignment = alignment_center
+    ws.cell(row=fila + 1, column=5).alignment = alignment_right
+    ws.cell(row=fila + 1, column=5).number_format = '$ #,##0.00'
+
+    # Ajustar ancho de columnas automáticamente
+    for col in ws.columns:
+        max_length = 0
+        column = col[0].column_letter
+        for cell in col:
+            try:
+                if cell.value:
+                    max_length = max(max_length, len(str(cell.value)))
+            except:
+                pass
+        adjusted_width = max_length + 2
+        ws.column_dimensions[column].width = adjusted_width
+
+    # Altura de filas
+    ws.row_dimensions[1].height = 24
+    ws.row_dimensions[3].height = 22
+
+    # Respuesta
+    response = HttpResponse(
+        content_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+    )
+    response["Content-Disposition"] = f'attachment; filename="{nombre_archivo}"'
+    wb.save(response)
+    return response

@@ -282,20 +282,20 @@
                 <div class="row g-0 text-center text-md-start">
                     <div class="col-md-3 item-total">
                         <span class="titulo-total">Total presupuestado</span>
-                        <span class="valor-total text-primary">{{ total_presupuestado|moneda_ar }}</span>
+                        <span class="valor-total text-primary">${{ total_presupuestado|moneda_ar }}</span>
                     </div>
                     <div class="col-md-3 item-total">
                         <span class="titulo-total">Total cobrado</span>
-                        <span class="valor-total text-success">{{ total_cobrado|moneda_ar }}</span>
+                        <span class="valor-total text-success">${{ total_cobrado|moneda_ar }}</span>
                     </div>
                     <div class="col-md-3 item-total">
                         <span class="titulo-total">Total reintegrado</span>
-                        <span class="valor-total text-warning">{{ total_reintegrado|moneda_ar }}</span>
+                        <span class="valor-total text-warning">${{ total_reintegrado|moneda_ar }}</span>
                     </div>
                     <div class="col-md-3 item-total">
                         <span class="titulo-total">Saldo total</span>
                         <span class="valor-total {% if saldo_total > 0 %}text-danger{% else %}text-success{% endif %}">
-                            {{ saldo_total|moneda_ar }}
+                            ${{ saldo_total|moneda_ar }}
                         </span>
                     </div>
                 </div>

@@ -2,135 +2,210 @@
 {% load group_tags %}
 
 {% block content %}
+<style>
+    .card-reporte {
+        border-radius: 16px;
+        overflow: hidden;
+    }
+
+    .filtros-reporte .form-control,
+    .filtros-reporte .form-select {
+        font-size: 13px;
+        min-height: 37px;
+    }
+
+    .filtros-reporte .form-label {
+        font-size: 12px;
+        margin-bottom: 5px;
+        color: #6c757d;
+        font-weight: 600;
+    }
+
+    .tabla-reporte td,
+    .tabla-reporte th {
+        font-size: 12.5px;
+        padding: 5px 6px;
+        vertical-align: middle;
+    }
+
+    .tabla-reporte thead th {
+        white-space: nowrap;
+        position: sticky;
+        top: 0;
+        z-index: 2;
+        background: #f8f9fa;
+        box-shadow: inset 0 -1px 0 #dee2e6;
+    }
+
+    .tabla-scroll {
+        max-height: 62vh;
+        overflow-y: auto;
+        border: 1px solid #e9ecef;
+        border-radius: 10px;
+    }
+
+    .acciones-filtros {
+        display: flex;
+        gap: 10px;
+        align-items: end;
+        justify-content: flex-end;
+    }
+
+    .totales-externos {
+        margin-top: 10px;
+        display: flex;
+        justify-content: end;
+    }
+
+    .totales-externos .bloque-total {
+        background: #f8f9fa;
+        border: 1px solid #e9ecef;
+        border-radius: 10px;
+        padding: 10px 16px;
+        min-width: 220px;
+        text-align: right;
+    }
+
+    .totales-externos .titulo-total {
+        font-size: 11px;
+        color: #6c757d;
+        font-weight: 600;
+        display: block;
+        margin-bottom: 2px;
+    }
+
+    .totales-externos .valor-total {
+        font-size: 16px;
+        font-weight: 700;
+        white-space: nowrap;
+    }
+
+    @media (max-width: 1400px) {
+        .tabla-reporte td,
+        .tabla-reporte th {
+            font-size: 12px;
+        }
+    }
+</style>
+
 <div class="container-fluid mt-4 mb-4">
+    <div class="card shadow-lg border-0 card-reporte">
 
-  <div class="card shadow-lg border-0">
-    <div class="card-header bg-light border-bottom d-flex justify-content-between align-items-center flex-wrap gap-2">
-      <div>
-        <h4 class="mb-0 text-primary fw-bold">
-          <i class="fas fa-money-check-alt me-2"></i>Reporte de Pagos
-        </h4>
-        <small class="text-muted">Consulta de pagos registrados por presupuesto</small>
-      </div>
+        <div class="card-header bg-light border-bottom d-flex justify-content-between align-items-center flex-wrap gap-2">
+            <div>
+                <h4 class="text-primary fw-bold mb-0">
+                    <i class="fas fa-cash-register me-2"></i>Reporte de Pagos
+                </h4>
+                <small class="text-muted">Listado de pagos registrados por presupuesto</small>
+            </div>
 
-      <div class="d-flex flex-wrap gap-2">
-        <span class="badge bg-primary fs-6">
-          Registros: {{ total_registros }}
-        </span>
-        <span class="badge bg-success fs-6">
-          Total pagado: $ {{ total_pagado|moneda_ar }}
-        </span>
-      </div>
-    </div>
-
-    <div class="card-body bg-white">
-
-      <!-- FILTROS -->
-      <form method="get" class="mb-4">
-        <div class="row g-3 align-items-end">
-
-          <div class="col-md-2">
-            <label class="form-label fw-semibold">Fecha desde</label>
-            <input type="date" name="fecha_desde" class="form-control form-control-sm" value="{{ fecha_desde }}">
-          </div>
-
-          <div class="col-md-2">
-            <label class="form-label fw-semibold">Fecha hasta</label>
-            <input type="date" name="fecha_hasta" class="form-control form-control-sm" value="{{ fecha_hasta }}">
-          </div>
-
-          <div class="col-md-3">
-            <label class="form-label fw-semibold">Paciente</label>
-            <input type="text" name="paciente" class="form-control form-control-sm" placeholder="Nombre del paciente" value="{{ paciente }}">
-          </div>
-
-          <div class="col-md-2">
-            <label class="form-label fw-semibold">N° Presupuesto</label>
-            <input type="text" name="nro_presupuesto" class="form-control form-control-sm" placeholder="Ej: 123" value="{{ nro_presupuesto }}">
-          </div>
-
-          <div class="col-md-2">
-            <label class="form-label fw-semibold">Medio de pago</label>
-            <select name="medio_pago" class="form-select form-select-sm">
-              <option value="todos" {% if not medio_pago or medio_pago == "todos" %}selected{% endif %}>Todos</option>
-              {% for medio in medios_pago %}
-                <option value="{{ medio }}" {% if medio_pago == medio %}selected{% endif %}>{{ medio }}</option>
-              {% endfor %}
-            </select>
-          </div>
-
-          <div class="col-md-1 d-grid">
-            <button type="submit" class="btn btn-primary btn-sm">
-              <i class="fas fa-search me-1"></i>Filtrar
-            </button>
-          </div>
-
-          <div class="col-md-12">
-            <a href="{% url 'presupuestos_app:reporte_pagos' %}" class="btn btn-outline-secondary btn-sm">
-              <i class="fas fa-eraser me-1"></i>Limpiar filtros
+            <a href="?{{ request.GET.urlencode }}&exportar=excel" class="btn btn-success btn-sm">
+                <i class="fas fa-file-excel me-1"></i>Exportar Excel
             </a>
-          </div>
+        </div>
+
+        <div class="card-body">
+
+                <form method="get" class="filtros-reporte mb-3">
+                    <div class="row g-3 align-items-end">
+
+                        <div class="col-md-2">
+                            <label class="form-label">Fecha desde</label>
+                            <input type="date" name="fecha_desde" class="form-control form-control-sm"
+                                value="{{ request.GET.fecha_desde }}">
+                        </div>
+
+                        <div class="col-md-2">
+                            <label class="form-label">Fecha hasta</label>
+                            <input type="date" name="fecha_hasta" class="form-control form-control-sm"
+                                value="{{ request.GET.fecha_hasta }}">
+                        </div>
+
+                        <div class="col-md-3">
+                            <label class="form-label">Paciente</label>
+                            <input type="text" name="paciente" placeholder="Buscar paciente"
+                                class="form-control form-control-sm"
+                                value="{{ request.GET.paciente }}">
+                        </div>
+
+                        <div class="col-md-2">
+                            <label class="form-label">N° Presupuesto</label>
+                            <input type="text" name="nro_presupuesto" placeholder="Ej: 125"
+                                class="form-control form-control-sm"
+                                value="{{ request.GET.nro_presupuesto }}">
+                        </div>
+
+                        <div class="col-md-3">
+                            <label class="form-label">Medio de pago</label>
+                            <select name="medio_pago" class="form-select form-select-sm">
+                                <option value="">Todos</option>
+                                {% for valor, label in medios_pago %}
+                                    <option value="{{ valor }}" {% if request.GET.medio_pago == valor %}selected{% endif %}>
+                                        {{ label }}
+                                    </option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="row mt-2">
+                        <div class="col-md-12">
+                            <div class="acciones-filtros">
+                                <button type="submit" class="btn btn-primary btn-sm px-4">
+                                    <i class="fas fa-filter me-1"></i>Filtrar
+                                </button>
+
+                                <a href="{% url 'presupuestos_app:reporte_pagos' %}" class="btn btn-outline-secondary btn-sm px-4">
+                                    <i class="fas fa-broom me-1"></i>Limpiar
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                </form>
+            <div class="tabla-scroll">
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle table-sm tabla-reporte mb-0">
+                        <thead class="table-light">
+                            <tr>
+                                <th style="width: 130px;">Fecha de pago</th>
+                                <th style="width: 90px;">Nro</th>
+                                <th>Paciente</th>
+                                <th style="width: 150px;">Medio de pago</th>
+                                <th class="text-end" style="width: 130px;">Importe</th>
+                                <th>Observaciones</th>
+                            </tr>
+                        </thead>
+
+                        <tbody>
+                            {% for pago in pagos %}
+                            <tr>
+                                <td class="text-nowrap">{{ pago.fecha|date:"d/m/Y H:i" }}</td>
+                                <td class="fw-semibold text-nowrap">{{ pago.presupuesto.id }}</td>
+                                <td>{{ pago.presupuesto.paciente_nombre }}</td>
+                                <td class="text-nowrap">{{ pago.get_medio_pago_display }}</td>
+                                <td class="text-end text-success text-nowrap">$ {{ pago.monto|moneda_ar }}</td>
+                                <td>{{ pago.observaciones|default:"-" }}</td>
+                            </tr>
+                            {% empty %}
+                            <tr>
+                                <td colspan="6" class="text-center text-muted py-4">
+                                    No hay pagos para mostrar con los filtros seleccionados.
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <div class="totales-externos">
+                <div class="bloque-total">
+                    <span class="titulo-total">Total pagado</span>
+                    <span class="valor-total text-success">$ {{ total_pagado|moneda_ar }}</span>
+                </div>
+            </div>
 
         </div>
-      </form>
-
-      <!-- TABLA -->
-      <div class="table-responsive" style="max-height: 70vh; overflow-y: auto;">
-        <table class="table table-hover table-bordered align-middle mb-0">
-          <thead class="table-light sticky-top" style="z-index: 10;">
-            <tr class="text-center">
-              <th style="min-width: 140px;">Fecha de pago</th>
-              <th style="min-width: 120px;">N° Presupuesto</th>
-              <th style="min-width: 240px;">Paciente</th>
-              <th style="min-width: 140px;">Medio de pago</th>
-              <th style="min-width: 130px;">Importe</th>
-              <th style="min-width: 280px;">Observaciones</th>
-            </tr>
-          </thead>
-          <tbody>
-            {% for pago in pagos %}
-            <tr>
-              <td class="text-center">
-                {{ pago.fecha|date:"d/m/Y H:i" }}
-              </td>
-              <td class="text-center fw-semibold">
-                {{ pago.presupuesto.id }}
-              </td>
-              <td>
-                {{ pago.presupuesto.paciente_nombre }}
-              </td>
-              <td class="text-center">
-                {{ pago.medio_pago|default:"-" }}
-              </td>
-              <td class="text-end fw-semibold text-success">
-                $ {{ pago.monto|moneda_ar }}
-              </td>
-              <td>
-                {{ pago.observaciones|default:"-" }}
-              </td>
-            </tr>
-            {% empty %}
-            <tr>
-              <td colspan="6" class="text-center text-muted py-4">
-                No se encontraron pagos con los filtros seleccionados.
-              </td>
-            </tr>
-            {% endfor %}
-          </tbody>
-
-          <tfoot class="table-light sticky-bottom" style="z-index: 10;">
-            <tr>
-              <th colspan="4" class="text-end">Total</th>
-              <th class="text-end text-success">
-                $ {{ total_pagado|moneda_ar }}
-              </th>
-              <th></th>
-            </tr>
-          </tfoot>
-        </table>
-      </div>
-
     </div>
-  </div>
 </div>
 {% endblock %}
