@@ -1,0 +1,198 @@
+{% extends 'base2.html' %}
+{% load group_tags %}
+
+{% block content %}
+<style>
+    .card-reporte {
+        border-radius: 16px;
+        overflow: hidden;
+    }
+
+    .filtros-reporte .form-control,
+    .filtros-reporte .form-select {
+        font-size: 13px;
+        min-height: 37px;
+    }
+
+    .filtros-reporte .form-label {
+        font-size: 12px;
+        margin-bottom: 5px;
+        color: #6c757d;
+        font-weight: 600;
+    }
+
+    .tabla-reporte td,
+    .tabla-reporte th {
+        font-size: 12.5px;
+        padding: 5px 6px;
+        vertical-align: middle;
+    }
+
+    .tabla-reporte thead th {
+        white-space: nowrap;
+        position: sticky;
+        top: 0;
+        z-index: 2;
+        background: #f8f9fa;
+        box-shadow: inset 0 -1px 0 #dee2e6;
+    }
+
+    .tabla-scroll {
+        max-height: 62vh;
+        overflow-y: auto;
+        border: 1px solid #e9ecef;
+        border-radius: 10px;
+    }
+
+    .acciones-filtros {
+        display: flex;
+        gap: 10px;
+        align-items: end;
+        justify-content: flex-end;
+    }
+
+    .totales-externos {
+        margin-top: 10px;
+        display: flex;
+        justify-content: end;
+    }
+
+    .totales-externos .bloque-total {
+        background: #f8f9fa;
+        border: 1px solid #e9ecef;
+        border-radius: 10px;
+        padding: 10px 16px;
+        min-width: 220px;
+        text-align: right;
+    }
+
+    .totales-externos .titulo-total {
+        font-size: 11px;
+        color: #6c757d;
+        font-weight: 600;
+        display: block;
+        margin-bottom: 2px;
+    }
+
+    .totales-externos .valor-total {
+        font-size: 16px;
+        font-weight: 700;
+        white-space: nowrap;
+    }
+
+    @media (max-width: 1400px) {
+        .tabla-reporte td,
+        .tabla-reporte th {
+            font-size: 12px;
+        }
+    }
+</style>
+
+<div class="container-fluid mt-4 mb-4">
+    <div class="card shadow-lg border-0 card-reporte">
+
+        <div class="card-header bg-light border-bottom d-flex justify-content-between align-items-center flex-wrap gap-2">
+            <div>
+                <h4 class="text-primary fw-bold mb-0">
+                    <i class="fas fa-undo-alt me-2"></i>Reporte de Reintegros
+                </h4>
+                <small class="text-muted">Listado de reintegros registrados por presupuesto</small>
+            </div>
+
+            <a href="?{{ request.GET.urlencode }}&exportar=excel" class="btn btn-success btn-sm">
+                <i class="fas fa-file-excel me-1"></i>Exportar Excel
+            </a>
+        </div>
+
+        <div class="card-body">
+
+            <form method="get" class="filtros-reporte mb-3">
+                <div class="row g-3 align-items-end">
+
+                    <div class="col-md-3">
+                        <label class="form-label">Fecha desde</label>
+                        <input type="date" name="fecha_desde" class="form-control form-control-sm"
+                               value="{{ request.GET.fecha_desde }}">
+                    </div>
+
+                    <div class="col-md-3">
+                        <label class="form-label">Fecha hasta</label>
+                        <input type="date" name="fecha_hasta" class="form-control form-control-sm"
+                               value="{{ request.GET.fecha_hasta }}">
+                    </div>
+
+                    <div class="col-md-4">
+                        <label class="form-label">Paciente</label>
+                        <input type="text" name="paciente" placeholder="Buscar paciente"
+                               class="form-control form-control-sm"
+                               value="{{ request.GET.paciente }}">
+                    </div>
+
+                    <div class="col-md-2">
+                        <label class="form-label">N° Presupuesto</label>
+                        <input type="text" name="nro_presupuesto" placeholder="Ej: 125"
+                               class="form-control form-control-sm"
+                               value="{{ request.GET.nro_presupuesto }}">
+                    </div>
+                </div>
+
+                <div class="row mt-2">
+                    <div class="col-md-12">
+                        <div class="acciones-filtros">
+                            <button type="submit" class="btn btn-primary btn-sm px-4">
+                                <i class="fas fa-filter me-1"></i>Filtrar
+                            </button>
+
+                            <a href="{% url 'presupuestos_app:reporte_reintegros' %}" class="btn btn-outline-secondary btn-sm px-4">
+                                <i class="fas fa-broom me-1"></i>Limpiar
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </form>
+
+            <div class="tabla-scroll">
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle table-sm tabla-reporte mb-0">
+                        <thead class="table-light">
+                            <tr>
+                                <th style="width: 140px;">Fecha reintegro</th>
+                                <th style="width: 90px;">Nro</th>
+                                <th>Paciente</th>
+                                <th class="text-end" style="width: 130px;">Importe</th>
+                                <th>Observaciones</th>
+                            </tr>
+                        </thead>
+
+                        <tbody>
+                            {% for reintegro in reintegros %}
+                            <tr>
+                                <td class="text-nowrap">{{ reintegro.fecha|date:"d/m/Y H:i" }}</td>
+                                <td class="fw-semibold text-nowrap">{{ reintegro.presupuesto.id }}</td>
+                                <td>{{ reintegro.presupuesto.paciente_nombre }}</td>
+                                <td class="text-end  text-nowrap">$ {{ reintegro.monto|moneda_ar }}</td>
+                                <td>{{ reintegro.observaciones|default:"-" }}</td>
+                            </tr>
+                            {% empty %}
+                            <tr>
+                                <td colspan="5" class="text-center text-muted py-4">
+                                    No hay reintegros para mostrar con los filtros seleccionados.
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <div class="totales-externos">
+                <div class="bloque-total">
+                    <span class="titulo-total">Total reintegrado</span>
+                    <span class="valor-total fw-bold">$ {{ total_reintegrado|moneda_ar }}</span>
+                </div>
+            </div>
+
+        </div>
+    </div>
+</div>
+{% endblock %}

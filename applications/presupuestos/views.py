@@ -1648,6 +1648,23 @@ from .models import Presupuesto, Pago, Reintegro, Medico, ObraSocial
 
 from datetime import date
 
+
+
+
+
+from datetime import datetime
+from django.shortcuts import render
+from django.db.models import Sum
+from django.http import HttpResponse
+from openpyxl import Workbook
+from openpyxl.styles import Font, PatternFill, Border, Side, Alignment
+from openpyxl.utils import get_column_letter
+
+from applications.presupuestos.models import Pago
+
+
+
+
 @login_required
 def reporte_resumen_general(request):
     fecha_desde = request.GET.get("fecha_desde")
@@ -1940,38 +1957,120 @@ def reporte_presupuestos(request):
     # EXPORT EXCEL
     # =========================
     if exportar == "excel":
-        wb = openpyxl.Workbook()
+        wb = Workbook()
         ws = wb.active
         ws.title = "Presupuestos"
 
+        hoy = datetime.now().strftime("%d-%m-%Y")
+        nombre_archivo = f"reporte_presupuestos_{hoy}.xlsx"
+
+        borde_fino = Border(
+            left=Side(style="thin", color="000000"),
+            right=Side(style="thin", color="000000"),
+            top=Side(style="thin", color="000000"),
+            bottom=Side(style="thin", color="000000"),
+        )
+
+        fill_header = PatternFill("solid", fgColor="D9EAF7")
+        font_header = Font(bold=True)
+        font_titulo = Font(bold=True, size=14)
+        font_total = Font(bold=True)
+
+        alignment_center = Alignment(horizontal="center", vertical="center")
+        alignment_left = Alignment(horizontal="left", vertical="center")
+        alignment_right = Alignment(horizontal="right", vertical="center")
+
+        ws.merge_cells("A1:K1")
+        ws["A1"] = "Reporte de Presupuestos Detallados"
+        ws["A1"].font = font_titulo
+        ws["A1"].alignment = alignment_center
+
         headers = [
             "Nro", "Fecha", "Paciente", "DNI",
-            "Medico", "Obra Social", "Estado",
+            "Médico", "Obra Social", "Estado",
             "Total", "Cobrado", "Reintegrado", "Saldo"
         ]
 
-        ws.append(headers)
+        fila_header = 3
+        for col_num, header in enumerate(headers, 1):
+            cell = ws.cell(row=fila_header, column=col_num, value=header)
+            cell.font = font_header
+            cell.fill = fill_header
+            cell.border = borde_fino
+            cell.alignment = alignment_center
 
+        fila = fila_header + 1
         for item in data:
             p = item["obj"]
-            ws.append([
-                p.id,
-                p.fecha_creacion.strftime("%d/%m/%Y"),
-                p.paciente_nombre,
-                p.paciente_dni,
-                str(p.medico),
-                str(p.obra_social),
-                p.get_estado_display(),
-                float(p.total),
-                float(item["cobrado"]),
-                float(item["reintegrado"]),
-                float(item["saldo"]),
-            ])
+
+            ws.cell(row=fila, column=1, value=p.id)
+            ws.cell(row=fila, column=2, value=p.fecha_creacion.strftime("%d/%m/%Y"))
+            ws.cell(row=fila, column=3, value=p.paciente_nombre)
+            ws.cell(row=fila, column=4, value=p.paciente_dni or "-")
+            ws.cell(row=fila, column=5, value=str(p.medico))
+            ws.cell(row=fila, column=6, value=str(p.obra_social))
+            ws.cell(row=fila, column=7, value=p.get_estado_display())
+            ws.cell(row=fila, column=8, value=float(p.total))
+            ws.cell(row=fila, column=9, value=float(item["cobrado"]))
+            ws.cell(row=fila, column=10, value=float(item["reintegrado"]))
+            ws.cell(row=fila, column=11, value=float(item["saldo"]))
+
+            for col in range(1, 12):
+                cell = ws.cell(row=fila, column=col)
+                cell.border = borde_fino
+
+                if col in [1, 2, 4, 7]:
+                    cell.alignment = alignment_center
+                elif col in [8, 9, 10, 11]:
+                    cell.alignment = alignment_right
+                    cell.number_format = '$ #,##0.00'
+                else:
+                    cell.alignment = alignment_left
+
+            fila += 1
+
+        fila_total = fila + 1
+
+        ws.cell(row=fila_total, column=7, value="Totales")
+        ws.cell(row=fila_total, column=8, value=float(total_presupuestado))
+        ws.cell(row=fila_total, column=9, value=float(total_cobrado))
+        ws.cell(row=fila_total, column=10, value=float(total_reintegrado))
+        ws.cell(row=fila_total, column=11, value=float(total_presupuestado - total_cobrado + total_reintegrado))
+
+        for col in range(7, 12):
+            cell = ws.cell(row=fila_total, column=col)
+            cell.font = font_total
+            cell.fill = fill_header
+            cell.border = borde_fino
+            if col == 7:
+                cell.alignment = alignment_center
+            else:
+                cell.alignment = alignment_right
+                cell.number_format = '$ #,##0.00'
+
+        anchos = {
+            "A": 10,
+            "B": 14,
+            "C": 32,
+            "D": 16,
+            "E": 28,
+            "F": 28,
+            "G": 16,
+            "H": 16,
+            "I": 16,
+            "J": 16,
+            "K": 16,
+        }
+        for col, ancho in anchos.items():
+            ws.column_dimensions[col].width = ancho
+
+        ws.row_dimensions[1].height = 24
+        ws.row_dimensions[3].height = 22
 
         response = HttpResponse(
             content_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
         )
-        response["Content-Disposition"] = "attachment; filename=presupuestos.xlsx"
+        response["Content-Disposition"] = f'attachment; filename="{nombre_archivo}"'
         wb.save(response)
         return response
     context = {
@@ -1992,18 +2091,6 @@ def reporte_presupuestos(request):
     return render(request, "presupuestos/reportes/presupuestos_detallado.html", context)
 
 
-
-
-
-from datetime import datetime
-from django.shortcuts import render
-from django.db.models import Sum
-from django.http import HttpResponse
-from openpyxl import Workbook
-from openpyxl.styles import Font, PatternFill, Border, Side, Alignment
-from openpyxl.utils import get_column_letter
-
-from applications.presupuestos.models import Pago
 
 
 def reporte_pagos(request):
@@ -2054,7 +2141,6 @@ def exportar_reporte_pagos_excel(pagos):
     hoy = datetime.now().strftime("%d-%m-%Y")
     nombre_archivo = f"reporte_pagos_{hoy}.xlsx"
 
-    # Estilos
     borde_fino = Border(
         left=Side(style="thin", color="000000"),
         right=Side(style="thin", color="000000"),
@@ -2071,13 +2157,11 @@ def exportar_reporte_pagos_excel(pagos):
     alignment_left = Alignment(horizontal="left", vertical="center")
     alignment_right = Alignment(horizontal="right", vertical="center")
 
-    # Título
     ws.merge_cells("A1:F1")
     ws["A1"] = "Reporte de Pagos"
     ws["A1"].font = font_titulo
     ws["A1"].alignment = alignment_center
 
-    # Encabezados
     headers = [
         "Fecha de pago",
         "Nro Presupuesto",
@@ -2095,7 +2179,6 @@ def exportar_reporte_pagos_excel(pagos):
         cell.border = borde_fino
         cell.alignment = alignment_center
 
-    # Datos
     fila = fila_header + 1
     for pago in pagos:
         ws.cell(row=fila, column=1, value=pago.fecha.strftime("%d/%m/%Y %H:%M"))
@@ -2119,9 +2202,10 @@ def exportar_reporte_pagos_excel(pagos):
 
         fila += 1
 
-    # Total abajo
+    total_pagado = sum(p.monto for p in pagos) or 0
+
     ws.cell(row=fila + 1, column=4, value="Total pagado")
-    ws.cell(row=fila + 1, column=5, value=float(sum(p.monto for p in pagos)))
+    ws.cell(row=fila + 1, column=5, value=float(total_pagado))
 
     ws.cell(row=fila + 1, column=4).font = font_total
     ws.cell(row=fila + 1, column=5).font = font_total
@@ -2133,24 +2217,157 @@ def exportar_reporte_pagos_excel(pagos):
     ws.cell(row=fila + 1, column=5).alignment = alignment_right
     ws.cell(row=fila + 1, column=5).number_format = '$ #,##0.00'
 
-    # Ajustar ancho de columnas automáticamente
-    for col in ws.columns:
-        max_length = 0
-        column = col[0].column_letter
-        for cell in col:
-            try:
-                if cell.value:
-                    max_length = max(max_length, len(str(cell.value)))
-            except:
-                pass
-        adjusted_width = max_length + 2
-        ws.column_dimensions[column].width = adjusted_width
+    anchos = {
+        "A": 20,
+        "B": 16,
+        "C": 35,
+        "D": 20,
+        "E": 16,
+        "F": 45,
+    }
+    for col, ancho in anchos.items():
+        ws.column_dimensions[col].width = ancho
 
-    # Altura de filas
     ws.row_dimensions[1].height = 24
     ws.row_dimensions[3].height = 22
 
-    # Respuesta
+    response = HttpResponse(
+        content_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+    )
+    response["Content-Disposition"] = f'attachment; filename="{nombre_archivo}"'
+    wb.save(response)
+    return response
+
+
+
+def reporte_reintegros(request):
+    reintegros = Reintegro.objects.select_related("presupuesto").all()
+
+    fecha_desde = request.GET.get("fecha_desde")
+    fecha_hasta = request.GET.get("fecha_hasta")
+    paciente = request.GET.get("paciente")
+    nro_presupuesto = request.GET.get("nro_presupuesto")
+    exportar = request.GET.get("exportar")
+
+    if fecha_desde:
+        reintegros = reintegros.filter(fecha__date__gte=fecha_desde)
+
+    if fecha_hasta:
+        reintegros = reintegros.filter(fecha__date__lte=fecha_hasta)
+
+    if paciente:
+        reintegros = reintegros.filter(presupuesto__paciente_nombre__icontains=paciente)
+
+    if nro_presupuesto:
+        reintegros = reintegros.filter(presupuesto__id=nro_presupuesto)
+
+    reintegros = reintegros.order_by("-fecha", "-presupuesto__id")
+
+    total_reintegrado = reintegros.aggregate(total=Sum("monto"))["total"] or 0
+
+    if exportar == "excel":
+        return exportar_reporte_reintegros_excel(reintegros, total_reintegrado)
+
+    context = {
+        "reintegros": reintegros,
+        "total_reintegrado": total_reintegrado,
+    }
+    return render(request, "presupuestos/reportes/reporte_reintegros.html", context)
+
+
+def exportar_reporte_reintegros_excel(reintegros, total_reintegrado):
+    wb = Workbook()
+    ws = wb.active
+    ws.title = "Reporte Reintegros"
+
+    hoy = datetime.now().strftime("%d-%m-%Y")
+    nombre_archivo = f"reporte_reintegros_{hoy}.xlsx"
+
+    borde_fino = Border(
+        left=Side(style="thin", color="000000"),
+        right=Side(style="thin", color="000000"),
+        top=Side(style="thin", color="000000"),
+        bottom=Side(style="thin", color="000000"),
+    )
+
+    fill_header = PatternFill("solid", fgColor="D9EAF7")
+    font_header = Font(bold=True)
+    font_titulo = Font(bold=True, size=14)
+    font_total = Font(bold=True)
+
+    alignment_center = Alignment(horizontal="center", vertical="center")
+    alignment_left = Alignment(horizontal="left", vertical="center")
+    alignment_right = Alignment(horizontal="right", vertical="center")
+
+    ws.merge_cells("A1:E1")
+    ws["A1"] = "Reporte de Reintegros"
+    ws["A1"].font = font_titulo
+    ws["A1"].alignment = alignment_center
+
+    headers = [
+        "Fecha reintegro",
+        "Nro Presupuesto",
+        "Paciente",
+        "Importe",
+        "Observaciones",
+    ]
+
+    fila_header = 3
+    for col_num, header in enumerate(headers, 1):
+        cell = ws.cell(row=fila_header, column=col_num, value=header)
+        cell.font = font_header
+        cell.fill = fill_header
+        cell.border = borde_fino
+        cell.alignment = alignment_center
+
+    fila = fila_header + 1
+    for reintegro in reintegros:
+        ws.cell(row=fila, column=1, value=reintegro.fecha.strftime("%d/%m/%Y %H:%M") if hasattr(reintegro.fecha, "strftime") else str(reintegro.fecha))
+        ws.cell(row=fila, column=2, value=reintegro.presupuesto.id)
+        ws.cell(row=fila, column=3, value=reintegro.presupuesto.paciente_nombre)
+        ws.cell(row=fila, column=4, value=float(reintegro.monto))
+        ws.cell(row=fila, column=5, value=reintegro.observaciones or "-")
+
+        for col in range(1, 6):
+            cell = ws.cell(row=fila, column=col)
+            cell.border = borde_fino
+
+            if col == 4:
+                cell.alignment = alignment_right
+                cell.number_format = '$ #,##0.00'
+            elif col in [1, 2]:
+                cell.alignment = alignment_center
+            else:
+                cell.alignment = alignment_left
+
+        fila += 1
+
+    ws.cell(row=fila + 1, column=3, value="Total reintegrado")
+    ws.cell(row=fila + 1, column=4, value=float(total_reintegrado))
+
+    ws.cell(row=fila + 1, column=3).font = font_total
+    ws.cell(row=fila + 1, column=4).font = font_total
+    ws.cell(row=fila + 1, column=3).fill = fill_header
+    ws.cell(row=fila + 1, column=4).fill = fill_header
+    ws.cell(row=fila + 1, column=3).border = borde_fino
+    ws.cell(row=fila + 1, column=4).border = borde_fino
+    ws.cell(row=fila + 1, column=3).alignment = alignment_center
+    ws.cell(row=fila + 1, column=4).alignment = alignment_right
+    ws.cell(row=fila + 1, column=4).number_format = '$ #,##0.00'
+
+    anchos = {
+        "A": 20,
+        "B": 16,
+        "C": 35,
+        "D": 16,
+        "E": 45,
+    }
+    for col, ancho in anchos.items():
+        ws.column_dimensions[col].width = ancho
+
+    ws.row_dimensions[1].height = 24
+    ws.row_dimensions[3].height = 22
+
     response = HttpResponse(
         content_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
     )

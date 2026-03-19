@@ -182,26 +182,7 @@
                                 <i class="fas fa-calendar-alt text-primary me-2"></i>
                                 Presupuestos detallado
                             </a>
-                        </li>
-                        <li>
-                            <a class="dropdown-item d-flex align-items-center" href="#">
-                                <i class="fas fa-layer-group text-warning me-2"></i>
-                                Presupuestos por estado
-                            </a>
-                        </li>
-                        <li>
-                            <a class="dropdown-item d-flex align-items-center" href="#">
-                                <i class="fas fa-user-md text-success me-2"></i>
-                                Presupuestos por médico
-                            </a>
-                        </li>
-                        <li>
-                            <a class="dropdown-item d-flex align-items-center" href="#">
-                                <i class="fas fa-hospital text-danger me-2"></i>
-                                Presupuestos por obra social
-                            </a>
-                        </li>
-
+                        </li>  
                         <li><hr class="dropdown-divider"></li>
 
                         <!-- MOVIMIENTOS -->
@@ -217,9 +198,9 @@
                             </a>
                         </li>
                         <li>
-                            <a class="dropdown-item d-flex align-items-center" href="#">
+                            <a class="dropdown-item d-flex align-items-center" href="{% url 'presupuestos_app:reporte_reintegros' %}">
                                 <i class="fas fa-hand-holding-usd text-info me-2"></i>
-                                Reintegros
+                                Reporte Reintegros
                             </a>
                         </li>
 
