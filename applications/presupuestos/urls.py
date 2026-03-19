@@ -34,4 +34,5 @@ urlpatterns = [
     ##REPORTES
     path("reportes/resumen-general/",views.reporte_resumen_general,name="reporte_resumen_general"),
     path("reportes/presupuestos/",views.reporte_presupuestos,name="reporte_presupuestos"),
+    path('reportes/pagos/', views.reporte_pagos, name='reporte_pagos'),
 ]

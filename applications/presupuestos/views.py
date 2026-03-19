@@ -1990,3 +1990,57 @@ def reporte_presupuestos(request):
         "request": request,
     }
     return render(request, "presupuestos/reportes/presupuestos_detallado.html", context)
+
+
+
+
+def reporte_pagos(request):
+    pagos = Pago.objects.select_related("presupuesto").all()
+
+    fecha_desde = request.GET.get("fecha_desde")
+    fecha_hasta = request.GET.get("fecha_hasta")
+    paciente = request.GET.get("paciente")
+    nro_presupuesto = request.GET.get("nro_presupuesto")
+    medio_pago = request.GET.get("medio_pago")
+
+    if fecha_desde:
+        pagos = pagos.filter(fecha__date__gte=fecha_desde)
+
+    if fecha_hasta:
+        pagos = pagos.filter(fecha__date__lte=fecha_hasta)
+
+    if paciente:
+        pagos = pagos.filter(presupuesto__paciente_nombre__icontains=paciente)
+
+    if nro_presupuesto:
+        pagos = pagos.filter(presupuesto__id=nro_presupuesto)
+
+    if medio_pago and medio_pago != "todos":
+        pagos = pagos.filter(medio_pago=medio_pago)
+
+    pagos = pagos.order_by("-fecha", "-presupuesto__id")
+
+    total_pagado = pagos.aggregate(total=Sum("monto"))["total"] or 0
+    total_registros = pagos.count()
+
+    medios_pago = (
+        Pago.objects.exclude(medio_pago__isnull=True)
+        .exclude(medio_pago__exact="")
+        .values_list("medio_pago", flat=True)
+        .distinct()
+        .order_by("medio_pago")
+    )
+
+    context = {
+        "pagos": pagos,
+        "fecha_desde": fecha_desde,
+        "fecha_hasta": fecha_hasta,
+        "paciente": paciente,
+        "nro_presupuesto": nro_presupuesto,
+        "medio_pago": medio_pago,
+        "medios_pago": medios_pago,
+        "total_pagado": total_pagado,
+        "total_registros": total_registros,
+    }
+
+    return render(request, "presupuestos/reportes/reporte_pagos.html", context)
