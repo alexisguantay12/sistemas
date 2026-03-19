@@ -1628,3 +1628,236 @@ def exportar_pagos_excel(pagos, fecha_desde="", fecha_hasta="", caja=""):
     response["Content-Disposition"] = f'attachment; filename="{filename}"'
     wb.save(response)
     return response
+
+
+
+
+
+#reportes 
+
+
+from decimal import Decimal
+from collections import defaultdict
+
+from django.contrib.auth.decorators import login_required
+from django.db.models import Count, Sum, Q
+from django.db.models.functions import TruncMonth
+from django.shortcuts import render
+
+from .models import Presupuesto, Pago, Reintegro, Medico, ObraSocial
+
+from datetime import date
+
+@login_required
+def reporte_resumen_general(request):
+    fecha_desde = request.GET.get("fecha_desde")
+    fecha_hasta = request.GET.get("fecha_hasta")
+    medico_id = request.GET.get("medico")
+    obra_social_id = request.GET.get("obra_social")
+    estado = request.GET.get("estado")
+
+    presupuestos = (
+        Presupuesto.objects
+        .select_related("medico", "obra_social")
+        .prefetch_related("items", "pagos", "reintegros")
+        .all()
+        .order_by("-fecha_creacion")
+    )
+
+    if fecha_desde:
+        presupuestos = presupuestos.filter(fecha_creacion__date__gte=fecha_desde)
+    if fecha_hasta:
+        presupuestos = presupuestos.filter(fecha_creacion__date__lte=fecha_hasta)
+    if medico_id:
+        presupuestos = presupuestos.filter(medico_id=medico_id)
+    if obra_social_id:
+        presupuestos = presupuestos.filter(obra_social_id=obra_social_id)
+    if estado:
+        presupuestos = presupuestos.filter(estado=estado)
+
+    presupuestos_list = list(presupuestos)
+
+    # =========================
+    # KPIs GENERALES
+    # =========================
+    total_presupuestos = len(presupuestos_list)
+    total_presupuestado = sum((p.total for p in presupuestos_list), Decimal("0.00"))
+
+    total_cobrado = Decimal("0.00")
+    total_reintegrado = Decimal("0.00")
+    cantidad_ejecutados = 0
+    cantidad_presupuestados = 0  # sin pagos
+
+    for p in presupuestos_list:
+        pagos = list(p.pagos.all())
+        reintegros = list(p.reintegros.all())
+
+        pagado = sum((pg.monto for pg in pagos), Decimal("0.00"))
+        reintegrado = sum((rg.monto for rg in reintegros), Decimal("0.00"))
+
+        total_cobrado += pagado
+        total_reintegrado += reintegrado
+
+        if pagos:
+            cantidad_ejecutados += 1
+        else:
+            cantidad_presupuestados += 1
+
+    saldo_global = total_presupuestado - total_cobrado + total_reintegrado
+    porcentaje_ejecucion = round((cantidad_ejecutados / total_presupuestos) * 100, 2) if total_presupuestos else 0
+
+    # =========================
+    # RESUMEN POR ESTADO
+    # =========================
+    estados_base = {key: 0 for key, _ in Presupuesto.ESTADOS}
+    for p in presupuestos_list:
+        estados_base[p.estado] += 1
+
+    estados_resumen = [
+        {
+            "key": key,
+            "label": label,
+            "cantidad": estados_base.get(key, 0),
+        }
+        for key, label in Presupuesto.ESTADOS
+    ]
+
+    # =========================
+    # TOP MÉDICOS
+    # =========================
+    medicos_map = defaultdict(lambda: {
+        "medico": "",
+        "cantidad": 0,
+        "ejecutados": 0,
+        "total": Decimal("0.00"),
+        "cobrado": Decimal("0.00"),
+        "saldo": Decimal("0.00"),
+    })
+
+    for p in presupuestos_list:
+        pagos = list(p.pagos.all())
+        pagado = sum((pg.monto for pg in pagos), Decimal("0.00"))
+
+        med_id = p.medico_id
+        medicos_map[med_id]["medico"] = str(p.medico)
+        medicos_map[med_id]["cantidad"] += 1
+        medicos_map[med_id]["total"] += p.total
+        medicos_map[med_id]["cobrado"] += pagado
+        medicos_map[med_id]["saldo"] += p.saldo
+
+        if pagos:
+            medicos_map[med_id]["ejecutados"] += 1
+
+    resumen_medicos = sorted(
+        medicos_map.values(),
+        key=lambda x: (x["total"], x["cantidad"]),
+        reverse=True
+    )[:8]
+
+    # =========================
+    # CHART: ÚLTIMOS 8 MESES
+    # Presupuestado = sin pagos
+    # Ejecutado = con algún pago
+    # =========================
+    def month_start(dt):
+        return date(dt.year, dt.month, 1)
+
+    def previous_month(dt):
+        if dt.month == 1:
+            return date(dt.year - 1, 12, 1)
+        return date(dt.year, dt.month - 1, 1)
+
+    # referencia final
+    if presupuestos_list:
+        fecha_referencia = max(p.fecha_creacion.date() for p in presupuestos_list if p.fecha_creacion)
+    else:
+        from django.utils import timezone
+        fecha_referencia = timezone.localdate()
+
+    # si hay fecha_hasta, usamos ese corte
+    if fecha_hasta:
+        try:
+            y, m, d = map(int, fecha_hasta.split("-"))
+            fecha_referencia = date(y, m, d)
+        except Exception:
+            pass
+
+    fecha_referencia = month_start(fecha_referencia)
+
+    # generamos hasta 8 meses hacia atrás
+    meses = []
+    cursor = fecha_referencia
+    for _ in range(8):
+        meses.append(cursor)
+        cursor = previous_month(cursor)
+    meses.reverse()
+
+    # si hay fecha_desde, quitamos meses anteriores al filtro
+    if fecha_desde:
+        try:
+            y, m, d = map(int, fecha_desde.split("-"))
+            desde_mes = date(y, m, 1)
+            meses = [m for m in meses if m >= desde_mes]
+        except Exception:
+            pass
+
+    chart_map = {
+        m.strftime("%Y-%m"): {
+            "label": m.strftime("%m/%Y"),
+            "presupuestado": 0,  # sin pagos
+            "ejecutado": 0,      # con pagos
+        }
+        for m in meses
+    }
+
+    for p in presupuestos_list:
+        if not p.fecha_creacion:
+            continue
+
+        clave = p.fecha_creacion.strftime("%Y-%m")
+        if clave not in chart_map:
+            continue
+
+        tiene_pago = p.pagos.exists()
+        if tiene_pago:
+            chart_map[clave]["ejecutado"] += 1
+        else:
+            chart_map[clave]["presupuestado"] += 1
+
+    chart_data = [chart_map[m.strftime("%Y-%m")] for m in meses]
+
+    chart_labels = [item["label"] for item in chart_data]
+    chart_presupuestado = [item["presupuestado"] for item in chart_data]
+    chart_ejecutado = [item["ejecutado"] for item in chart_data]
+
+    # =========================
+    # ÚLTIMOS PRESUPUESTOS
+    # =========================
+    ultimos_presupuestos = presupuestos_list[:10]
+
+    context = {
+        "titulo": "Resumen General",
+        "total_presupuestos": total_presupuestos,
+        "total_presupuestado": total_presupuestado,
+        "total_cobrado": total_cobrado,
+        "total_reintegrado": total_reintegrado,
+        "saldo_global": saldo_global,
+        "cantidad_ejecutados": cantidad_ejecutados,
+        "cantidad_presupuestados": cantidad_presupuestados,
+        "porcentaje_ejecucion": porcentaje_ejecucion,
+        "estados_resumen": estados_resumen,
+        "resumen_medicos": resumen_medicos,
+        "ultimos_presupuestos": ultimos_presupuestos,
+        "medicos": Medico.objects.all().order_by("nombre"),
+        "obras_sociales": ObraSocial.objects.all().order_by("nombre"),
+        "estado_actual": estado,
+        "medico_actual": medico_id,
+        "obra_social_actual": obra_social_id,
+        "fecha_desde": fecha_desde,
+        "fecha_hasta": fecha_hasta,
+        "estados": Presupuesto.ESTADOS,
+        "chart_labels_json": json.dumps(chart_labels),
+        "chart_presupuestado_json": json.dumps(chart_presupuestado),
+        "chart_ejecutado_json": json.dumps(chart_ejecutado),
+    }
+    return render(request, "presupuestos/reportes/resumen_general.html", context)

@@ -31,4 +31,8 @@ urlpatterns = [
     path('detalle/eliminar-reintegro/<int:pk>/',views.eliminar_reintegro, name = 'eliminar_reintegro'),
     path('detalle/guardar-datos-internacion/<int:pk>/',views.guardar_datos_internacion, name = 'guardar_datos_internacion'),
     
+    ##REPORTES
+    path("reportes/resumen-general/",views.reporte_resumen_general,name="reporte_resumen_general"),
+
+
 ]

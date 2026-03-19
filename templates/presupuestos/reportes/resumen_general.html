@@ -1,0 +1,436 @@
+{% extends 'base2.html' %}
+{% load group_tags %}
+
+{% block content %}
+<div class="container-fluid mt-4 mb-4">
+  <div class="card shadow-lg border-0 rounded-4">
+    
+    <div class="card-header bg-light border-bottom d-flex justify-content-between align-items-center py-3">
+      <div>
+        <h4 class="mb-0 text-primary fw-bold">
+          <i class="fas fa-chart-line me-2"></i>Resumen General
+        </h4>
+        <small class="text-muted">
+          Vista ejecutiva del comportamiento de presupuestos, ejecución y movimiento económico
+        </small>
+      </div>
+      <div class="text-end">
+        <span class="badge bg-primary fs-6 px-3 py-2">
+          {{ total_presupuestos }} presupuestos
+        </span>
+      </div>
+    </div>
+
+    <div class="card-body bg-white">
+
+      <!-- FILTROS -->
+      <form method="get" class="mb-4">
+        <div class="row g-3 align-items-end">
+
+          <div class="col-md-2">
+            <label class="form-label fw-semibold">Fecha desde</label>
+            <input type="date" name="fecha_desde" class="form-control form-control-sm" value="{{ fecha_desde }}">
+          </div>
+
+          <div class="col-md-2">
+            <label class="form-label fw-semibold">Fecha hasta</label>
+            <input type="date" name="fecha_hasta" class="form-control form-control-sm" value="{{ fecha_hasta }}">
+          </div>
+
+          <div class="col-md-3">
+            <label class="form-label fw-semibold">Médico</label>
+            <select name="medico" class="form-select form-select-sm">
+              <option value="">Todos</option>
+              {% for medico in medicos %}
+                <option value="{{ medico.id }}" {% if medico_actual == medico.id|stringformat:"s" %}selected{% endif %}>
+                  {{ medico }}
+                </option>
+              {% endfor %}
+            </select>
+          </div>
+
+          <div class="col-md-3">
+            <label class="form-label fw-semibold">Obra social</label>
+            <select name="obra_social" class="form-select form-select-sm">
+              <option value="">Todas</option>
+              {% for obra in obras_sociales %}
+                <option value="{{ obra.id }}" {% if obra_social_actual == obra.id|stringformat:"s" %}selected{% endif %}>
+                  {{ obra }}
+                </option>
+              {% endfor %}
+            </select>
+          </div>
+
+          <div class="col-md-2">
+            <label class="form-label fw-semibold">Estado</label>
+            <select name="estado" class="form-select form-select-sm">
+              <option value="">Todos</option>
+              {% for value, label in estados %}
+                <option value="{{ value }}" {% if estado_actual == value %}selected{% endif %}>{{ label }}</option>
+              {% endfor %}
+            </select>
+          </div>
+
+          <div class="col-12 d-flex gap-2 mt-2">
+            <button type="submit" class="btn btn-primary btn-sm px-4">
+              <i class="fas fa-filter me-1"></i>Aplicar filtros
+            </button>
+            <a href="{% url 'presupuestos_app:reporte_resumen_general' %}" class="btn btn-outline-secondary btn-sm px-4">
+              <i class="fas fa-broom me-1"></i>Limpiar
+            </a>
+          </div>
+        </div>
+      </form>
+
+      <!-- KPIS -->
+      <div class="row g-3 mb-4">
+
+        <div class="col-md-3">
+          <div class="card border-0 shadow-sm rounded-4 h-100">
+            <div class="card-body">
+              <small class="text-muted d-block mb-1">Total presupuestado</small>
+              <h3 class="fw-bold text-primary mb-0">{{ total_presupuestado|moneda_ar }}</h3>
+            </div>
+          </div>
+        </div>
+
+        <div class="col-md-3">
+          <div class="card border-0 shadow-sm rounded-4 h-100">
+            <div class="card-body">
+              <small class="text-muted d-block mb-1">Total cobrado</small>
+              <h3 class="fw-bold text-success mb-0">{{ total_cobrado|moneda_ar }}</h3>
+            </div>
+          </div>
+        </div>
+
+        <div class="col-md-3">
+          <div class="card border-0 shadow-sm rounded-4 h-100">
+            <div class="card-body">
+              <small class="text-muted d-block mb-1">Total reintegrado</small>
+              <h3 class="fw-bold text-warning mb-0">{{ total_reintegrado|moneda_ar }}</h3>
+            </div>
+          </div>
+        </div>
+
+        <div class="col-md-3">
+          <div class="card border-0 shadow-sm rounded-4 h-100">
+            <div class="card-body">
+              <small class="text-muted d-block mb-1">Saldo global</small>
+              <h3 class="fw-bold {% if saldo_global > 0 %}text-danger{% else %}text-success{% endif %} mb-0">
+                {{ saldo_global|moneda_ar }}
+              </h3>
+            </div>
+          </div>
+        </div>
+
+        <div class="col-md-3">
+          <div class="card border-0 shadow-sm rounded-4 h-100">
+            <div class="card-body">
+              <small class="text-muted d-block mb-1">Presupuestos</small>
+              <h3 class="fw-bold text-dark mb-0">{{ total_presupuestos }}</h3>
+            </div>
+          </div>
+        </div>
+
+        <div class="col-md-3">
+          <div class="card border-0 shadow-sm rounded-4 h-100">
+            <div class="card-body">
+              <small class="text-muted d-block mb-1">Ejecutados</small>
+              <h3 class="fw-bold text-success mb-0">{{ cantidad_ejecutados }}</h3>
+              <small class="text-muted">Con al menos un pago</small>
+            </div>
+          </div>
+        </div>
+
+        <div class="col-md-3">
+          <div class="card border-0 shadow-sm rounded-4 h-100">
+            <div class="card-body">
+              <small class="text-muted d-block mb-1">Presupuestados</small>
+              <h3 class="fw-bold text-secondary mb-0">{{ cantidad_presupuestados }}</h3>
+              <small class="text-muted">Sin pagos registrados</small>
+            </div>
+          </div>
+        </div>
+
+        <div class="col-md-3">
+          <div class="card border-0 shadow-sm rounded-4 h-100">
+            <div class="card-body">
+              <small class="text-muted d-block mb-1">% de ejecución</small>
+              <h3 class="fw-bold text-info mb-0">{{ porcentaje_ejecucion }}%</h3>
+              <div class="progress mt-2" style="height: 7px;">
+                <div class="progress-bar bg-info" role="progressbar" style="width: {{ porcentaje_ejecucion }}%;"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ESTADOS -->
+      <div class="row g-3 mb-4">
+        {% for item in estados_resumen %}
+        <div class="col-md-2 col-sm-4 col-6">
+          <div class="card border-0 shadow-sm text-center rounded-4 h-100">
+            <div class="card-body py-3">
+              <small class="text-muted d-block mb-2">{{ item.label }}</small>
+              <h3 class="fw-bold mb-0 text-dark">{{ item.cantidad }}</h3>
+            </div>
+          </div>
+        </div>
+        {% endfor %}
+      </div>
+
+      <!-- GRÁFICO PRINCIPAL -->
+      <div class="card border-0 shadow-sm rounded-4 mb-4">
+        <div class="card-header bg-white border-bottom">
+          <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
+            <div>
+              <h6 class="mb-0 fw-bold text-primary">
+                <i class="fas fa-chart-bar me-2"></i>Presupuestado vs Ejecutado por mes
+              </h6>
+              <small class="text-muted">
+                Últimos hasta 8 meses dentro del rango filtrado. Ejecutado = con algún pago.
+              </small>
+            </div>
+          </div>
+        </div>
+        <div class="card-body">
+          <canvas id="graficoResumenMensual" height="110"></canvas>
+        </div>
+      </div>
+
+      <div class="row g-4">
+        <!-- TOP MÉDICOS -->
+        <div class="col-lg-6">
+          <div class="card border-0 shadow-sm rounded-4 h-100">
+            <div class="card-header bg-white border-bottom">
+              <h6 class="mb-0 fw-bold text-primary">
+                <i class="fas fa-user-md me-2"></i>Top médicos
+              </h6>
+            </div>
+            <div class="card-body p-0">
+              <div class="table-responsive">
+                <table class="table table-hover align-middle mb-0">
+                  <thead class="table-light">
+                    <tr>
+                      <th>Médico</th>
+                      <th class="text-center">Pres.</th>
+                      <th class="text-center">Ejec.</th>
+                      <th class="text-end">Total</th>
+                      <th class="text-end">Cobrado</th>
+                      <th class="text-end">Saldo</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {% for item in resumen_medicos %}
+                    <tr>
+                      <td>{{ item.medico }}</td>
+                      <td class="text-center">{{ item.cantidad }}</td>
+                      <td class="text-center">{{ item.ejecutados }}</td>
+                      <td class="text-end">{{ item.total|moneda_ar }}</td>
+                      <td class="text-end">{{ item.cobrado|moneda_ar }}</td>
+                      <td class="text-end">{{ item.saldo|moneda_ar }}</td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                      <td colspan="6" class="text-center text-muted py-4">Sin datos para mostrar</td>
+                    </tr>
+                    {% endfor %}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- RESUMEN OPERATIVO -->
+        <div class="col-lg-6">
+          <div class="card border-0 shadow-sm rounded-4 h-100">
+            <div class="card-header bg-white border-bottom">
+              <h6 class="mb-0 fw-bold text-primary">
+                <i class="fas fa-bullseye me-2"></i>Lectura rápida del período
+              </h6>
+            </div>
+            <div class="card-body">
+              <div class="mb-3 pb-3 border-bottom">
+                <small class="text-muted d-block">Presupuestos analizados</small>
+                <div class="fs-4 fw-bold text-dark">{{ total_presupuestos }}</div>
+              </div>
+
+              <div class="mb-3 pb-3 border-bottom">
+                <small class="text-muted d-block">Nivel de ejecución</small>
+                <div class="fs-4 fw-bold text-info">{{ porcentaje_ejecucion }}%</div>
+                <small class="text-muted">
+                  {{ cantidad_ejecutados }} ejecutados / {{ cantidad_presupuestados }} solo presupuestados
+                </small>
+              </div>
+
+              <div class="mb-3 pb-3 border-bottom">
+                <small class="text-muted d-block">Relación económica</small>
+                <div class="fs-6">
+                  <span class="fw-semibold text-primary">Presupuestado:</span> {{ total_presupuestado|moneda_ar }}
+                </div>
+                <div class="fs-6">
+                  <span class="fw-semibold text-success">Cobrado:</span> {{ total_cobrado|moneda_ar }}
+                </div>
+                <div class="fs-6">
+                  <span class="fw-semibold text-warning">Reintegrado:</span> {{ total_reintegrado|moneda_ar }}
+                </div>
+              </div>
+
+              <div>
+                <small class="text-muted d-block">Saldo general del período</small>
+                <div class="fs-4 fw-bold {% if saldo_global > 0 %}text-danger{% else %}text-success{% endif %}">
+                  {{ saldo_global|moneda_ar }}
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ÚLTIMOS PRESUPUESTOS -->
+      <div class="card border-0 shadow-sm rounded-4 mt-4">
+        <div class="card-header bg-white border-bottom d-flex justify-content-between align-items-center">
+          <h6 class="mb-0 fw-bold text-primary">
+            <i class="fas fa-file-invoice-dollar me-2"></i>Últimos presupuestos generados
+          </h6>
+          <span class="badge bg-light text-dark border">Vista rápida</span>
+        </div>
+
+        <div class="card-body p-0">
+          <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0">
+              <thead class="table-light">
+                <tr>
+                  <th>Nro</th>
+                  <th>Fecha</th>
+                  <th>Paciente</th>
+                  <th>Médico</th>
+                  <th>Obra Social</th>
+                  <th>Estado</th>
+                  <th class="text-end">Total</th>
+                  <th class="text-end">Saldo</th>
+                </tr>
+              </thead>
+              <tbody>
+                {% for p in ultimos_presupuestos %}
+                <tr>
+                  <td class="fw-semibold">{{ p.id }}</td>
+                  <td>{{ p.fecha_creacion|date:"d/m/Y H:i" }}</td>
+                  <td>{{ p.paciente_nombre }}</td>
+                  <td>{{ p.medico }}</td>
+                  <td>{{ p.obra_social }}</td>
+                  <td>
+                    {% if p.estado == 'pendiente' %}
+                      <span class="badge bg-warning text-dark">{{ p.get_estado_display }}</span>
+                    {% elif p.estado == 'autorizado' %}
+                      <span class="badge bg-primary">{{ p.get_estado_display }}</span>
+                    {% elif p.estado == 'en_curso' %}
+                      <span class="badge bg-success">{{ p.get_estado_display }}</span>
+                    {% elif p.estado == 'cerrado' %}
+                      <span class="badge bg-dark">{{ p.get_estado_display }}</span>
+                    {% elif p.estado == 'expirado' %}
+                      <span class="badge bg-secondary">{{ p.get_estado_display }}</span>
+                    {% elif p.estado == 'anulado' %}
+                      <span class="badge bg-danger">{{ p.get_estado_display }}</span>
+                    {% else %}
+                      <span class="badge bg-light text-dark">{{ p.get_estado_display }}</span>
+                    {% endif %}
+                  </td>
+                  <td class="text-end">{{ p.total|moneda_ar }}</td>
+                  <td class="text-end">{{ p.saldo|moneda_ar }}</td>
+                </tr>
+                {% empty %}
+                <tr>
+                  <td colspan="8" class="text-center text-muted py-4">No hay presupuestos para mostrar</td>
+                </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+  const labels = {{ chart_labels_json|safe }};
+  const dataPresupuestado = {{ chart_presupuestado_json|safe }};
+  const dataEjecutado = {{ chart_ejecutado_json|safe }};
+
+  const ctx = document.getElementById('graficoResumenMensual').getContext('2d');
+
+  new Chart(ctx, {
+    type: 'bar',
+    data: {
+      labels: labels,
+      datasets: [
+        {
+          label: 'Presupuestado',
+          data: dataPresupuestado,
+          backgroundColor: 'rgba(108, 117, 125, 0.75)',
+          borderColor: 'rgba(108, 117, 125, 1)',
+          borderWidth: 1,
+          borderRadius: 8
+        },
+        {
+          label: 'Ejecutado',
+          data: dataEjecutado,
+          backgroundColor: 'rgba(13, 110, 253, 0.75)',
+          borderColor: 'rgba(13, 110, 253, 1)',
+          borderWidth: 1,
+          borderRadius: 8
+        }
+      ]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      interaction: {
+        mode: 'index',
+        intersect: false
+      },
+      plugins: {
+        legend: {
+          display: true,
+          position: 'top'
+        },
+        tooltip: {
+          callbacks: {
+            footer: function(tooltipItems) {
+              let total = 0;
+              tooltipItems.forEach(function(item) {
+                total += item.parsed.y;
+              });
+              return 'Total del mes: ' + total;
+            }
+          }
+        }
+      },
+      scales: {
+        x: {
+          stacked: false,
+          ticks: {
+            font: {
+              size: 12
+            }
+          }
+        },
+        y: {
+          beginAtZero: true,
+          ticks: {
+            precision: 0
+          },
+          title: {
+            display: true,
+            text: 'Cantidad de presupuestos'
+          }
+        }
+      }
+    }
+  });
+</script>
+{% endblock %}
