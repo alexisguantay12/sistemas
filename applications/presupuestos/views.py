@@ -1974,17 +1974,19 @@ def reporte_presupuestos(request):
         response["Content-Disposition"] = "attachment; filename=presupuestos.xlsx"
         wb.save(response)
         return response
-
     context = {
         "data": data,
         "total_presupuestado": total_presupuestado,
         "total_cobrado": total_cobrado,
         "total_reintegrado": total_reintegrado,
         "saldo_total": total_presupuestado - total_cobrado + total_reintegrado,
-        "medicos": Medico.objects.all(),
-        "obras_sociales": ObraSocial.objects.all(),
+        "medicos": Medico.objects.filter(
+            id__in=Presupuesto.objects.values_list("medico_id", flat=True).distinct()
+        ).order_by("nombre"),
+        "obras_sociales": ObraSocial.objects.filter(
+            id__in=Presupuesto.objects.values_list("obra_social_id", flat=True).distinct()
+        ).order_by("nombre"),
         "estados": Presupuesto.ESTADOS,
-        "request": request
+        "request": request,
     }
-
     return render(request, "presupuestos/reportes/presupuestos_detallado.html", context)

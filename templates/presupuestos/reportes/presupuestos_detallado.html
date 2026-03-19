@@ -3,6 +3,24 @@
 
 {% block content %}
 <style>
+    .card-reporte {
+        border-radius: 16px;
+        overflow: hidden;
+    }
+
+    .filtros-reporte .form-control,
+    .filtros-reporte .form-select {
+        font-size: 13px;
+        min-height: 37px;
+    }
+
+    .filtros-reporte .form-label {
+        font-size: 12px;
+        margin-bottom: 5px;
+        color: #6c757d;
+        font-weight: 600;
+    }
+
     .tabla-reporte td,
     .tabla-reporte th {
         font-size: 12.5px;
@@ -12,10 +30,11 @@
 
     .tabla-reporte thead th {
         white-space: nowrap;
-    }
-
-    .tabla-reporte .text-nowrap {
-        white-space: nowrap;
+        position: sticky;
+        top: 0;
+        z-index: 2;
+        background: #f8f9fa;
+        box-shadow: inset 0 -1px 0 #dee2e6;
     }
 
     .badge-estado {
@@ -24,36 +43,63 @@
         border-radius: 0.5rem;
     }
 
-    .card-reporte {
-        border-radius: 16px;
-        overflow: hidden;
-    }
-
-    .filtros-reporte .form-control,
-    .filtros-reporte .form-select {
-        font-size: 13px;
-        min-height: 38px;
-    }
-
     .tabla-scroll {
-        max-height: 70vh;
+        max-height: 62vh;
         overflow-y: auto;
+        border: 1px solid #e9ecef;
+        border-radius: 10px 10px 0 0;
     }
 
-    .tabla-scroll thead th {
-        position: sticky;
-        top: 0;
-        z-index: 2;
+    .totales-fijos {
+        border: 1px solid #e9ecef;
+        border-top: 0;
+        border-radius: 0 0 10px 10px;
         background: #f8f9fa;
-        box-shadow: inset 0 -1px 0 #dee2e6;
     }
 
-    .tfoot-reporte td {
-        position: sticky;
-        bottom: 0;
-        background: #f8f9fa;
-        box-shadow: inset 0 1px 0 #dee2e6;
-        z-index: 1;
+    .totales-fijos .item-total {
+        padding: 10px 12px;
+        border-right: 1px solid #e9ecef;
+    }
+
+    .totales-fijos .item-total:last-child {
+        border-right: 0;
+    }
+
+    .totales-fijos .titulo-total {
+        font-size: 11px;
+        color: #6c757d;
+        font-weight: 600;
+        display: block;
+        margin-bottom: 2px;
+    }
+
+    .totales-fijos .valor-total {
+        font-size: 13px;
+        font-weight: 700;
+        white-space: nowrap;
+    }
+
+    .acciones-filtros {
+        display: flex;
+        gap: 8px;
+        align-items: end;
+        justify-content: end;
+    }
+
+    .checkbox-wrap {
+        display: flex;
+        align-items: center;
+        gap: 7px;
+        min-height: 37px;
+        padding-top: 25px;
+    }
+
+    @media (max-width: 1400px) {
+        .tabla-reporte td,
+        .tabla-reporte th {
+            font-size: 12px;
+        }
     }
 </style>
 
@@ -75,91 +121,97 @@
 
         <div class="card-body">
 
-            <!-- FILTROS -->
-            <form method="get" class="row g-3 mb-4 filtros-reporte">
+            <form method="get" class="filtros-reporte mb-3">
 
-                <div class="col-md-2">
-                    <label class="form-label fw-semibold">Fecha desde</label>
-                    <input type="date" name="fecha_desde" class="form-control form-control-sm"
-                           value="{{ request.GET.fecha_desde }}">
-                </div>
+                <!-- FILA 1 -->
+                <div class="row g-3 align-items-end mb-1">
+                    <div class="col-md-2">
+                        <label class="form-label">Fecha desde</label>
+                        <input type="date" name="fecha_desde" class="form-control form-control-sm"
+                               value="{{ request.GET.fecha_desde }}">
+                    </div>
 
-                <div class="col-md-2">
-                    <label class="form-label fw-semibold">Fecha hasta</label>
-                    <input type="date" name="fecha_hasta" class="form-control form-control-sm"
-                           value="{{ request.GET.fecha_hasta }}">
-                </div>
+                    <div class="col-md-2">
+                        <label class="form-label">Fecha hasta</label>
+                        <input type="date" name="fecha_hasta" class="form-control form-control-sm"
+                               value="{{ request.GET.fecha_hasta }}">
+                    </div>
 
-                <div class="col-md-2">
-                    <label class="form-label fw-semibold">Paciente</label>
-                    <input type="text" name="paciente" placeholder="Buscar paciente"
-                           class="form-control form-control-sm"
-                           value="{{ request.GET.paciente }}">
-                </div>
+                    <div class="col-md-3">
+                        <label class="form-label">Paciente</label>
+                        <input type="text" name="paciente" placeholder="Buscar paciente"
+                               class="form-control form-control-sm"
+                               value="{{ request.GET.paciente }}">
+                    </div>
 
-                <div class="col-md-2">
-                    <label class="form-label fw-semibold">DNI</label>
-                    <input type="text" name="dni" placeholder="Buscar DNI"
-                           class="form-control form-control-sm"
-                           value="{{ request.GET.dni }}">
-                </div>
+                    <div class="col-md-2">
+                        <label class="form-label">DNI</label>
+                        <input type="text" name="dni" placeholder="Buscar DNI"
+                               class="form-control form-control-sm"
+                               value="{{ request.GET.dni }}">
+                    </div>
 
-                <div class="col-md-2">
-                    <label class="form-label fw-semibold">Médico</label>
-                    <select name="medico" class="form-select form-select-sm">
-                        <option value="">Todos</option>
-                        {% for m in medicos %}
-                            <option value="{{ m.id }}" {% if request.GET.medico == m.id|stringformat:"s" %}selected{% endif %}>
-                                {{ m }}
-                            </option>
-                        {% endfor %}
-                    </select>
-                </div>
-
-                <div class="col-md-2">
-                    <label class="form-label fw-semibold">Estado</label>
-                    <select name="estado" class="form-select form-select-sm">
-                        <option value="">Todos</option>
-                        {% for v, l in estados %}
-                            <option value="{{ v }}" {% if request.GET.estado == v %}selected{% endif %}>{{ l }}</option>
-                        {% endfor %}
-                    </select>
-                </div>
-
-                <div class="col-md-3">
-                    <label class="form-label fw-semibold">Obra Social</label>
-                    <select name="obra_social" class="form-select form-select-sm">
-                        <option value="">Todas</option>
-                        {% for o in obras_sociales %}
-                            <option value="{{ o.id }}" {% if request.GET.obra_social == o.id|stringformat:"s" %}selected{% endif %}>
-                                {{ o }}
-                            </option>
-                        {% endfor %}
-                    </select>
-                </div>
-
-                <div class="col-md-3 d-flex align-items-end">
-                    <div class="form-check mb-2">
-                        <input class="form-check-input" type="checkbox" name="solo_ejecutados" value="1"
-                               id="soloEjecutados" {% if request.GET.solo_ejecutados %}checked{% endif %}>
-                        <label class="form-check-label fw-semibold" for="soloEjecutados">
-                            Solo ejecutados
-                        </label>
+                    <div class="col-md-3">
+                        <label class="form-label">Médico</label>
+                        <select name="medico" class="form-select form-select-sm">
+                            <option value="">Todos</option>
+                            {% for m in medicos %}
+                                <option value="{{ m.id }}" {% if request.GET.medico == m.id|stringformat:"s" %}selected{% endif %}>
+                                    {{ m }}
+                                </option>
+                            {% endfor %}
+                        </select>
                     </div>
                 </div>
 
-                <div class="col-12 d-flex gap-2">
-                    <button class="btn btn-primary btn-sm px-4">
-                        <i class="fas fa-filter me-1"></i>Filtrar
-                    </button>
+                <!-- FILA 2 -->
+                <div class="row g-3 align-items-end">
+                    <div class="col-md-3">
+                        <label class="form-label">Obra social</label>
+                        <select name="obra_social" class="form-select form-select-sm">
+                            <option value="">Todas</option>
+                            {% for o in obras_sociales %}
+                                <option value="{{ o.id }}" {% if request.GET.obra_social == o.id|stringformat:"s" %}selected{% endif %}>
+                                    {{ o }}
+                                </option>
+                            {% endfor %}
+                        </select>
+                    </div>
 
-                    <a href="{% url 'presupuestos_app:reporte_presupuestos' %}" class="btn btn-outline-secondary btn-sm px-4">
-                        <i class="fas fa-broom me-1"></i>Limpiar
-                    </a>
+                    <div class="col-md-2">
+                        <label class="form-label">Estado</label>
+                        <select name="estado" class="form-select form-select-sm">
+                            <option value="">Todos</option>
+                            {% for v, l in estados %}
+                                <option value="{{ v }}" {% if request.GET.estado == v %}selected{% endif %}>{{ l }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+
+                    <div class="col-md-2">
+                        <div class="checkbox-wrap">
+                            <input class="form-check-input mt-0" type="checkbox" name="solo_ejecutados" value="1"
+                                   id="soloEjecutados" {% if request.GET.solo_ejecutados %}checked{% endif %}>
+                            <label class="form-check-label fw-semibold mb-0" for="soloEjecutados">
+                                Solo ejecutados
+                            </label>
+                        </div>
+                    </div>
+
+                    <div class="col-md-5">
+                        <div class="acciones-filtros">
+                            <button class="btn btn-primary btn-sm px-4">
+                                <i class="fas fa-filter me-1"></i>Filtrar
+                            </button>
+
+                            <a href="{% url 'presupuestos_app:reporte_presupuestos' %}" class="btn btn-outline-secondary btn-sm px-4">
+                                <i class="fas fa-broom me-1"></i>Limpiar
+                            </a>
+                        </div>
+                    </div>
                 </div>
             </form>
 
-            <!-- TABLA -->
             <div class="tabla-scroll">
                 <div class="table-responsive">
                     <table class="table table-hover align-middle table-sm tabla-reporte mb-0">
@@ -168,14 +220,14 @@
                                 <th style="width: 60px;">Nro</th>
                                 <th style="width: 95px;">Fecha</th>
                                 <th>Paciente</th>
-                                <th>DNI</th>
-                                <th class="text-nowrap">Médico</th>
+                                <th style="width: 95px;">DNI</th>
+                                <th>Médico</th>
                                 <th>Obra Social</th>
                                 <th style="width: 110px;">Estado</th>
-                                <th class="text-end" style="width: 110px;">Total</th>
-                                <th class="text-end" style="width: 110px;">Cobrado</th>
-                                <th class="text-end" style="width: 110px;">Reint.</th>
-                                <th class="text-end" style="width: 110px;">Saldo</th>
+                                <th class="text-end" style="width: 120px;">Total</th>
+                                <th class="text-end" style="width: 120px;">Cobrado</th>
+                                <th class="text-end" style="width: 120px;">Reint.</th>
+                                <th class="text-end" style="width: 120px;">Saldo</th>
                             </tr>
                         </thead>
 
@@ -222,19 +274,30 @@
                             </tr>
                             {% endfor %}
                         </tbody>
-
-                        <tfoot class="table-light fw-bold tfoot-reporte">
-                            <tr>
-                                <td colspan="7">Totales</td>
-                                <td class="text-end text-nowrap">{{ total_presupuestado|moneda_ar }}</td>
-                                <td class="text-end text-success text-nowrap">{{ total_cobrado|moneda_ar }}</td>
-                                <td class="text-end text-warning text-nowrap">{{ total_reintegrado|moneda_ar }}</td>
-                                <td class="text-end text-nowrap {% if saldo_total > 0 %}text-danger{% else %}text-success{% endif %}">
-                                    {{ saldo_total|moneda_ar }}
-                                </td>
-                            </tr>
-                        </tfoot>
                     </table>
+                </div>
+            </div>
+
+            <div class="totales-fijos">
+                <div class="row g-0 text-center text-md-start">
+                    <div class="col-md-3 item-total">
+                        <span class="titulo-total">Total presupuestado</span>
+                        <span class="valor-total text-primary">{{ total_presupuestado|moneda_ar }}</span>
+                    </div>
+                    <div class="col-md-3 item-total">
+                        <span class="titulo-total">Total cobrado</span>
+                        <span class="valor-total text-success">{{ total_cobrado|moneda_ar }}</span>
+                    </div>
+                    <div class="col-md-3 item-total">
+                        <span class="titulo-total">Total reintegrado</span>
+                        <span class="valor-total text-warning">{{ total_reintegrado|moneda_ar }}</span>
+                    </div>
+                    <div class="col-md-3 item-total">
+                        <span class="titulo-total">Saldo total</span>
+                        <span class="valor-total {% if saldo_total > 0 %}text-danger{% else %}text-success{% endif %}">
+                            {{ saldo_total|moneda_ar }}
+                        </span>
+                    </div>
                 </div>
             </div>
 
