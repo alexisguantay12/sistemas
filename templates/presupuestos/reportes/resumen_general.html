@@ -194,7 +194,9 @@
           </div>
         </div>
         <div class="card-body">
-          <canvas id="graficoResumenMensual" height="110"></canvas>
+            <div style="height: 320px;">
+             <canvas id="graficoResumenMensual"></canvas>
+            </div>
         </div>
       </div>
 
@@ -369,7 +371,7 @@
       labels: labels,
       datasets: [
         {
-          label: 'Presupuestado',
+          label: 'Solo Presupuestado',
           data: dataPresupuestado,
           backgroundColor: 'rgba(108, 117, 125, 0.75)',
           borderColor: 'rgba(108, 117, 125, 1)',
