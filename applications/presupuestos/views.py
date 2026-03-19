@@ -1861,3 +1861,130 @@ def reporte_resumen_general(request):
         "chart_ejecutado_json": json.dumps(chart_ejecutado),
     }
     return render(request, "presupuestos/reportes/resumen_general.html", context)
+
+
+
+
+
+
+@login_required
+def reporte_presupuestos(request):
+    fecha_desde = request.GET.get("fecha_desde")
+    fecha_hasta = request.GET.get("fecha_hasta")
+    paciente = request.GET.get("paciente")
+    dni = request.GET.get("dni")
+    medico_id = request.GET.get("medico")
+    obra_social_id = request.GET.get("obra_social")
+    estado = request.GET.get("estado")
+    solo_ejecutados = request.GET.get("solo_ejecutados")
+    exportar = request.GET.get("exportar")
+
+    qs = (
+        Presupuesto.objects
+        .select_related("medico", "obra_social")
+        .prefetch_related("pagos", "reintegros", "items")
+        .order_by("-fecha_creacion")
+    )
+
+    # FILTROS
+    if fecha_desde:
+        qs = qs.filter(fecha_creacion__date__gte=fecha_desde)
+    if fecha_hasta:
+        qs = qs.filter(fecha_creacion__date__lte=fecha_hasta)
+    if paciente:
+        qs = qs.filter(paciente_nombre__icontains=paciente)
+    if dni:
+        qs = qs.filter(paciente_dni__icontains=dni)
+    if medico_id:
+        qs = qs.filter(medico_id=medico_id)
+    if obra_social_id:
+        qs = qs.filter(obra_social_id=obra_social_id)
+    if estado:
+        qs = qs.filter(estado=estado)
+
+    presupuestos = list(qs)
+
+    # CALCULOS
+    total_presupuestado = Decimal("0")
+    total_cobrado = Decimal("0")
+    total_reintegrado = Decimal("0")
+
+    data = []
+
+    for p in presupuestos:
+        pagos = list(p.pagos.all())
+        reintegros = list(p.reintegros.all())
+
+        cobrado = sum((pg.monto for pg in pagos), Decimal("0"))
+        reintegrado = sum((rg.monto for rg in reintegros), Decimal("0"))
+        saldo = p.total - cobrado + reintegrado
+
+        ejecutado = True if pagos else False
+
+        if solo_ejecutados == "1" and not ejecutado:
+            continue
+
+        total_presupuestado += p.total
+        total_cobrado += cobrado
+        total_reintegrado += reintegrado
+
+        data.append({
+            "obj": p,
+            "cobrado": cobrado,
+            "reintegrado": reintegrado,
+            "saldo": saldo,
+            "ejecutado": ejecutado
+        })
+
+    # =========================
+    # EXPORT EXCEL
+    # =========================
+    if exportar == "excel":
+        wb = openpyxl.Workbook()
+        ws = wb.active
+        ws.title = "Presupuestos"
+
+        headers = [
+            "Nro", "Fecha", "Paciente", "DNI",
+            "Medico", "Obra Social", "Estado",
+            "Total", "Cobrado", "Reintegrado", "Saldo"
+        ]
+
+        ws.append(headers)
+
+        for item in data:
+            p = item["obj"]
+            ws.append([
+                p.id,
+                p.fecha_creacion.strftime("%d/%m/%Y"),
+                p.paciente_nombre,
+                p.paciente_dni,
+                str(p.medico),
+                str(p.obra_social),
+                p.get_estado_display(),
+                float(p.total),
+                float(item["cobrado"]),
+                float(item["reintegrado"]),
+                float(item["saldo"]),
+            ])
+
+        response = HttpResponse(
+            content_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+        )
+        response["Content-Disposition"] = "attachment; filename=presupuestos.xlsx"
+        wb.save(response)
+        return response
+
+    context = {
+        "data": data,
+        "total_presupuestado": total_presupuestado,
+        "total_cobrado": total_cobrado,
+        "total_reintegrado": total_reintegrado,
+        "saldo_total": total_presupuestado - total_cobrado + total_reintegrado,
+        "medicos": Medico.objects.all(),
+        "obras_sociales": ObraSocial.objects.all(),
+        "estados": Presupuesto.ESTADOS,
+        "request": request
+    }
+
+    return render(request, "presupuestos/reportes/presupuestos_detallado.html", context)
