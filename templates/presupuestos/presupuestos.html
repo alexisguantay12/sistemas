@@ -59,14 +59,7 @@ td.sin-redireccion {
         </h3>
         <a href="{% url 'presupuestos_app:agregar_presupuesto' %}" class="btn btn-success">
             <i class="fas fa-plus"></i> Nuevo Presupuesto
-        </a>
-        <form method="post" action="{% url 'presupuestos_app:cargar_categoria_unica' %}" style="display:inline;"
-        onsubmit="return confirm('¿Seguro que querés ejecutar la carga de categorías? Esto se hace una sola vez.')">
-        {% csrf_token %}
-        <button type="submit" class="btn btn-danger btn-sm">
-            Ejecutar carga de categorías
-        </button>
-</form>
+        </a> 
     </div>
 
     <div class="card shadow-sm">
