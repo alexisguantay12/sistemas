@@ -19,6 +19,8 @@ class Prestacion(BaseAbstractWithUser):
     codigo = models.CharField(max_length=50, blank=True, null=True)  # si usás nomenclador
     gastos = models.DecimalField(max_digits=14, decimal_places=2)
     especialista = models.DecimalField(max_digits=14, decimal_places=2)
+    categoria = models.CharField(max_length=200,null=True,blank=True)
+    
     TIPO_CHOICES = [
         ('particular', 'Particular'),
         ('ips', 'IPS'), 

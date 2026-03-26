@@ -566,11 +566,25 @@ def editar_presupuesto(request, pk):
         messages.error(request, "No se puede editar un presupuesto cerrado o expirado.")
         return redirect("presupuestos_app:detalle_presupuesto", pk=presupuesto.pk)
     
+    cambiar = (
+        presupuesto.estado in ["pendiente", "autorizado"]
+        and not presupuesto.pagos.exists()
+    )
+
+
     if request.method == "POST":
         # Guardar historial antes de modificar
         try:
             with transaction.atomic():
                 guardar_historial(presupuesto, usuario=presupuesto.user_updated) 
+                obra_social_id = request.POST.get("obra_social")
+                medico_id = request.POST.get("medico")
+                print("Obra social id : ",obra_social_id)
+                print("Medico :", medico_id)
+                obra_social = get_object_or_404(ObraSocial, id = obra_social_id)
+                medico = get_object_or_404(Medico,id = medico_id)
+
+                print("OS:",obra_social)
                 # Actualizar campos principales 
                 presupuesto.paciente_nombre = request.POST.get("paciente_nombre") 
                 presupuesto.paciente_edad = request.POST.get("paciente_edad") or None
@@ -578,9 +592,13 @@ def editar_presupuesto(request, pk):
                 presupuesto.paciente_telefono = request.POST.get("paciente_telefono")
                 presupuesto.paciente_email = request.POST.get("paciente_email") 
                 presupuesto.diagnostico = request.POST.get("diagnostico")
+                presupuesto.obra_social = obra_social     
+                presupuesto.medico= medico           
                 presupuesto.motivo_no_concretado = request.POST.get("observaciones")
                 presupuesto.episodio = request.POST.get("episodio")
                 presupuesto.estado = 'pendiente'
+                presupuesto.paciente_dni = request.POST.get("paciente_dni")
+                
                 presupuesto.user_updated = request.user
                 presupuesto.save()
                 print("Entre aqui")
@@ -597,6 +615,8 @@ def editar_presupuesto(request, pk):
                 ivas = request.POST.getlist("iva")
                 subtotales = request.POST.getlist("subtotal")
                 comentarios = request.POST.getlist("comentario")
+
+                
                 for i in range(len(codigos)):
                     if codigos[i].strip() == "" and prestaciones[i].strip() == "":
                         continue
@@ -639,7 +659,10 @@ def editar_presupuesto(request, pk):
     return render(request, "presupuestos/editar_presupuesto.html", {
         "itemspresupuesto":itemspresupuesto,
         "presupuesto": presupuesto,
-        "tiene_iva": tiene_iva
+        "tiene_iva": tiene_iva,
+        "cambiar":cambiar,
+        "obras_sociales" : ObraSocial.objects.all().order_by('nombre'),
+        "medicos":Medico.objects.all().order_by('nombre')
     })
 
 
@@ -2374,3 +2397,82 @@ def exportar_reporte_reintegros_excel(reintegros, total_reintegrado):
     response["Content-Disposition"] = f'attachment; filename="{nombre_archivo}"'
     wb.save(response)
     return response
+
+
+
+
+
+from django.contrib.admin.views.decorators import staff_member_required
+from django.shortcuts import render
+from django.db.models import Q 
+from django.conf import settings 
+
+
+def cargar_categoria_unica(request):
+
+    # Podés cambiar el nombre si querés .xlsm o .xlsx
+    archivo_excel = os.path.join(settings.MEDIA_ROOT, "nomenclador.xlsx")
+
+    if not os.path.exists(archivo_excel):
+        messages.error(request, f"No se encontró el archivo: {archivo_excel}")
+        return redirect("presupuestos_app:presupuestos")  # cambiá esta url si hace falta
+
+    try:
+        wb = load_workbook(archivo_excel, data_only=True)
+        ws = wb.active  # usa la primera hoja
+
+        # Leer encabezados de la primera fila
+        encabezados = {}
+        for idx, cell in enumerate(ws[1], start=1):
+            if cell.value:
+                encabezados[str(cell.value).strip().lower()] = idx
+        print("Encabezados detectados:", encabezados)
+        if "codigo" not in encabezados:
+            print("El Excel no tiene una columna llamada 'codigo'.")
+            messages.error(request, "El Excel no tiene una columna llamada 'codigo'.")
+            return redirect("presupuestos_app:presupuestos")
+
+        if "categoria" not in encabezados:
+            print("El Excel no tiene una columna llamada 'categoria'.")
+            messages.error(request, "El Excel no tiene una columna llamada 'categoria'.")
+            return redirect("presupuestos_app:presupuestos")
+
+        col_codigo = encabezados["codigo"]
+        col_categoria = encabezados["categoria"]
+
+        actualizados = 0
+        no_encontrados = 0
+        vacios = 0
+
+        with transaction.atomic():
+            for fila in range(2, ws.max_row + 1):
+                codigo_excel = ws.cell(row=fila, column=col_codigo).value
+                categoria_excel = ws.cell(row=fila, column=col_categoria).value
+
+                if codigo_excel is None or str(codigo_excel).strip() == "":
+                    vacios += 1
+                    continue
+
+                codigo_excel = str(codigo_excel).strip()
+                categoria_excel = str(categoria_excel).strip() if categoria_excel is not None else ""
+
+                prestacion = Prestacion.objects.filter(codigo=codigo_excel).first()
+
+                if prestacion:
+                    prestacion.categoria = categoria_excel
+                    prestacion.save(update_fields=["categoria"])
+                    actualizados += 1
+                else:
+                    no_encontrados += 1
+                    print(f"No se encontró Prestacion con codigo: {codigo_excel}")
+
+        messages.success(
+            request,
+            f"Importación finalizada. Actualizados: {actualizados}, no encontrados: {no_encontrados}, códigos vacíos: {vacios}."
+        )
+        return redirect("presupuestos_app:presupuestos")
+
+    except Exception as e:
+        print("Error al importar categorías desde nomenclador:", e)
+        messages.error(request, f"Ocurrió un error al importar el nomenclador: {e}")
+        return redirect("presupuestos_app:presupuestos")

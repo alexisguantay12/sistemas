@@ -156,8 +156,14 @@ td {
                     </div>
                     <div class="col-md-2">
                         <label>DNI</label>
-                        <input disabled type="text" name="paciente_dni" class="form-control" value="{{ presupuesto.paciente_dni }}">
-                    </div>
+                        <input type="text"
+                            name="paciente_dni"
+                            class="form-control"
+                            value="{{ presupuesto.paciente_dni|default:'' }}"
+                            autocomplete="off"
+                            required
+                            {% if not cambiar %}readonly{% endif %}> 
+                    </div> 
                     <div class="col-md-2">
                         <label>Edad</label>
                         <input type="number" name="paciente_edad" class="form-control" value="{{ presupuesto.paciente_edad }}">
@@ -173,21 +179,53 @@ td {
                     <div class="col-md-3">
                         <label>Email</label>
                         <input type="text" name="paciente_email" class="form-control" value="{{ presupuesto.paciente_email }}">
-                    </div>
-                    <div class="col-md-3">
+                    </div> 
+                     <div class="col-md-3">
                         <label>Obra Social</label>
-                        <input disabled type="text" name="obra_social" class="form-control" value="{{ presupuesto.obra_social }}">
-                        <!-- Guarda el ID real para usar en JS -->
-                        <input type="hidden" id="obra_social_id" value="{{ presupuesto.obra_social.id }}">
+
+                        {% if cambiar %}
+                            <select name="obra_social" class="form-select" required>
+                                <option value="">Seleccione una obra social..</option>
+                                {% for obra_social in obras_sociales %}
+                                    <option value="{{ obra_social.id }}"
+                                        {% if obra_social.id == presupuesto.obra_social.id %}selected{% endif %}>
+                                        {{ obra_social.nombre }}
+                                    </option>
+                                {% endfor %}
+                            </select>
+                        {% else %}
+                            <input disabled type="text" name="obra_social" class="form-control" value="{{ presupuesto.obra_social }}">
+                            <input type="hidden" name="obra_social" value="{{ presupuesto.obra_social.id }}"> 
+                        {% endif %}
                     </div>
+
+
+
                 </div>
             </div>
             <div class="card-body">
                 <h5 class="card-title">Datos Adicionales</h5>
                 <div class="row g-2">
-                    <div class="col-md-6">
+                    <div class="col-md-4">
                         <label>Médico</label>
-                        <input disabled type="text" name="medico" class="form-control" value="{{ presupuesto.medico }}">
+
+                        {% if cambiar %}
+                            <select name="medico" class="form-select" required>
+                                <option value="">Seleccione un médico..</option>
+                                {% for medico in medicos %}
+                                    <option value="{{ medico.id }}"
+                                        {% if presupuesto.medico %}
+                                            {% if medico.id == presupuesto.medico.id %}selected{% endif %}
+                                        {% endif %}
+                                    >
+                                        {{ medico.nombre }}
+                                    </option>
+                                {% endfor %}
+                            </select>
+                        {% else %}
+                            <input disabled type="text" class="form-control" value="{{ presupuesto.medico }}">
+                            <input type="hidden" name="medico" value="{{ presupuesto.medico.id }}"> 
+                        {% endif %}
                     </div>
                     <div class="col-md-6">
                         <label>Diagnóstico</label>
