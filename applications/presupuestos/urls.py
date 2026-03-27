@@ -36,7 +36,9 @@ urlpatterns = [
     path("reportes/presupuestos/",views.reporte_presupuestos,name="reporte_presupuestos"),
     path('reportes/pagos/', views.reporte_pagos, name='reporte_pagos'),
     path('reportes/reintegros/', views.reporte_reintegros, name='reporte_reintegros'),
+    path("reportes/presupuestos-particulares/",views.reporte_presupuestos_particulares,name="reporte_presupuestos_particulares",),
 
 
     path("carga-unica-categoria/", views.cargar_categoria_unica, name="cargar_categoria_unica"),
+    
 ]

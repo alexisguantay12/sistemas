@@ -2400,6 +2400,495 @@ def exportar_reporte_reintegros_excel(reintegros, total_reintegrado):
 
 
 
+from decimal import Decimal
+from datetime import datetime
+from collections import defaultdict
+
+from django.contrib.auth.decorators import login_required
+from django.http import HttpResponse
+from django.shortcuts import render
+
+from openpyxl import Workbook
+from openpyxl.styles import Border, Side, PatternFill, Font, Alignment
+
+from .models import Presupuesto, Prestacion
+
+@login_required
+def reporte_presupuestos_particulares(request):
+    fecha_desde = request.GET.get("fecha_desde")
+    fecha_hasta = request.GET.get("fecha_hasta")
+    estado = request.GET.get("estado")
+    solo_ejecutados = request.GET.get("solo_ejecutados")
+    exportar = request.GET.get("exportar")
+
+    qs = (
+        Presupuesto.objects
+        .select_related("medico", "obra_social")
+        .prefetch_related("pagos", "reintegros", "items")
+        .order_by("-fecha_creacion")
+    )
+
+    # FILTROS
+    if fecha_desde:
+        qs = qs.filter(fecha_creacion__date__gte=fecha_desde)
+    if fecha_hasta:
+        qs = qs.filter(fecha_creacion__date__lte=fecha_hasta)
+    if estado:
+        qs = qs.filter(estado=estado)
+
+    presupuestos = list(qs)
+
+    # =========================
+    # MAPEO CODIGO -> CATEGORIA
+    # =========================
+    prestaciones = Prestacion.objects.exclude(codigo__isnull=True).exclude(codigo__exact="")
+    mapa_categorias = {}
+
+    for p in prestaciones:
+        codigo_prestacion = str(p.codigo).strip().upper()
+        categoria_prestacion = (p.categoria or "").strip()
+        mapa_categorias[codigo_prestacion] = categoria_prestacion
+
+    # codigos especiales que NO existen en Prestacion
+    codigos_especiales = {
+        "MEDINT": "farmacia",
+        "MEDQUIR": "farmacia",
+        "MEDUTI": "farmacia",
+    }
+
+    def normalizar_codigo(codigo):
+        """
+        Normaliza el codigo para mejorar coincidencias.
+        Ej:
+        80720      -> 80720
+        '80720 '   -> 80720
+        '80720.0'  -> 80720
+        """
+        codigo = str(codigo or "").strip().upper()
+
+        if codigo.endswith(".0"):
+            codigo = codigo[:-2]
+
+        return codigo
+
+    def normalizar_categoria(cat):
+        cat = (cat or "").strip().lower()
+
+        if cat in ["gasto quirúrgico", "gasto quirurgico", "gastos quirúrgicos", "gastos quirurgicos"]:
+            return "gastos_quirurgicos"
+
+        if cat in ["labac"]:
+            return "labac"
+
+        if cat in ["honorarios", "honorario"]:
+            return "honorarios_medicos"
+
+        if cat in ["fisioterapia"]:
+            return "fisioterapia"
+
+        if cat in ["imagen clara", "imagenclara"]:
+            return "imagen_clara"
+
+        if cat in ["pension", "pensión"]:
+            return "pension"
+
+        if cat in ["farmacia", "medicamentos"]:
+            return "farmacia"
+
+        return ""
+
+    total_presupuestado = Decimal("0")
+    total_cobrado = Decimal("0")
+    total_reintegrado = Decimal("0")
+    saldo_total = Decimal("0")
+    control_total = Decimal("0")
+
+    total_pension = Decimal("0")
+    total_gq = Decimal("0")
+    total_hm = Decimal("0")
+    total_farmacia = Decimal("0")
+    total_fisio = Decimal("0")
+    total_labac = Decimal("0")
+    total_imagen = Decimal("0")
+    total_iva = Decimal("0")
+    total_caja_b = Decimal("0")
+
+    data = []
+
+    for p in presupuestos:
+        pagos = list(p.pagos.all())
+        reintegros = list(p.reintegros.all())
+        items = list(p.items.all())
+
+        cobrado = sum((pg.monto for pg in pagos), Decimal("0"))
+        reintegrado = sum((rg.monto for rg in reintegros), Decimal("0"))
+        saldo = p.saldo
+
+        ejecutado = bool(pagos)
+        if solo_ejecutados == "1" and not ejecutado:
+            continue
+
+        # =========================
+        # RUBROS POR CATEGORIA
+        # usa IMPORTE sin IVA
+        # =========================
+        rubros = defaultdict(lambda: Decimal("0"))
+
+        for item in items:
+            codigo = normalizar_codigo(item.codigo)
+            print("El codigo es:", codigo)
+            # 1) primero revisar si es codigo especial
+            if codigo in codigos_especiales:
+                categoria = codigos_especiales[codigo]
+            else:
+                # 2) si no, buscar en prestaciones
+                categoria_original = mapa_categorias.get(codigo, "")
+                categoria = normalizar_categoria(categoria_original)
+            print("Categoria es:", categoria)
+            if categoria:
+                rubros[categoria] += (item.importe or Decimal("0"))
+
+        pension = rubros["pension"]
+        gastos_quirurgicos = rubros["gastos_quirurgicos"]
+        honorarios_medicos = rubros["honorarios_medicos"]
+        farmacia = rubros["farmacia"]
+        fisioterapia = rubros["fisioterapia"]
+        labac = rubros["labac"]
+        imagen_clara = rubros["imagen_clara"]
+
+        # IVA / TOTAL
+        iva_total = p.iva or Decimal("0")
+        total_presupuesto = p.total or Decimal("0")
+
+        # CAJA B
+        pagos_caja_b = [pg for pg in pagos if pg.medio_pago == "cajab"]
+        fecha_b = max((pg.fecha for pg in pagos_caja_b), default=None)
+        caja_b_total = sum((pg.monto for pg in pagos_caja_b), Decimal("0"))
+
+        # CONTROL = 
+        
+        control = saldo-reintegrado
+
+        total_presupuestado += total_presupuesto
+        total_cobrado += cobrado
+        total_reintegrado += reintegrado
+        saldo_total += saldo 
+        total_pension += pension
+        total_gq += gastos_quirurgicos
+        total_hm += honorarios_medicos
+        total_farmacia += farmacia
+        total_fisio += fisioterapia
+        total_labac += labac
+        total_imagen += imagen_clara
+        total_iva += iva_total
+        total_caja_b += caja_b_total
+
+        data.append({
+            "obj": p,
+            "ingreso": p.fecha_inicio,
+            "egreso": p.fecha_fin,
+            "asistencia": p.hc or "",
+            "paciente": p.paciente_nombre,
+            "medico": str(p.medico) if p.medico else "",
+            "cod_cx": p.diagnostico or "",
+            "pension": pension,
+            "gastos_quirurgicos": gastos_quirurgicos,
+            "honorarios_medicos": honorarios_medicos,
+            "farmacia": farmacia,
+            "fisioterapia": fisioterapia,
+            "labac": labac,
+            "imagen_clara": imagen_clara,
+            "iva": iva_total,
+            "total_presupuesto": total_presupuesto,
+            "nro_deposito": "",
+            "importe_deposito": "",
+            "nro_factura": "",
+            "importe_factura": "",
+            "total_cobrado": cobrado,
+            "fecha_b": fecha_b,
+            "caja_b": caja_b_total,
+            "saldo": saldo,
+            "reintegro": reintegrado,
+            "control": control,
+            "observaciones": "",
+            "estado": p.get_estado_display(),
+            "ejecutado": ejecutado,
+        })
+
+    # =========================
+    # EXPORTAR EXCEL
+    # =========================
+    if exportar == "excel":
+        wb = Workbook()
+        ws = wb.active
+        ws.title = "Reporte Particulares"
+
+        hoy = datetime.now().strftime("%d-%m-%Y")
+        nombre_archivo = f"reporte_presupuestos_particulares_{hoy}.xlsx"
+
+        borde_fino = Border(
+            left=Side(style="thin", color="000000"),
+            right=Side(style="thin", color="000000"),
+            top=Side(style="thin", color="000000"),
+            bottom=Side(style="thin", color="000000"),
+        )
+
+        # Colores
+        fill_generales = PatternFill("solid", fgColor="FFFFFF")   # blanco
+        fill_presupuesto = PatternFill("solid", fgColor="DCEBFF") # azul suave
+        fill_cobranza = PatternFill("solid", fgColor="6dcd66")    # verde suave
+        fill_cierre = PatternFill("solid", fgColor="FFFFFF")      # blanco
+
+        fill_header_generales = PatternFill("solid", fgColor="F8F9FA")
+        fill_header_presupuesto = PatternFill("solid", fgColor="EAF3FF")
+        fill_header_cobranza = PatternFill("solid", fgColor="EAF8ED")
+        fill_header_cierre = PatternFill("solid", fgColor="F8F9FA")
+
+        fill_sub = PatternFill("solid", fgColor="EEF6FB")
+
+        font_header = Font(bold=True)
+        font_titulo = Font(bold=True, size=14)
+        font_total = Font(bold=True)
+        font_grupo = Font(bold=True, size=11)
+
+        alignment_center = Alignment(horizontal="center", vertical="center")
+        alignment_left = Alignment(horizontal="left", vertical="center")
+        alignment_right = Alignment(horizontal="right", vertical="center")
+
+        # Título
+        ws.merge_cells("A1:AA1")
+        ws["A1"] = "Reporte de Presupuestos Particulares"
+        ws["A1"].font = font_titulo
+        ws["A1"].alignment = alignment_center
+
+        # =========================
+        # FILA DE GRUPOS
+        # =========================
+        fila_grupos = 3
+
+        ws.merge_cells("A3:F3")
+        ws["A3"] = "Datos Generales"
+
+        ws.merge_cells("G3:O3")
+        ws["G3"] = "Datos Presupuesto"
+
+        ws.merge_cells("P3:V3")
+        ws["P3"] = "Datos Cobranza"
+
+        ws.merge_cells("W3:AA3")
+        ws["W3"] = "Cierre / Control"
+
+        grupos = [
+            ("A3:F3", fill_generales),
+            ("G3:O3", fill_presupuesto),
+            ("P3:V3", fill_cobranza),
+            ("W3:AA3", fill_cierre),
+        ]
+
+        for rango, fill in grupos:
+            inicio = rango.split(":")[0]
+            cell = ws[inicio]
+            cell.font = font_grupo
+            cell.alignment = alignment_center
+            cell.fill = fill
+
+        # aplicar bordes a toda la fila de grupos
+        for col in range(1, 28):
+            cell = ws.cell(row=fila_grupos, column=col)
+            cell.border = borde_fino
+
+        # =========================
+        # FILA DE HEADERS
+        # =========================
+        headers = [
+            "Ingreso", "Egreso", "Asistencia", "Paciente", "Médico", "Cód Cx",
+            "Pensión", "G. Quirúrgicos", "H. Médicos", "Farmacia", "Fisioterapia",
+            "LABAC", "Imagen Clara", "IVA", "TOTAL",
+            "N° Depósito", "Importe Depósito", "N° Factura", "Importe Factura",
+            "Fecha B", "Caja B", "TOTAL",
+            "Saldo", "Reintegro", "Control", "Observaciones", "Estado"
+        ]
+
+        fila_header = 4
+
+        for col_num, header in enumerate(headers, 1):
+            cell = ws.cell(row=fila_header, column=col_num, value=header)
+            cell.font = font_header
+            cell.border = borde_fino
+            cell.alignment = alignment_center
+
+            if 1 <= col_num <= 6:
+                cell.fill = fill_header_generales
+            elif 7 <= col_num <= 15:
+                cell.fill = fill_header_presupuesto
+            elif 16 <= col_num <= 22:
+                cell.fill = fill_header_cobranza
+            elif 23 <= col_num <= 27:
+                cell.fill = fill_header_cierre
+
+        # =========================
+        # DATOS
+        # =========================
+        fila = fila_header + 1
+
+        for item in data:
+            valores = [
+                item["ingreso"].strftime("%d/%m/%Y") if item["ingreso"] else "",
+                item["egreso"].strftime("%d/%m/%Y") if item["egreso"] else "",
+                item["asistencia"],
+                item["paciente"],
+                item["medico"],
+                item["cod_cx"],
+                float(item["pension"]),
+                float(item["gastos_quirurgicos"]),
+                float(item["honorarios_medicos"]),
+                float(item["farmacia"]),
+                float(item["fisioterapia"]),
+                float(item["labac"]),
+                float(item["imagen_clara"]),
+                float(item["iva"]),
+                float(item["total_presupuesto"]),
+                item["nro_deposito"],
+                float(item["importe_deposito"]) if item["importe_deposito"] not in [None, ""] else "",
+                item["nro_factura"],
+                float(item["importe_factura"]) if item["importe_factura"] not in [None, ""] else "",
+                item["fecha_b"].strftime("%d/%m/%Y %H:%M") if item["fecha_b"] else "",
+                float(item["caja_b"]),
+                float(item["total_cobrado"]),
+                float(item["saldo"]),
+                float(item["reintegro"]),
+                float(item["control"]),
+                item["observaciones"],
+                item["estado"],
+            ]
+
+            for col, valor in enumerate(valores, 1):
+                cell = ws.cell(row=fila, column=col, value=valor)
+                cell.border = borde_fino
+
+                # fondo por bloque
+                if 1 <= col <= 6:
+                    cell.fill = fill_generales
+                elif 7 <= col <= 15:
+                    cell.fill = fill_presupuesto
+                elif 16 <= col <= 22:
+                    cell.fill = fill_cobranza
+                elif 23 <= col <= 27:
+                    cell.fill = fill_cierre
+
+                # alineaciones
+                if col in [1, 2, 3, 6, 16, 18, 27]:
+                    cell.alignment = alignment_center
+                elif col in [7, 8, 9, 10, 11, 12, 13, 14, 15, 17, 19, 21, 22, 23, 24, 25]:
+                    cell.alignment = alignment_right
+                    if valor != "":
+                        cell.number_format = '$ #,##0.00'
+                elif col == 20:
+                    cell.alignment = alignment_center
+                else:
+                    cell.alignment = alignment_left
+
+            fila += 1
+
+        # =========================
+        # FILA DE TOTALES
+        # =========================
+        fila_total = fila + 1
+        ws.cell(row=fila_total, column=6, value="Totales").font = font_total
+        ws.cell(row=fila_total, column=6).fill = fill_sub
+        ws.cell(row=fila_total, column=6).alignment = alignment_center
+        ws.cell(row=fila_total, column=6).border = borde_fino
+
+        totales = {
+            7: total_pension,
+            8: total_gq,
+            9: total_hm,
+            10: total_farmacia,
+            11: total_fisio,
+            12: total_labac,
+            13: total_imagen,
+            14: total_iva,
+            15: total_presupuestado,
+            22: total_cobrado,
+            23: saldo_total,
+            24: total_reintegrado,
+            25: control_total,
+            21: total_caja_b,
+        }
+
+        for col, valor in totales.items():
+            cell = ws.cell(row=fila_total, column=col, value=float(valor))
+            cell.font = font_total
+            cell.fill = fill_sub
+            cell.border = borde_fino
+            cell.alignment = alignment_right
+            cell.number_format = '$ #,##0.00'
+
+        for col in range(1, 28):
+            cell = ws.cell(row=fila_total, column=col)
+            cell.border = borde_fino
+            if not cell.fill or cell.fill.fill_type is None:
+                cell.fill = fill_sub
+
+        # =========================
+        # ANCHOS
+        # =========================
+        anchos = {
+            "A": 14, "B": 14, "C": 16, "D": 28, "E": 26, "F": 24,
+            "G": 14, "H": 16, "I": 14, "J": 14, "K": 14, "L": 14, "M": 16,
+            "N": 12, "O": 14, "P": 14, "Q": 16, "R": 14, "S": 16, "T": 18,
+            "U": 14, "V": 16, "W": 14, "X": 14, "Y": 14, "Z": 24, "AA": 14
+        }
+
+        for col, ancho in anchos.items():
+            ws.column_dimensions[col].width = ancho
+
+        ws.row_dimensions[1].height = 25
+        ws.row_dimensions[3].height = 24
+        ws.row_dimensions[4].height = 24
+
+        # congelar paneles
+        ws.freeze_panes = "A5"
+
+        response = HttpResponse(
+            content_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+        )
+        response["Content-Disposition"] = f'attachment; filename="{nombre_archivo}"'
+        wb.save(response)
+        return response
+
+    context = {
+        "data": data,
+        "estados": Presupuesto.ESTADOS,
+        "request": request,
+        "total_pension": total_pension,
+        "total_gq": total_gq,
+        "total_hm": total_hm,
+        "total_farmacia": total_farmacia,
+        "total_fisio": total_fisio,
+        "total_labac": total_labac,
+        "total_imagen": total_imagen,
+        "total_iva": total_iva,
+        "total_presupuestado": total_presupuestado,
+        "total_cobrado": total_cobrado,
+        "total_caja_b": total_caja_b,
+        "saldo_total": saldo_total,
+        "total_reintegrado": total_reintegrado,
+        "control_total": control_total,
+    }
+
+    return render(
+        request,
+        "presupuestos/reportes/presupuestos_generales.html",
+        context
+    )
+
+
+
+
+
+
+
 
 
 from django.contrib.admin.views.decorators import staff_member_required

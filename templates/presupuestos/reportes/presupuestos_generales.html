@@ -1,0 +1,457 @@
+{% extends 'base2.html' %}
+{% load group_tags %} 
+
+{% block content %}
+<style>
+
+    /* ===== GRUPOS HEADER ===== */
+    .grupo-header {
+        text-align: center;
+        font-size: 12px;
+        font-weight: 800;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        padding: 10px 6px !important;
+        border-bottom: 2px solid #dee2e6;
+        position: sticky;
+        top: 0;
+        z-index: 6;
+    }
+
+    /* COLORES */
+    .grupo-generales {
+        background: #f1f3f5; /* gris suave */
+        color: #495057;
+    }
+
+    .grupo-presupuesto {
+        background: #022048; /* azul suave */
+        color: #74acff;
+    }
+
+    .grupo-cobranza {
+        background: #014909; /* violeta/celeste suave */
+        color: #05057a;
+    }
+
+    .grupo-cierre {
+        background: #999a9c; /* gris neutro */
+        color: #343a40;
+    }
+
+    /* SEGUNDA FILA (headers normales) */
+    .tabla-reporte thead tr:nth-child(2) th {
+        top: 42px; /* altura de la fila agrupadora */
+        z-index: 5;
+    }
+
+
+    .card-reporte {
+        border-radius: 18px;
+        overflow: hidden;
+    }
+
+    .filtros-reporte .form-control,
+    .filtros-reporte .form-select {
+        font-size: 13px;
+        min-height: 38px;
+        border-radius: 10px;
+    }
+
+    .filtros-reporte .form-label {
+        font-size: 12px;
+        margin-bottom: 5px;
+        color: #6c757d;
+        font-weight: 700;
+    }
+
+    .tabla-reporte td,
+    .tabla-reporte th {
+        font-size: 12.3px;
+        padding: 6px 8px;
+        vertical-align: middle;
+        white-space: nowrap;
+    }
+
+    .tabla-reporte thead th {
+        position: sticky;
+        top: 0;
+        z-index: 3;
+        background: #f8f9fa;
+        box-shadow: inset 0 -1px 0 #dee2e6;
+    }
+
+    .tabla-reporte thead th.th-sticky-left {
+        position: sticky;
+        left: 0;
+        z-index: 5;
+        background: #f8f9fa;
+    }
+
+    .tabla-reporte tbody td.td-sticky-left {
+        position: sticky;
+        left: 0;
+        z-index: 2;
+        background: #fff;
+        box-shadow: 1px 0 0 #e9ecef;
+    }
+
+    .badge-estado {
+        font-size: 11px;
+        padding: 0.40em 0.65em;
+        border-radius: 0.55rem;
+    }
+
+    .tabla-scroll {
+        max-height: 64vh;
+        overflow: auto;
+        border: 1px solid #e9ecef;
+        border-radius: 12px 12px 0 0;
+        background: #fff;
+    }
+
+    .totales-fijos {
+        border: 1px solid #e9ecef;
+        border-top: 0;
+        border-radius: 0 0 12px 12px;
+        background: #f8f9fa;
+    }
+
+    .totales-fijos .item-total {
+        padding: 10px 12px;
+        border-right: 1px solid #e9ecef;
+    }
+
+    .totales-fijos .item-total:last-child {
+        border-right: 0;
+    }
+
+    .totales-fijos .titulo-total {
+        font-size: 11px;
+        color: #6c757d;
+        font-weight: 700;
+        display: block;
+        margin-bottom: 2px;
+    }
+
+    .totales-fijos .valor-total {
+        font-size: 13px;
+        font-weight: 800;
+        white-space: nowrap;
+    }
+
+    .acciones-filtros {
+        display: flex;
+        gap: 8px;
+        align-items: end;
+        justify-content: end;
+        flex-wrap: wrap;
+    }
+
+    .checkbox-wrap {
+        display: flex;
+        align-items: center;
+        gap: 7px;
+        min-height: 38px;
+        padding-top: 25px;
+    }
+
+    .subtitulo-bloque {
+        font-size: 11px;
+        font-weight: 700;
+        text-transform: uppercase;
+        color: #6c757d;
+        letter-spacing: 0.4px;
+    }
+
+    .hint-scroll {
+        font-size: 11px;
+        color: #6c757d;
+    }
+
+    .table-responsive-interna {
+        min-width: 2500px;
+    }
+
+    .col-presupuesto {
+        background: #e4eaf1 !important;
+    }
+
+    .col-cobranza {
+        background: #cfe9c9 !important;
+    }
+
+    .col-cierre {
+        background: #fcfcfc !important;
+    }
+
+    @media (max-width: 1400px) {
+        .tabla-reporte td,
+        .tabla-reporte th {
+            font-size: 12px;
+        }
+    }
+</style>
+
+<div class="container-fluid mt-4 mb-4">
+    <div class="card shadow-lg border-0 card-reporte">
+
+        <div class="card-header bg-light border-bottom d-flex justify-content-between align-items-center flex-wrap gap-2">
+            <div>
+                <h4 class="text-primary fw-bold mb-0">
+                    <i class="fas fa-file-invoice-dollar me-2"></i>Reporte de Presupuestos Particulares
+                </h4>
+                <small class="text-muted">
+                    Vista operativa con desglose por rubro, cobranzas, reintegros y control
+                </small>
+            </div>
+
+            <a href="?{{ request.GET.urlencode }}&exportar=excel" class="btn btn-success btn-sm">
+                <i class="fas fa-file-excel me-1"></i>Exportar Excel
+            </a>
+        </div>
+
+        <div class="card-body">
+
+            <form method="get" class="filtros-reporte mb-3">
+                <div class="row g-3 align-items-end">
+                    <div class="col-md-2">
+                        <label class="form-label">Fecha desde</label>
+                        <input type="date" name="fecha_desde" class="form-control form-control-sm"
+                               value="{{ request.GET.fecha_desde }}">
+                    </div>
+
+                    <div class="col-md-2">
+                        <label class="form-label">Fecha hasta</label>
+                        <input type="date" name="fecha_hasta" class="form-control form-control-sm"
+                               value="{{ request.GET.fecha_hasta }}">
+                    </div>
+
+                    <div class="col-md-2">
+                        <label class="form-label">Estado</label>
+                        <select name="estado" class="form-select form-select-sm">
+                            <option value="">Todos</option>
+                            {% for v, l in estados %}
+                                <option value="{{ v }}" {% if request.GET.estado == v %}selected{% endif %}>{{ l }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+
+                    <div class="col-md-2">
+                        <div class="checkbox-wrap">
+                            <input class="form-check-input mt-0" type="checkbox" name="solo_ejecutados" value="1"
+                                   id="soloEjecutados" {% if request.GET.solo_ejecutados %}checked{% endif %}>
+                            <label class="form-check-label fw-semibold mb-0" for="soloEjecutados">
+                                Solo ejecutados
+                            </label>
+                        </div>
+                    </div>
+
+                    <div class="col-md-4">
+                        <div class="acciones-filtros">
+                            <button class="btn btn-primary btn-sm px-4">
+                                <i class="fas fa-filter me-1"></i>Filtrar
+                            </button>
+
+                            <a href="{% url 'presupuestos_app:reporte_presupuestos_particulares' %}" class="btn btn-outline-secondary btn-sm px-4">
+                                <i class="fas fa-broom me-1"></i>Limpiar
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </form>
+
+            <div class="d-flex justify-content-between align-items-center mb-2 flex-wrap gap-2">
+                <div class="subtitulo-bloque">Detalle completo por presupuesto</div>
+                <div class="hint-scroll">
+                    <i class="fas fa-arrows-left-right-to-line me-1"></i>Deslizá horizontalmente para ver todas las columnas
+                </div>
+            </div>
+
+            <div class="tabla-scroll">
+                <div class="table-responsive table-responsive-interna">
+                    <table class="table table-hover align-middle table-sm tabla-reporte mb-0">
+                        <thead>
+                            <!-- FILA AGRUPADORA -->
+                            <tr>
+                                <th colspan="6" class="grupo-header grupo-generales ">Datos Generales</th>
+                                <th colspan="9" class="grupo-header grupo-presupuesto">Datos Presupuesto</th>
+                                <th colspan="7" class="grupo-header grupo-cobranza">Datos Cobranza</th>
+                                <th colspan="5" class="grupo-header grupo-cierre">Cierre / Control</th>
+                            </tr>
+
+                            <!-- FILA DE COLUMNAS -->
+                            <tr>
+                                <th class="th-sticky-left">Ingreso</th>
+                                <th>Egreso</th>
+                                <th>Asistencia</th>
+                                <th>Paciente</th>
+                                <th>Médico</th>
+                                <th>Cód Cx</th>
+
+                                <th class="text-end col-presupuesto">Pensión</th>
+                                <th class="text-end col-presupuesto">G. Quirúrgicos</th>
+                                <th class="text-end col-presupuesto">H. Médicos</th>
+                                <th class="text-end col-presupuesto">Farmacia</th>
+                                <th class="text-end col-presupuesto">Fisioterapia</th>
+                                <th class="text-end col-presupuesto">LABAC</th>
+                                <th class="text-end col-presupuesto">Imagen Clara</th>
+                                <th class="text-end col-presupuesto">IVA</th>
+                                <th class="text-end col-presupuesto">TOTAL</th>
+
+                                <th class="col-cobranza">N° Depósito</th>
+                                <th class="text-end col-cobranza">Importe Depósito</th>
+                                <th class="col-cobranza">N° Factura</th>
+                                <th class="text-end col-cobranza">Importe Factura</th>
+                                <th class="col-cobranza">Fecha B</th>
+                                <th class="text-end col-cobranza">Caja B</th>
+                                <th class="text-end col-cobranza">TOTAL</th>
+
+                                <th class="text-end col-cierre">Saldo</th>
+                                <th class="text-end col-cierre">Reintegro</th>
+                                <th class="text-end col-cierre">Control</th>
+                                <th class="col-cierre">Observaciones</th>
+                                <th class="col-cierre">Estado</th>
+                            </tr>
+                        </thead>
+
+                        <tbody>
+                            {% for item in data %}
+                            <tr>
+                                <td class="td-sticky-left text-nowrap">
+                                    {% if item.ingreso %}{{ item.ingreso|date:"d/m/Y" }}{% else %}-{% endif %}
+                                </td>
+                                <td class="text-nowrap">
+                                    {% if item.egreso %}{{ item.egreso|date:"d/m/Y" }}{% else %}-{% endif %}
+                                </td>
+                                <td class="text-nowrap">{{ item.asistencia|default:"-" }}</td>
+                                <td>{{ item.paciente }}</td>
+                                <td class="text-nowrap">{{ item.medico|default:"-" }}</td>
+                                <td>{{ item.cod_cx|default:"-" }}</td>
+
+                                <td class="text-end text-nowrap col-presupuesto">{{ item.pension|moneda_ar }}</td>
+                                <td class="text-end text-nowrap col-presupuesto">{{ item.gastos_quirurgicos|moneda_ar }}</td>
+                                <td class="text-end text-nowrap col-presupuesto">{{ item.honorarios_medicos|moneda_ar }}</td>
+                                <td class="text-end text-nowrap col-presupuesto">{{ item.farmacia|moneda_ar }}</td>
+                                <td class="text-end text-nowrap col-presupuesto">{{ item.fisioterapia|moneda_ar }}</td>
+                                <td class="text-end text-nowrap col-presupuesto">{{ item.labac|moneda_ar }}</td>
+                                <td class="text-end text-nowrap col-presupuesto">{{ item.imagen_clara|moneda_ar }}</td>
+                                <td class="text-end text-nowrap col-presupuesto">{{ item.iva|moneda_ar }}</td>
+                                <td class="text-end text-nowrap fw-bold col-presupuesto">{{ item.total_presupuesto|moneda_ar }}</td>
+
+                                <td class="col-cobranza">{{ item.nro_deposito|default:"-" }}</td>
+                                <td class="text-end text-nowrap col-cobranza">{{ item.importe_deposito|default:"-" }}</td>
+                                <td class="col-cobranza">{{ item.nro_factura|default:"-" }}</td>
+                                <td class="text-end text-nowrap col-cobranza">{{ item.importe_factura|default:"-" }}</td>
+                                
+                                <td class="text-nowrap col-cobranza">
+                                    {% if item.fecha_b %}{{ item.fecha_b|date:"d/m/Y H:i" }}{% else %}-{% endif %}
+                                </td>
+                                <td class="text-end text-nowrap col-cobranza">{{ item.caja_b|moneda_ar }}</td>
+                                <td class="text-end text-nowrap text-success fw-semibold col-cobranza">{{ item.total_cobrado|moneda_ar }}</td>
+                                <td class="text-end text-nowrap fw-semibold col-cierre {% if item.saldo > 0 %}text-danger{% else %}text-success{% endif %}">
+                                    {{ item.saldo|moneda_ar }}
+                                </td>
+                                <td class="text-end text-nowrap text-warning fw-semibold col-cierre">
+                                    {{ item.reintegro|moneda_ar }}
+                                </td>
+                                <td class="text-end text-nowrap col-cierre">
+                                    {{ item.control|moneda_ar }}
+                                </td>
+                                <td class="col-cierre">{{ item.observaciones|default:"-" }}</td>
+                                <td class="col-cierre">
+                                    {% if item.obj.estado == 'pendiente' %}
+                                        <span class="badge bg-warning text-dark badge-estado">{{ item.estado }}</span>
+                                    {% elif item.obj.estado == 'autorizado' %}
+                                        <span class="badge bg-primary badge-estado">{{ item.estado }}</span>
+                                    {% elif item.obj.estado == 'en_curso' %}
+                                        <span class="badge bg-success badge-estado">{{ item.estado }}</span>
+                                    {% elif item.obj.estado == 'cerrado' %}
+                                        <span class="badge bg-dark badge-estado">{{ item.estado }}</span>
+                                    {% elif item.obj.estado == 'expirado' %}
+                                        <span class="badge bg-secondary badge-estado">{{ item.estado }}</span>
+                                    {% elif item.obj.estado == 'anulado' %}
+                                        <span class="badge bg-danger badge-estado">{{ item.estado }}</span>
+                                    {% else %}
+                                        <span class="badge bg-secondary badge-estado">{{ item.estado }}</span>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                            {% empty %}
+                            <tr>
+                                <td colspan="27" class="text-center text-muted py-4">
+                                    No hay presupuestos para mostrar con los filtros seleccionados.
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <div class="totales-fijos">
+                <div class="row g-0">
+                    <div class="col-md item-total">
+                        <span class="titulo-total">Pensión</span>
+                        <span class="valor-total text-primary">${{ total_pension|moneda_ar }}</span>
+                    </div>
+                    <div class="col-md item-total">
+                        <span class="titulo-total">G. Quirúrgicos</span>
+                        <span class="valor-total text-primary">${{ total_gq|moneda_ar }}</span>
+                    </div>
+                    <div class="col-md item-total">
+                        <span class="titulo-total">H. Médicos</span>
+                        <span class="valor-total text-primary">${{ total_hm|moneda_ar }}</span>
+                    </div>
+                    <div class="col-md item-total">
+                        <span class="titulo-total">Farmacia</span>
+                        <span class="valor-total text-primary">${{ total_farmacia|moneda_ar }}</span>
+                    </div>
+                    <div class="col-md item-total">
+                        <span class="titulo-total">Fisioterapia</span>
+                        <span class="valor-total text-primary">${{ total_fisio|moneda_ar }}</span>
+                    </div>
+                    <div class="col-md item-total">
+                        <span class="titulo-total">LABAC</span>
+                        <span class="valor-total text-primary">${{ total_labac|moneda_ar }}</span>
+                    </div>
+                </div>
+
+                <div class="row g-0 border-top">
+                    <div class="col-md item-total">
+                        <span class="titulo-total">Imagen Clara</span>
+                        <span class="valor-total text-primary">${{ total_imagen|moneda_ar }}</span>
+                    </div>
+                    <div class="col-md item-total">
+                        <span class="titulo-total">IVA</span>
+                        <span class="valor-total text-primary">${{ total_iva|moneda_ar }}</span>
+                    </div>
+                    <div class="col-md item-total">
+                        <span class="titulo-total">Total presupuestado</span>
+                        <span class="valor-total text-primary">${{ total_presupuestado|moneda_ar }}</span>
+                    </div>
+                    <div class="col-md item-total">
+                        <span class="titulo-total">Total cobrado</span>
+                        <span class="valor-total text-success">${{ total_cobrado|moneda_ar }}</span>
+                    </div>
+                    <div class="col-md item-total">
+                        <span class="titulo-total">Caja B</span>
+                        <span class="valor-total text-info">${{ total_caja_b|moneda_ar }}</span>
+                    </div>
+                    <div class="col-md item-total">
+                        <span class="titulo-total">Saldo total</span>
+                        <span class="valor-total {% if saldo_total > 0 %}text-danger{% else %}text-success{% endif %}">
+                            ${{ saldo_total|moneda_ar }}
+                        </span>
+                    </div>
+                    <div class="col-md item-total">
+                        <span class="titulo-total">Reintegrado</span>
+                        <span class="valor-total text-warning">${{ total_reintegrado|moneda_ar }}</span>
+                    </div> 
+                </div>
+            </div>
+
+        </div>
+    </div>
+</div>
+{% endblock %}
