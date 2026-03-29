@@ -176,5 +176,21 @@ class PresupuestoItem(models.Model):
         choices=TIPO_CHOICES,
         default='gastos'
     )
+
+        # --- Liquidación ---
+    liquidado = models.BooleanField(default=False)
+    fecha_liquidacion = models.DateField(null=True, blank=True)
+    liquidado_en = models.DateTimeField(null=True, blank=True)
+    liquidado_por = models.ForeignKey(
+        'users.User', 
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name="items_liquidados"
+    )
+    observaciones_liquidacion = models.TextField(null=True, blank=True)
+
+
+
     def __str__(self):
         return f"{self.prestacion} x{self.cantidad}"

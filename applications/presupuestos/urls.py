@@ -38,6 +38,8 @@ urlpatterns = [
     path('reportes/reintegros/', views.reporte_reintegros, name='reporte_reintegros'),
     path("reportes/presupuestos-particulares/",views.reporte_presupuestos_particulares,name="reporte_presupuestos_particulares",),
 
+    path("liquidacion-prestaciones/", views.liquidacion_prestaciones, name="liquidacion_prestaciones"),
+    path("liquidacion-prestaciones/<int:item_id>/liquidar/", views.liquidar_prestacion_item, name="liquidar_prestacion_item"),
 
     path("carga-unica-categoria/", views.cargar_categoria_unica, name="cargar_categoria_unica"),
     

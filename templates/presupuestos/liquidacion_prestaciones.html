@@ -1,0 +1,549 @@
+{% extends 'base2.html' %}
+{% load group_tags %} 
+
+{% block content %}
+<style>
+    .card-reporte {
+        border-radius: 16px;
+        overflow: hidden;
+    }
+
+    .filtros-reporte .form-control,
+    .filtros-reporte .form-select {
+        font-size: 13px;
+        min-height: 37px;
+    }
+
+    .filtros-reporte .form-label {
+        font-size: 12px;
+        margin-bottom: 5px;
+        color: #6c757d;
+        font-weight: 600;
+    }
+
+    .tabla-reporte td,
+    .tabla-reporte th {
+        font-size: 12.5px;
+        padding: 5px 6px;
+        vertical-align: middle;
+    }
+
+    .tabla-reporte thead th {
+        white-space: nowrap;
+        position: sticky;
+        top: 0;
+        z-index: 2;
+        background: #f8f9fa;
+        box-shadow: inset 0 -1px 0 #dee2e6;
+    }
+
+    .badge-estado {
+        font-size: 11px;
+        padding: 0.35em 0.6em;
+        border-radius: 0.5rem;
+    }
+
+    .tabla-scroll {
+        max-height: 62vh;
+        overflow-y: auto;
+        border: 1px solid #e9ecef;
+        border-radius: 10px 10px 0 0;
+    }
+
+    .totales-fijos {
+        border: 1px solid #e9ecef;
+        border-top: 0;
+        border-radius: 0 0 10px 10px;
+        background: #f8f9fa;
+    }
+
+    .totales-fijos .item-total {
+        padding: 10px 12px;
+        border-right: 1px solid #e9ecef;
+    }
+
+    .totales-fijos .item-total:last-child {
+        border-right: 0;
+    }
+
+    .totales-fijos .titulo-total {
+        font-size: 11px;
+        color: #6c757d;
+        font-weight: 600;
+        display: block;
+        margin-bottom: 2px;
+    }
+
+    .totales-fijos .valor-total {
+        font-size: 13px;
+        font-weight: 700;
+        white-space: nowrap;
+    }
+
+    .acciones-filtros {
+        display: flex;
+        gap: 8px;
+        align-items: end;
+        justify-content: end;
+    }
+
+    .btn-accion-sm {
+        min-width: 78px;
+    }
+
+    .estado-si {
+        background: #d1e7dd;
+        color: #0f5132;
+    }
+
+    .estado-no {
+        background: #f8d7da;
+        color: #842029;
+    }
+
+    .badge-categoria {
+        font-size: 11px;
+        padding: 0.35em 0.55em;
+        border-radius: 0.5rem;
+        background: #e9ecef;
+        color: #495057;
+    }
+
+    .modal-label {
+        font-size: 12px;
+        color: #6c757d;
+        font-weight: 600;
+        margin-bottom: 4px;
+    }
+
+    .modal-value {
+        font-size: 13px;
+        font-weight: 500;
+        color: #212529;
+        margin-bottom: 12px;
+        word-break: break-word;
+    }
+
+    @media (max-width: 1400px) {
+        .tabla-reporte td,
+        .tabla-reporte th {
+            font-size: 12px;
+        }
+    }
+</style>
+
+<div class="container-fluid mt-4 mb-4">
+    <div class="card shadow-lg border-0 card-reporte">
+
+        <div class="card-header bg-light border-bottom d-flex justify-content-between align-items-center flex-wrap gap-2">
+            <div>
+                <h4 class="text-primary fw-bold mb-0">
+                    <i class="fas fa-file-invoice-dollar me-2"></i>Liquidación de Prestaciones
+                </h4>
+                <small class="text-muted">
+                    Listado operativo de ítems liquidables por código de prestación
+                </small>
+            </div>
+        </div>
+
+        <div class="card-body">
+
+            {% if messages %}
+                {% for message in messages %}
+                    <div class="alert alert-{{ message.tags }} alert-dismissible fade show py-2" role="alert">
+                        {{ message }}
+                        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                    </div>
+                {% endfor %}
+            {% endif %}
+
+            <form method="get" class="filtros-reporte mb-3">
+
+                <div class="row g-3 align-items-end mb-1">
+                    <div class="col-md-2">
+                        <label class="form-label">Ingreso desde</label>
+                        <input type="date" name="fecha_ingreso_desde" class="form-control form-control-sm"
+                               value="{{ request.GET.fecha_ingreso_desde }}">
+                    </div>
+
+                    <div class="col-md-2">
+                        <label class="form-label">Ingreso hasta</label>
+                        <input type="date" name="fecha_ingreso_hasta" class="form-control form-control-sm"
+                               value="{{ request.GET.fecha_ingreso_hasta }}">
+                    </div>
+
+                    <div class="col-md-2">
+                        <label class="form-label">Egreso desde</label>
+                        <input type="date" name="fecha_egreso_desde" class="form-control form-control-sm"
+                               value="{{ request.GET.fecha_egreso_desde }}">
+                    </div>
+
+                    <div class="col-md-2">
+                        <label class="form-label">Egreso hasta</label>
+                        <input type="date" name="fecha_egreso_hasta" class="form-control form-control-sm"
+                               value="{{ request.GET.fecha_egreso_hasta }}">
+                    </div>
+
+                    <div class="col-md-2">
+                        <label class="form-label">HC</label>
+                        <input type="text" name="hc" class="form-control form-control-sm"
+                               placeholder="Buscar HC"
+                               value="{{ request.GET.hc }}">
+                    </div>
+
+                    <div class="col-md-2">
+                        <label class="form-label">Paciente</label>
+                        <input type="text" name="paciente" class="form-control form-control-sm"
+                               placeholder="Buscar paciente"
+                               value="{{ request.GET.paciente }}">
+                    </div>
+                </div>
+
+                <div class="row g-3 align-items-end">
+                    <div class="col-md-3">
+                        <label class="form-label">Categoría</label>
+                        <select name="categoria" class="form-select form-select-sm">
+                            <option value="">Todas</option>
+                            {% for c in categorias %}
+                                <option value="{{ c }}" {% if request.GET.categoria == c %}selected{% endif %}>
+                                    {{ c }}
+                                </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+
+                    <div class="col-md-2">
+                        <label class="form-label">Liquidado</label>
+                        <select name="liquidado" class="form-select form-select-sm">
+                            {% for value, label in liquidado_opciones %}
+                                <option value="{{ value }}" {% if request.GET.liquidado|default:"no" == value %}selected{% endif %}>
+                                    {{ label }}
+                                </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+
+                    <div class="col-md-7">
+                        <div class="acciones-filtros">
+                            <button class="btn btn-primary btn-sm px-4">
+                                <i class="fas fa-filter me-1"></i>Filtrar
+                            </button>
+
+                            <a href="{% url 'presupuestos_app:liquidacion_prestaciones' %}" class="btn btn-outline-secondary btn-sm px-4">
+                                <i class="fas fa-broom me-1"></i>Limpiar
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </form>
+
+            <div class="tabla-scroll">
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle table-sm tabla-reporte mb-0">
+                        <thead class="table-light">
+                            <tr>
+                                <th style="width: 70px;">Presup.</th>
+                                <th style="width: 95px;">Ingreso</th>
+                                <th style="width: 95px;">Egreso</th>
+                                <th style="width: 90px;">HC</th>
+                                <th>Paciente</th>
+                                <th style="width: 120px;">Categoría</th>
+                                <th>Prestación</th>
+                                <th style="width: 70px;" class="text-center">Cant.</th>
+                                <th style="width: 120px;" class="text-end">Importe</th>
+                                <th style="width: 110px;">Liquidado</th>
+                                <th style="width: 170px;" class="text-center">Acciones</th>
+                            </tr>
+                        </thead>
+
+                        <tbody>
+                            {% for item in data %}
+                            <tr>
+                                <td class="fw-semibold">{{ item.obj.presupuesto.id }}</td>
+                                <td class="text-nowrap">
+                                    {% if item.obj.presupuesto.fecha_inicio %}
+                                        {{ item.obj.presupuesto.fecha_inicio|date:"d/m/Y" }}
+                                    {% else %}
+                                        -
+                                    {% endif %}
+                                </td>
+                                <td class="text-nowrap">
+                                    {% if item.obj.presupuesto.fecha_fin %}
+                                        {{ item.obj.presupuesto.fecha_fin|date:"d/m/Y" }}
+                                    {% else %}
+                                        -
+                                    {% endif %}
+                                </td>
+                                <td class="text-nowrap">{{ item.obj.presupuesto.hc|default:"-" }}</td>
+                                <td>{{ item.obj.presupuesto.paciente_nombre }}</td>
+                                <td>
+                                    <span class="badge badge-categoria">{{ item.categoria|default:"-" }}</span>
+                                </td>
+                                <td>{{ item.obj.prestacion|default:"-" }}</td>
+                                <td class="text-center">{{ item.obj.cantidad }}</td>
+                                <td class="text-end text-nowrap">{{ item.obj.importe|moneda_ar }}</td>
+                                <td>
+                                    {% if item.obj.liquidado %}
+                                        <span class="badge badge-estado estado-si">Sí</span>
+                                    {% else %}
+                                        <span class="badge badge-estado estado-no">No</span>
+                                    {% endif %}
+                                </td>
+                                <td class="text-center">
+                                    <button
+                                        type="button"
+                                        class="btn btn-outline-info btn-sm btn-accion-sm"
+                                        data-bs-toggle="modal"
+                                        data-bs-target="#modalVerLiquidacion"
+                                        data-item-id="{{ item.obj.id }}"
+                                        data-presupuesto="{{ item.obj.presupuesto.id }}"
+                                        data-paciente="{{ item.obj.presupuesto.paciente_nombre }}"
+                                        data-hc="{{ item.obj.presupuesto.hc|default:'-' }}"
+                                        data-categoria="{{ item.categoria|default:'-' }}"
+                                        data-prestacion="{{ item.obj.prestacion|default:'-' }}"
+                                        data-importe="{{ item.obj.importe|moneda_ar }}"
+                                        data-liquidado="{% if item.obj.liquidado %}Sí{% else %}No{% endif %}"
+                                        data-fecha-liquidacion="{% if item.obj.fecha_liquidacion %}{{ item.obj.fecha_liquidacion|date:'d/m/Y' }}{% else %}-{% endif %}"
+                                        data-fecha-hora-liquidacion="{% if item.obj.liquidado_en %}{{ item.obj.liquidado_en|date:'d/m/Y H:i' }}{% else %}-{% endif %}"
+                                        data-usuario-liquidacion="{% if item.obj.liquidado_por %}{{ item.obj.liquidado_por.get_full_name|default:item.obj.liquidado_por.username }}{% else %}-{% endif %}"
+                                        data-observaciones="{% if item.obj.observaciones_liquidacion %}{{ item.obj.observaciones_liquidacion|escapejs }}{% else %}-{% endif %}"
+                                    >
+                                        <i class="fas fa-eye me-1"></i>Ver
+                                    </button>
+
+                                    {% if not item.obj.liquidado %}
+                                    <button
+                                        type="button"
+                                        class="btn btn-success btn-sm btn-accion-sm"
+                                        data-bs-toggle="modal"
+                                        data-bs-target="#modalLiquidar"
+                                        data-item-id="{{ item.obj.id }}"
+                                        data-presupuesto="{{ item.obj.presupuesto.id }}"
+                                        data-paciente="{{ item.obj.presupuesto.paciente_nombre }}"
+                                        data-prestacion="{{ item.obj.prestacion|default:'-' }}"
+                                        data-categoria="{{ item.categoria|default:'-' }}"
+                                        data-importe="{{ item.obj.importe|moneda_ar }}"
+                                    >
+                                        <i class="fas fa-check-circle me-1"></i>Liquidar
+                                    </button>
+                                    {% else %}
+                                    <button type="button" class="btn btn-outline-secondary btn-sm btn-accion-sm" disabled>
+                                        <i class="fas fa-check me-1"></i>Liquidado
+                                    </button>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                            {% empty %}
+                            <tr>
+                                <td colspan="11" class="text-center text-muted py-4">
+                                    No hay ítems para mostrar con los filtros seleccionados.
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <div class="totales-fijos">
+                <div class="row g-0 text-center text-md-start">
+                    <div class="col-md-3 item-total">
+                        <span class="titulo-total">Cantidad de ítems</span>
+                        <span class="valor-total text-primary">{{ total_items }}</span>
+                    </div>
+                    <div class="col-md-3 item-total">
+                        <span class="titulo-total">Importe total</span>
+                        <span class="valor-total text-dark">${{ total_importe|moneda_ar }}</span>
+                    </div>
+                    <div class="col-md-3 item-total">
+                        <span class="titulo-total">Importe liquidado</span>
+                        <span class="valor-total text-success">${{ total_liquidados|moneda_ar }}</span>
+                    </div>
+                    <div class="col-md-3 item-total">
+                        <span class="titulo-total">Importe pendiente</span>
+                        <span class="valor-total text-danger">${{ total_pendientes|moneda_ar }}</span>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+    </div>
+</div>
+
+<!-- MODAL VER -->
+<div class="modal fade" id="modalVerLiquidacion" tabindex="-1" aria-labelledby="modalVerLiquidacionLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-centered">
+        <div class="modal-content border-0 shadow">
+            <div class="modal-header bg-light">
+                <h5 class="modal-title fw-bold" id="modalVerLiquidacionLabel">
+                    <i class="fas fa-eye text-info me-2"></i>Detalle de liquidación
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+
+            <div class="modal-body">
+                <div class="row">
+                    <div class="col-md-3">
+                        <div class="modal-label">Presupuesto</div>
+                        <div class="modal-value" id="ver_presupuesto">-</div>
+                    </div>
+                    <div class="col-md-5">
+                        <div class="modal-label">Paciente</div>
+                        <div class="modal-value" id="ver_paciente">-</div>
+                    </div>
+                    <div class="col-md-2">
+                        <div class="modal-label">HC</div>
+                        <div class="modal-value" id="ver_hc">-</div>
+                    </div>
+                    <div class="col-md-2">
+                        <div class="modal-label">Liquidado</div>
+                        <div class="modal-value" id="ver_liquidado">-</div>
+                    </div>
+
+                    <div class="col-md-4">
+                        <div class="modal-label">Categoría</div>
+                        <div class="modal-value" id="ver_categoria">-</div>
+                    </div>
+                    <div class="col-md-5">
+                        <div class="modal-label">Prestación</div>
+                        <div class="modal-value" id="ver_prestacion">-</div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="modal-label">Importe</div>
+                        <div class="modal-value" id="ver_importe">-</div>
+                    </div>
+
+                    <div class="col-md-4">
+                        <div class="modal-label">Fecha de liquidación</div>
+                        <div class="modal-value" id="ver_fecha_liquidacion">-</div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="modal-label">Fecha y hora registración</div>
+                        <div class="modal-value" id="ver_fecha_hora_liquidacion">-</div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="modal-label">Usuario que liquidó</div>
+                        <div class="modal-value" id="ver_usuario_liquidacion">-</div>
+                    </div>
+
+                    <div class="col-12">
+                        <div class="modal-label">Observaciones</div>
+                        <div class="modal-value border rounded p-2 bg-light" id="ver_observaciones">-</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="modal-footer bg-white">
+                <button type="button" class="btn btn-outline-secondary btn-sm" data-bs-dismiss="modal">
+                    Cerrar
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- MODAL LIQUIDAR -->
+<div class="modal fade" id="modalLiquidar" tabindex="-1" aria-labelledby="modalLiquidarLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-centered">
+        <div class="modal-content border-0 shadow">
+            <form method="post" id="formLiquidar">
+                {% csrf_token %}
+                <div class="modal-header bg-light">
+                    <h5 class="modal-title fw-bold" id="modalLiquidarLabel">
+                        <i class="fas fa-check-circle text-success me-2"></i>Liquidar ítem
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+
+                <div class="modal-body">
+                    <div class="alert alert-warning py-2 mb-3">
+                        ¿Desea liquidar este ítem? El sistema lo marcará como liquidado y registrará el usuario que realizó la acción.
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-3">
+                            <div class="modal-label">Presupuesto</div>
+                            <div class="modal-value" id="liq_presupuesto">-</div>
+                        </div>
+                        <div class="col-md-5">
+                            <div class="modal-label">Paciente</div>
+                            <div class="modal-value" id="liq_paciente">-</div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="modal-label">Categoría</div>
+                            <div class="modal-value" id="liq_categoria">-</div>
+                        </div>
+
+                        <div class="col-md-8">
+                            <div class="modal-label">Prestación</div>
+                            <div class="modal-value" id="liq_prestacion">-</div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="modal-label">Importe</div>
+                            <div class="modal-value" id="liq_importe">-</div>
+                        </div>
+
+                        <div class="col-md-4">
+                            <label class="form-label">Fecha de liquidación</label>
+                            <input type="date" name="fecha_liquidacion" class="form-control" required>
+                        </div>
+
+                        <div class="col-md-8">
+                            <label class="form-label">Observaciones</label>
+                            <textarea name="observaciones" rows="3" class="form-control"
+                                      placeholder="Agregar observaciones (opcional)"></textarea>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="modal-footer bg-white">
+                    <button type="button" class="btn btn-outline-secondary btn-sm" data-bs-dismiss="modal">
+                        Cancelar
+                    </button>
+                    <button type="submit" class="btn btn-success btn-sm">
+                        <i class="fas fa-check me-1"></i>Confirmar liquidación
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script>
+    const modalVerLiquidacion = document.getElementById('modalVerLiquidacion');
+    if (modalVerLiquidacion) {
+        modalVerLiquidacion.addEventListener('show.bs.modal', function (event) {
+            const button = event.relatedTarget;
+
+            document.getElementById('ver_presupuesto').textContent = button.getAttribute('data-presupuesto') || '-';
+            document.getElementById('ver_paciente').textContent = button.getAttribute('data-paciente') || '-';
+            document.getElementById('ver_hc').textContent = button.getAttribute('data-hc') || '-';
+            document.getElementById('ver_categoria').textContent = button.getAttribute('data-categoria') || '-';
+            document.getElementById('ver_prestacion').textContent = button.getAttribute('data-prestacion') || '-';
+            document.getElementById('ver_importe').textContent = button.getAttribute('data-importe') || '-';
+            document.getElementById('ver_liquidado').textContent = button.getAttribute('data-liquidado') || '-';
+            document.getElementById('ver_fecha_liquidacion').textContent = button.getAttribute('data-fecha-liquidacion') || '-';
+            document.getElementById('ver_fecha_hora_liquidacion').textContent = button.getAttribute('data-fecha-hora-liquidacion') || '-';
+            document.getElementById('ver_usuario_liquidacion').textContent = button.getAttribute('data-usuario-liquidacion') || '-';
+            document.getElementById('ver_observaciones').textContent = button.getAttribute('data-observaciones') || '-';
+        });
+    }
+
+    const modalLiquidar = document.getElementById('modalLiquidar');
+    if (modalLiquidar) {
+        modalLiquidar.addEventListener('show.bs.modal', function (event) {
+            const button = event.relatedTarget;
+            const itemId = button.getAttribute('data-item-id');
+
+            document.getElementById('liq_presupuesto').textContent = button.getAttribute('data-presupuesto') || '-';
+            document.getElementById('liq_paciente').textContent = button.getAttribute('data-paciente') || '-';
+            document.getElementById('liq_categoria').textContent = button.getAttribute('data-categoria') || '-';
+            document.getElementById('liq_prestacion').textContent = button.getAttribute('data-prestacion') || '-';
+            document.getElementById('liq_importe').textContent = button.getAttribute('data-importe') || '-';
+
+            const form = document.getElementById('formLiquidar');
+            form.action = `/presupuestos/liquidacion-prestaciones/${itemId}/liquidar/`;
+        });
+    }
+</script>
+{% endblock %}

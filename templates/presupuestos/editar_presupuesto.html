@@ -184,7 +184,7 @@ td {
                         <label>Obra Social</label>
 
                         {% if cambiar %}
-                            <select name="obra_social" class="form-select" required>
+                            <select id="obra_social_id" name="obra_social" class="form-select" required>
                                 <option value="">Seleccione una obra social..</option>
                                 {% for obra_social in obras_sociales %}
                                     <option value="{{ obra_social.id }}"
@@ -195,7 +195,7 @@ td {
                             </select>
                         {% else %}
                             <input disabled type="text" name="obra_social" class="form-control" value="{{ presupuesto.obra_social }}">
-                            <input type="hidden" name="obra_social" value="{{ presupuesto.obra_social.id }}"> 
+                            <input type="hidden" id="obra_social_id" name="obra_social" value="{{ presupuesto.obra_social.id }}"> 
                         {% endif %}
                     </div>
 
@@ -520,7 +520,7 @@ document.getElementById("tabla-prestaciones").addEventListener("blur", async e =
     const fila = e.target.closest("tr");
     try {
         const obraSocialId = document.getElementById("obra_social_id").value;
-
+        console.log("Obra Social Id es:", obraSocialId)
         const url = "{% url 'presupuestos_app:get_prestacion' codigo='__codigo__' %}"
             .replace("__codigo__", encodeURIComponent(codigo));
         const resp = await fetch(`${url}?obra_social=${obraSocialId}`);

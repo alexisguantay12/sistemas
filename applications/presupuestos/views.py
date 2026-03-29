@@ -2885,6 +2885,184 @@ def reporte_presupuestos_particulares(request):
 
 
 
+CATEGORIAS_LIQUIDABLES = [
+    "HONORARIOS",
+    "LABAC",
+    "IMAGEN CLARA",
+    "FISIOTERAPIA",
+]
+
+from django.db.models import Q
+
+@login_required
+def liquidacion_prestaciones(request):
+    fecha_ingreso_desde = request.GET.get("fecha_ingreso_desde")
+    fecha_ingreso_hasta = request.GET.get("fecha_ingreso_hasta")
+    fecha_egreso_desde = request.GET.get("fecha_egreso_desde")
+    fecha_egreso_hasta = request.GET.get("fecha_egreso_hasta")
+    paciente = request.GET.get("paciente")
+    hc = request.GET.get("hc")
+    categoria = request.GET.get("categoria")
+    liquidado = request.GET.get("liquidado", "no")  # por defecto no liquidados
+
+    prestaciones_qs = (
+        Prestacion.objects
+        .filter(categoria__in=CATEGORIAS_LIQUIDABLES)
+        .exclude(codigo__isnull=True)
+        .exclude(codigo__exact="")
+    )
+
+    if categoria:
+        prestaciones_qs = prestaciones_qs.filter(categoria=categoria)
+
+    codigos_liquidables = list(
+        prestaciones_qs.values_list("codigo", flat=True).distinct()
+    )
+
+    categoria_por_codigo = {
+        p.codigo: p.categoria
+        for p in Prestacion.objects.filter(codigo__in=codigos_liquidables)
+    }
+
+    items_qs = (
+        PresupuestoItem.objects
+        .select_related("presupuesto", "liquidado_por") 
+        .filter(
+            codigo__in=codigos_liquidables
+        ) 
+        .order_by("-presupuesto__fecha_inicio", "-id")
+    )
+
+    if fecha_ingreso_desde:
+        items_qs = items_qs.filter(
+            presupuesto__fecha_inicio__date__gte=fecha_ingreso_desde
+        )
+
+    if fecha_ingreso_hasta:
+        items_qs = items_qs.filter(
+            presupuesto__fecha_inicio__date__lte=fecha_ingreso_hasta
+        )
+
+    if fecha_egreso_desde:
+        items_qs = items_qs.filter(
+            presupuesto__fecha_fin__date__gte=fecha_egreso_desde
+        )
+
+    if fecha_egreso_hasta:
+        items_qs = items_qs.filter(
+            presupuesto__fecha_fin__date__lte=fecha_egreso_hasta
+        )
+
+    if paciente:
+        items_qs = items_qs.filter(
+            presupuesto__paciente_nombre__icontains=paciente
+        )
+
+    if hc:
+        items_qs = items_qs.filter(
+            presupuesto__hc__icontains=hc
+        )
+
+    print("Para qs :",items_qs)
+
+    if liquidado == "si":
+        items_qs = items_qs.filter(liquidado=True)
+    elif liquidado == "no":
+        items_qs = items_qs.filter(liquidado=False)
+
+    data = []
+    total_importe = Decimal("0.00")
+    total_liquidados = Decimal("0.00")
+    total_pendientes = Decimal("0.00")
+
+    for item in items_qs:
+
+        # Solo permitir liquidación si el saldo del presupuesto es negativo
+        presupuesto = item.presupuesto
+        if not (
+            presupuesto.estado == "cerrado" or
+            presupuesto.saldo <= 0
+        ):
+            continue
+        categoria_item = categoria_por_codigo.get(item.codigo, "-")
+
+        data.append({
+            "obj": item,
+            "categoria": categoria_item,
+        })
+
+        importe = item.importe or Decimal("0.00")
+        total_importe += importe
+
+        if item.liquidado:
+            total_liquidados += importe
+        else:
+            total_pendientes += importe
+
+    categorias_disponibles = (
+        Prestacion.objects
+        .filter(categoria__in=CATEGORIAS_LIQUIDABLES)
+        .exclude(codigo__isnull=True)
+        .exclude(codigo__exact="")
+        .values_list("categoria", flat=True)
+        .distinct()
+        .order_by("categoria")
+    )
+
+    context = {
+        "data": data,
+        "categorias": categorias_disponibles,
+        "liquidado_opciones": [
+            ("no", "No liquidados"),
+            ("si", "Liquidados"),
+            ("todos", "Todos"),
+        ],
+        "total_items": len(data),
+        "total_importe": total_importe,
+        "total_liquidados": total_liquidados,
+        "total_pendientes": total_pendientes,
+    }
+
+    return render(request, "presupuestos/liquidacion_prestaciones.html", context)
+
+from django.urls import reverse
+
+@login_required
+def liquidar_prestacion_item(request, item_id):
+    item = get_object_or_404(PresupuestoItem, pk=item_id)
+
+    prestaciones_validas = Prestacion.objects.filter(
+        categoria__in=CATEGORIAS_LIQUIDABLES,
+        codigo=item.codigo
+    ).exists()
+
+    if not prestaciones_validas:
+        messages.error(request, "El ítem no pertenece a una categoría liquidable.")
+        return redirect(f"{reverse('presupuestos_app:liquidacion_prestaciones')}?{request.GET.urlencode()}")
+
+    if request.method == "POST":
+        if item.liquidado:
+            messages.warning(request, "Este ítem ya fue liquidado.")
+            return redirect("presupuestos_app:liquidacion_prestaciones")
+
+        fecha_liquidacion = request.POST.get("fecha_liquidacion")
+        observaciones = request.POST.get("observaciones")
+
+        if not fecha_liquidacion:
+            messages.error(request, "Debe indicar la fecha de liquidación.")
+            return redirect("presupuestos_app:liquidacion_prestaciones")
+
+        item.liquidado = True
+        item.fecha_liquidacion = fecha_liquidacion
+        item.liquidado_en = timezone.now()
+        item.liquidado_por = request.user
+        item.observaciones_liquidacion = observaciones
+        item.save()
+
+        messages.success(request, f"El ítem #{item.id} fue liquidado correctamente.")
+
+    return redirect("presupuestos_app:liquidacion_prestaciones")
+
 
 
 
