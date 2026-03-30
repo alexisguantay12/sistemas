@@ -515,9 +515,10 @@ function parsearNumeroAR(str) {
 document.getElementById("tabla-prestaciones").addEventListener("blur", async e => {
     if (!e.target.classList.contains("codigo")) return;
     const codigo = e.target.value.trim();
-    if (!codigo) return;
-
-    const fila = e.target.closest("tr");
+    const fila = e.target.closest("tr");    
+    if (!codigo){ 
+        return;
+    } 
     try {
         const obraSocialId = document.getElementById("obra_social_id").value;
         console.log("Obra Social Id es:", obraSocialId)
@@ -799,7 +800,8 @@ function agregarFila() {
     const tbody = document.querySelector("#tabla-prestaciones tbody");
     const template = tbody.querySelector("tr.fila-detalle");
     const fila = template.cloneNode(true);
-
+    fila.querySelector(".precio").setAttribute("readonly", true);
+    fila.querySelector(".precio").classList.remove("bg-light");
     fila.querySelectorAll("input").forEach(el => {
         el.value = el.classList.contains("cantidad") ? 1 : "";
         if (el.classList.contains("precio")) el.value = (0).toFixed(DECIMALS);

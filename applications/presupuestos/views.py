@@ -852,8 +852,8 @@ def gestion_clausulas(request):
 
 def get_prestacion(request, codigo):
     """Devuelve los datos de una prestación según código."""
-    prestacion = get_object_or_404(Prestacion, codigo=codigo)
-
+    print("Entre aca getprestacion")
+    prestacion = get_object_or_404(Prestacion, codigo=codigo) 
     # Casos especiales
     if codigo == '430101':
         p_desc = get_object_or_404(Prestacion, codigo='431001')
