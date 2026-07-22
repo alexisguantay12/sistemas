@@ -1,0 +1,2785 @@
+{% extends "base3.html" %}
+
+{% block title %}
+Dashboard de llamadores
+{% endblock title %}
+
+{% block content %}
+
+<style>
+    :root {
+        --dashboard-bg: #07111f;
+        --dashboard-panel: #0d1a2b;
+        --dashboard-panel-soft: #111f32;
+        --dashboard-border: rgba(148, 163, 184, 0.15);
+        --dashboard-text: #f8fafc;
+        --dashboard-muted: #94a3b8;
+
+        --dashboard-green: #10d981;
+        --dashboard-green-soft: rgba(16, 217, 129, 0.13);
+
+        --dashboard-blue: #2f8cff;
+        --dashboard-blue-soft: rgba(47, 140, 255, 0.13);
+
+        --dashboard-purple: #8b5cf6;
+        --dashboard-purple-soft: rgba(139, 92, 246, 0.14);
+
+        --dashboard-orange: #ff8a1f;
+        --dashboard-orange-soft: rgba(255, 138, 31, 0.14);
+
+        --dashboard-yellow: #f6c915;
+        --dashboard-yellow-soft: rgba(246, 201, 21, 0.14);
+
+        --dashboard-red: #ef4444;
+        --dashboard-red-soft: rgba(239, 68, 68, 0.14);
+    }
+
+    body {
+        background: var(--dashboard-bg);
+    }
+
+    .dashboard-wrapper {
+        min-height: calc(100vh - 60px);
+        padding: 16px;
+        background:
+            radial-gradient(
+                circle at top left,
+                rgba(47, 140, 255, 0.08),
+                transparent 28%
+            ),
+            linear-gradient(
+                135deg,
+                #06101d 0%,
+                #091525 48%,
+                #06101d 100%
+            );
+        color: var(--dashboard-text);
+    }
+
+    /* ======================================================
+       ENCABEZADO
+       ====================================================== */
+
+    .dashboard-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 24px;
+        margin-bottom: 14px;
+        padding: 17px 22px;
+        border: 1px solid var(--dashboard-border);
+        border-radius: 12px;
+        background:
+            linear-gradient(
+                135deg,
+                rgba(15, 30, 49, 0.98),
+                rgba(10, 23, 39, 0.98)
+            );
+        box-shadow: 0 12px 35px rgba(0, 0, 0, 0.18);
+    }
+
+    .dashboard-brand {
+        display: flex;
+        align-items: center;
+        gap: 16px;
+    }
+
+    .dashboard-brand-icon {
+        width: 52px;
+        height: 52px;
+        flex-shrink: 0;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: 14px;
+        color: #ffffff;
+        font-size: 1.55rem;
+        background:
+            linear-gradient(
+                145deg,
+                rgba(47, 140, 255, 0.28),
+                rgba(47, 140, 255, 0.08)
+            );
+        border: 1px solid rgba(47, 140, 255, 0.25);
+        box-shadow:
+            inset 0 1px 0 rgba(255, 255, 255, 0.06),
+            0 8px 20px rgba(47, 140, 255, 0.12);
+    }
+
+    .dashboard-title {
+        margin: 0;
+        color: var(--dashboard-text);
+        font-size: 1.55rem;
+        font-weight: 750;
+        letter-spacing: -0.02em;
+    }
+
+    .dashboard-subtitle {
+        margin: 5px 0 0;
+        color: var(--dashboard-muted);
+        font-size: 0.84rem;
+    }
+
+    .dashboard-header-right {
+        display: flex;
+        align-items: center;
+        gap: 24px;
+    }
+
+    .live-badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        padding: 8px 12px;
+        border: 1px solid rgba(16, 217, 129, 0.35);
+        border-radius: 7px;
+        color: var(--dashboard-green);
+        background: var(--dashboard-green-soft);
+        font-size: 0.72rem;
+        font-weight: 800;
+        text-transform: uppercase;
+    }
+
+    .live-dot {
+        width: 7px;
+        height: 7px;
+        border-radius: 50%;
+        background: var(--dashboard-green);
+        box-shadow: 0 0 12px rgba(16, 217, 129, 0.9);
+        animation: livePulse 1.5s infinite;
+    }
+
+    @keyframes livePulse {
+        0% {
+            opacity: 1;
+            transform: scale(1);
+        }
+
+        50% {
+            opacity: 0.5;
+            transform: scale(0.75);
+        }
+
+        100% {
+            opacity: 1;
+            transform: scale(1);
+        }
+    }
+
+    .dashboard-clock-container {
+        min-width: 130px;
+        text-align: right;
+    }
+
+    .dashboard-clock {
+        color: #ffffff;
+        font-size: 1.65rem;
+        font-weight: 500;
+        font-variant-numeric: tabular-nums;
+        letter-spacing: 0.02em;
+    }
+
+    .dashboard-clock-label {
+        margin-top: 2px;
+        color: var(--dashboard-muted);
+        font-size: 0.68rem;
+    }
+
+    /* ======================================================
+       TARJETAS DE RESUMEN
+       ====================================================== */
+
+    .summary-grid {
+        display: grid;
+        grid-template-columns: repeat(5, minmax(0, 1fr));
+        gap: 12px;
+        margin-bottom: 12px;
+    }
+
+    .summary-card {
+        min-height: 124px;
+        display: flex;
+        align-items: flex-start;
+        gap: 14px;
+        padding: 18px;
+        border: 1px solid var(--dashboard-border);
+        border-radius: 10px;
+        background:
+            linear-gradient(
+                145deg,
+                rgba(17, 31, 50, 0.98),
+                rgba(11, 25, 42, 0.98)
+            );
+        box-shadow: 0 9px 26px rgba(0, 0, 0, 0.15);
+        overflow: hidden;
+        position: relative;
+    }
+
+    .summary-card::after {
+        content: "";
+        position: absolute;
+        width: 90px;
+        height: 90px;
+        right: -34px;
+        bottom: -42px;
+        border-radius: 50%;
+        background: currentColor;
+        opacity: 0.025;
+    }
+
+    .summary-icon {
+        width: 48px;
+        height: 48px;
+        flex-shrink: 0;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: 13px;
+        font-size: 1.25rem;
+        border: 1px solid currentColor;
+        box-shadow: 0 7px 18px currentColor;
+    }
+
+    .summary-card.green {
+        color: var(--dashboard-green);
+    }
+
+    .summary-card.green .summary-icon {
+        background: var(--dashboard-green-soft);
+    }
+
+    .summary-card.blue {
+        color: var(--dashboard-blue);
+    }
+
+    .summary-card.blue .summary-icon {
+        background: var(--dashboard-blue-soft);
+    }
+
+    .summary-card.purple {
+        color: var(--dashboard-purple);
+    }
+
+    .summary-card.purple .summary-icon {
+        background: var(--dashboard-purple-soft);
+    }
+
+    .summary-card.orange {
+        color: var(--dashboard-orange);
+    }
+
+    .summary-card.orange .summary-icon {
+        background: var(--dashboard-orange-soft);
+    }
+
+    .summary-card.yellow {
+        color: var(--dashboard-yellow);
+    }
+
+    .summary-card.yellow .summary-icon {
+        background: var(--dashboard-yellow-soft);
+    }
+
+    .summary-content {
+        min-width: 0;
+    }
+
+    .summary-label {
+        margin: 1px 0 8px;
+        color: #cbd5e1;
+        font-size: 0.68rem;
+        font-weight: 750;
+        line-height: 1.3;
+        text-transform: uppercase;
+    }
+
+    .summary-value {
+        color: var(--dashboard-text);
+        font-size: 2rem;
+        font-weight: 780;
+        line-height: 1;
+        font-variant-numeric: tabular-nums;
+    }
+
+    .summary-description {
+        margin-top: 10px;
+        color: var(--dashboard-muted);
+        font-size: 0.72rem;
+        line-height: 1.35;
+    }
+
+    /* ======================================================
+       GRILLA PRINCIPAL
+       ====================================================== */
+
+    .dashboard-main-grid {
+        display: grid;
+        grid-template-columns: minmax(420px, 1fr) minmax(520px, 1fr);
+        gap: 12px;
+        align-items: stretch;
+    }
+
+    .dashboard-column {
+        display: grid;
+        gap: 12px;
+        align-content: start;
+    }
+
+    .dashboard-panel {
+        border: 1px solid var(--dashboard-border);
+        border-radius: 10px;
+        background:
+            linear-gradient(
+                145deg,
+                rgba(14, 28, 46, 0.98),
+                rgba(9, 22, 38, 0.98)
+            );
+        box-shadow: 0 9px 27px rgba(0, 0, 0, 0.14);
+        overflow: hidden;
+    }
+
+    .panel-header {
+        min-height: 56px;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 14px;
+        padding: 14px 16px;
+        border-bottom: 1px solid var(--dashboard-border);
+    }
+
+    .panel-title-group {
+        min-width: 0;
+    }
+
+    .panel-title {
+        margin: 0;
+        color: #f8fafc;
+        font-size: 0.9rem;
+        font-weight: 750;
+        text-transform: uppercase;
+    }
+
+    .panel-subtitle {
+        margin-top: 4px;
+        color: var(--dashboard-muted);
+        font-size: 0.7rem;
+    }
+
+    .panel-count {
+        min-width: 32px;
+        height: 27px;
+        padding: 0 9px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: 7px;
+        color: var(--dashboard-green);
+        background: var(--dashboard-green-soft);
+        font-size: 0.78rem;
+        font-weight: 800;
+    }
+
+    .panel-body {
+        padding: 12px;
+    }
+
+    /* ======================================================
+       TABLA DE LLAMADORES
+       ====================================================== */
+
+    .waiting-panel {
+        min-height: 570px;
+    }
+
+    .dashboard-table-wrapper {
+        width: 100%;
+        overflow-x: auto;
+    }
+
+    .dashboard-table {
+        width: 100%;
+        border-collapse: collapse;
+        color: #e2e8f0;
+    }
+
+    .dashboard-table thead th {
+        padding: 11px 12px;
+        color: #aebdce;
+        background: rgba(148, 163, 184, 0.08);
+        font-size: 0.68rem;
+        font-weight: 700;
+        text-align: left;
+        text-transform: uppercase;
+        white-space: nowrap;
+    }
+
+    .dashboard-table tbody td {
+        padding: 13px 12px;
+        border-bottom: 1px solid rgba(148, 163, 184, 0.1);
+        font-size: 0.83rem;
+        vertical-align: middle;
+    }
+
+    .dashboard-table tbody tr {
+        transition:
+            background 0.15s ease,
+            transform 0.15s ease;
+    }
+
+    .dashboard-table tbody tr:hover {
+        background: rgba(47, 140, 255, 0.05);
+    }
+
+    .queue-position {
+        width: 30px;
+        height: 30px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: 50%;
+        color: var(--dashboard-green);
+        background: var(--dashboard-green-soft);
+        border: 1px solid rgba(16, 217, 129, 0.16);
+        font-size: 0.75rem;
+        font-weight: 800;
+    }
+
+    .queue-subject {
+        color: #f8fafc;
+        font-size: 0.92rem;
+        font-weight: 750;
+    }
+
+    .queue-status {
+        display: block;
+        margin-top: 3px;
+        color: var(--dashboard-muted);
+        font-size: 0.67rem;
+    }
+
+    .queue-time {
+        color: var(--dashboard-green);
+        font-size: 0.93rem;
+        font-weight: 800;
+        font-variant-numeric: tabular-nums;
+    }
+
+    .queue-time.warning {
+        color: var(--dashboard-yellow);
+    }
+
+    .queue-time.danger {
+        color: var(--dashboard-red);
+    }
+
+    .queue-from {
+        color: #b9c4d1;
+        font-size: 0.8rem;
+        font-variant-numeric: tabular-nums;
+    }
+
+
+
+    .frequency-chart-container {
+        position: relative;
+        width: 100%;
+        height: 330px;
+        padding: 18px 16px 10px;
+    }
+
+    .frequency-chart-container canvas {
+        width: 100% !important;
+        height: 100% !important;
+    }
+
+    .chart-loading-message {
+        position: absolute;
+        inset: 0;
+        z-index: 2;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        flex-direction: column;
+        gap: 10px;
+        color: var(--dashboard-muted);
+        background: rgba(9, 22, 38, 0.75);
+        font-size: 0.78rem;
+    }
+
+    .chart-error-message {
+        position: absolute;
+        inset: 20px;
+        z-index: 3;
+        align-items: center;
+        justify-content: center;
+        padding: 18px;
+        border: 1px solid rgba(239, 68, 68, 0.25);
+        border-radius: 8px;
+        color: #fecaca;
+        background: rgba(239, 68, 68, 0.07);
+        font-size: 0.8rem;
+        text-align: center;
+    }
+
+
+    .usuarios-loading {
+        min-height: 230px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        flex-direction: column;
+        gap: 10px;
+        color: var(--dashboard-muted);
+        font-size: 0.76rem;
+    }
+
+    .usuarios-error {
+        min-height: 180px;
+        align-items: center;
+        justify-content: center;
+        padding: 20px;
+        border: 1px solid rgba(239, 68, 68, 0.25);
+        border-radius: 8px;
+        color: #fecaca;
+        background: rgba(239, 68, 68, 0.06);
+        font-size: 0.78rem;
+        text-align: center;
+    }
+
+    .usuario-ranking {
+        width: 27px;
+        height: 27px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: 50%;
+        color: var(--dashboard-blue);
+        background: var(--dashboard-blue-soft);
+        border: 1px solid rgba(47, 140, 255, 0.2);
+        font-size: 0.72rem;
+        font-weight: 800;
+    }
+
+    .usuario-nombre {
+        color: #f8fafc;
+        font-weight: 650;
+    }
+
+    .usuario-cantidad {
+        color: #e2e8f0;
+        font-size: 0.9rem;
+        font-weight: 800;
+        font-variant-numeric: tabular-nums;
+    }
+
+    .usuario-participacion {
+        display: grid;
+        grid-template-columns: minmax(80px, 1fr) 55px;
+        align-items: center;
+        gap: 10px;
+    }
+
+    .usuario-porcentaje {
+        color: #cbd5e1;
+        font-size: 0.75rem;
+        font-variant-numeric: tabular-nums;
+        text-align: right;
+    }
+
+    .dashboard-progress {
+        height: 7px;
+        border-radius: 999px;
+        background: rgba(148, 163, 184, 0.12);
+        overflow: hidden;
+    }
+
+    .dashboard-progress-bar {
+        height: 100%;
+        min-width: 2px;
+        border-radius: inherit;
+        background: linear-gradient(
+            90deg,
+            #1686ff,
+            #46a4ff
+        );
+        transition: width 0.4s ease;
+    }
+    .evolution-panel {
+        overflow: hidden;
+    }
+
+    .evolution-current {
+        min-width: 120px;
+        padding: 8px 12px;
+        border: 1px solid rgba(47, 140, 255, 0.18);
+        border-radius: 8px;
+        background: rgba(47, 140, 255, 0.08);
+        text-align: right;
+    }
+
+    .evolution-current-label {
+        display: block;
+        margin-bottom: 2px;
+        color: var(--dashboard-muted);
+        font-size: 0.65rem;
+        text-transform: uppercase;
+        letter-spacing: 0.06em;
+    }
+
+    .evolution-current strong {
+        color: #f8fafc;
+        font-size: 1.05rem;
+        font-variant-numeric: tabular-nums;
+    }
+
+    .evolution-status-bar {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 14px;
+        padding: 10px 18px;
+        border-top: 1px solid rgba(148, 163, 184, 0.08);
+        border-bottom: 1px solid rgba(148, 163, 184, 0.08);
+        background: rgba(2, 10, 22, 0.22);
+    }
+
+    .evolution-legend-item {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        color: #94a3b8;
+        font-size: 0.68rem;
+    }
+
+    .evolution-dot {
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+        box-shadow: 0 0 8px currentColor;
+    }
+
+    .evolution-dot-green {
+        color: #10d981;
+        background: #10d981;
+    }
+
+    .evolution-dot-yellow {
+        color: #f6c915;
+        background: #f6c915;
+    }
+
+    .evolution-dot-orange {
+        color: #ff8a1f;
+        background: #ff8a1f;
+    }
+
+    .evolution-dot-red {
+        color: #ef4444;
+        background: #ef4444;
+    }
+
+    .evolution-chart-wrapper {
+        position: relative;
+        width: 100%;
+        height: 340px;
+        padding: 18px 16px 10px;
+    }
+
+    .evolution-chart-wrapper canvas {
+        width: 100% !important;
+        height: 100% !important;
+    }
+
+    .evolution-state {
+        position: absolute;
+        inset: 0;
+        z-index: 4;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        flex-direction: column;
+        gap: 10px;
+        padding: 20px;
+        color: var(--dashboard-muted);
+        background: rgba(9, 22, 38, 0.82);
+        font-size: 0.78rem;
+        text-align: center;
+    }
+
+    .evolution-error {
+        color: #fecaca;
+        background: rgba(69, 10, 10, 0.82);
+    }
+
+    /* ======================================================
+       PANELES SECUNDARIOS
+       ====================================================== */
+
+    .chart-panel {
+        min-height: 322px;
+    }
+
+    .chart-placeholder {
+        min-height: 245px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 24px;
+    }
+
+    .placeholder-content {
+        max-width: 320px;
+        text-align: center;
+    }
+
+    .placeholder-icon {
+        width: 58px;
+        height: 58px;
+        margin: 0 auto 14px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: 15px;
+        color: var(--dashboard-blue);
+        background: var(--dashboard-blue-soft);
+        border: 1px solid rgba(47, 140, 255, 0.2);
+        font-size: 1.35rem;
+    }
+
+    .placeholder-title {
+        margin: 0 0 7px;
+        color: #dbeafe;
+        font-size: 0.88rem;
+        font-weight: 700;
+    }
+
+    .placeholder-text {
+        margin: 0;
+        color: var(--dashboard-muted);
+        font-size: 0.74rem;
+        line-height: 1.55;
+    }
+
+    .users-table .progress-column {
+        width: 40%;
+    }
+
+    .dashboard-progress {
+        height: 7px;
+        border-radius: 999px;
+        background: rgba(148, 163, 184, 0.12);
+        overflow: hidden;
+    }
+
+    .dashboard-progress-bar {
+        height: 100%;
+        border-radius: inherit;
+        background: linear-gradient(
+            90deg,
+            #1686ff,
+            #46a4ff
+        );
+    }
+
+    .panel-footer {
+        padding: 11px 15px;
+        border-top: 1px solid var(--dashboard-border);
+        color: var(--dashboard-muted);
+        background: rgba(148, 163, 184, 0.025);
+        font-size: 0.69rem;
+        text-align: center;
+    }
+
+    /* ======================================================
+       ESTADOS
+       ====================================================== */
+
+    .dashboard-loading,
+    .dashboard-empty,
+    .dashboard-error {
+        min-height: 300px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 30px;
+        text-align: center;
+    }
+
+    .loading-spinner {
+        width: 34px;
+        height: 34px;
+        margin: 0 auto 12px;
+        border: 3px solid rgba(148, 163, 184, 0.18);
+        border-top-color: var(--dashboard-blue);
+        border-radius: 50%;
+        animation: dashboardSpin 0.8s linear infinite;
+    }
+
+    @keyframes dashboardSpin {
+        to {
+            transform: rotate(360deg);
+        }
+    }
+
+    .state-title {
+        margin: 0 0 5px;
+        color: #e2e8f0;
+        font-size: 0.88rem;
+        font-weight: 700;
+    }
+
+    .state-description {
+        margin: 0;
+        color: var(--dashboard-muted);
+        font-size: 0.74rem;
+    }
+
+    .dashboard-error {
+        color: #fecaca;
+        background: rgba(239, 68, 68, 0.04);
+    }
+
+    /* ======================================================
+       PIE
+       ====================================================== */
+
+    .dashboard-footer {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 18px;
+        margin-top: 12px;
+        padding: 12px 16px;
+        border: 1px solid var(--dashboard-border);
+        border-radius: 9px;
+        color: var(--dashboard-muted);
+        background: rgba(13, 26, 43, 0.9);
+        font-size: 0.68rem;
+    }
+
+    .footer-item {
+        display: inline-flex;
+        align-items: center;
+        gap: 7px;
+    }
+
+    .connection-dot {
+        width: 7px;
+        height: 7px;
+        border-radius: 50%;
+        background: var(--dashboard-green);
+        box-shadow: 0 0 8px rgba(16, 217, 129, 0.65);
+    }
+
+    /* ======================================================
+       RESPONSIVE
+       ====================================================== */
+
+    @media (max-width: 1350px) {
+        .summary-grid {
+            grid-template-columns: repeat(3, minmax(0, 1fr));
+        }
+
+        .dashboard-main-grid {
+            grid-template-columns: 1fr;
+        }
+
+        .waiting-panel {
+            min-height: auto;
+        }
+    }
+
+    @media (max-width: 900px) {
+        .summary-grid {
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+        }
+
+        .dashboard-header {
+            align-items: flex-start;
+            flex-direction: column;
+        }
+
+        .dashboard-header-right {
+            width: 100%;
+            justify-content: space-between;
+        }
+    }
+
+    @media (max-width: 580px) {
+        .dashboard-wrapper {
+            padding: 9px;
+        }
+
+        .summary-grid {
+            grid-template-columns: 1fr;
+        }
+
+        .dashboard-title {
+            font-size: 1.25rem;
+        }
+
+        .dashboard-brand-icon {
+            width: 45px;
+            height: 45px;
+        }
+
+        .dashboard-header-right {
+            align-items: flex-start;
+            flex-direction: column;
+        }
+
+        .dashboard-clock-container {
+            text-align: left;
+        }
+
+        .dashboard-main-grid {
+            display: block;
+        }
+
+        .dashboard-column {
+            margin-bottom: 12px;
+        }
+
+        .dashboard-footer {
+            align-items: flex-start;
+            flex-direction: column;
+        }
+    }
+</style>
+
+<div class="dashboard-wrapper">
+
+    <!-- ==================================================
+         ENCABEZADO
+         ================================================== -->
+
+    <header class="dashboard-header">
+
+        <div class="dashboard-brand">
+
+            <div class="dashboard-brand-icon">
+                <i class="fas fa-headset"></i>
+            </div>
+
+            <div>
+                <h1 class="dashboard-title">
+                    Dashboard de Control
+                </h1>
+
+                <p class="dashboard-subtitle">
+                    Seguimiento operativo en tiempo real
+                    ·
+                    <span id="fecha-actual"></span>
+                </p>
+            </div>
+
+        </div>
+
+        <div class="dashboard-header-right">
+
+            <div class="live-badge">
+                <span class="live-dot"></span>
+                En vivo
+            </div>
+
+            <div class="dashboard-clock-container">
+                <div
+                    id="reloj-dashboard"
+                    class="dashboard-clock"
+                >
+                    --:--:--
+                </div>
+
+                <div class="dashboard-clock-label">
+                    Actualización automática
+                </div>
+            </div>
+
+        </div>
+
+    </header>
+
+    <!-- ==================================================
+         INDICADORES PRINCIPALES
+         ================================================== -->
+
+    <section class="summary-grid">
+
+        <article class="summary-card green">
+
+            <div class="summary-icon">
+                <i class="fas fa-users"></i>
+            </div>
+
+            <div class="summary-content">
+                <div class="summary-label">
+                    En espera ahora
+                </div>
+
+                <div
+                    id="kpi-en-espera"
+                    class="summary-value"
+                >
+                    0
+                </div>
+
+                <div class="summary-description">
+                    Llamadores pendientes de atención
+                </div>
+            </div>
+
+        </article>
+
+        <article class="summary-card blue">
+
+            <div class="summary-icon">
+                <i class="fas fa-user-check"></i>
+            </div>
+
+            <div class="summary-content">
+                <div class="summary-label">
+                    Atendidos hoy
+                </div>
+
+                <div
+                    id="kpi-atendidos"
+                    class="summary-value"
+                >
+                    --
+                </div>
+
+                <div class="summary-description">
+                    Se conectará al próximo indicador
+                </div>
+            </div>
+
+        </article>
+
+        <article class="summary-card purple">
+
+            <div class="summary-icon">
+                <i class="fas fa-clock"></i>
+            </div>
+
+            <div class="summary-content">
+                <div class="summary-label">
+                    Tiempo promedio hoy
+                </div>
+
+                <div
+                    id="kpi-promedio"
+                    class="summary-value"
+                >
+                    --:--
+                </div>
+
+                <div class="summary-description">
+                    Promedio entre alta y atención
+                </div>
+            </div>
+
+        </article>
+
+        <article class="summary-card orange">
+
+            <div class="summary-icon">
+                <i class="fas fa-hourglass-end"></i>
+            </div>
+
+            <div class="summary-content">
+                <div class="summary-label">
+                    Tiempo máximo hoy
+                </div>
+
+                <div
+                    id="kpi-maximo"
+                    class="summary-value"
+                >
+                    --:--
+                </div>
+
+                <div class="summary-description">
+                    Mayor demora registrada
+                </div>
+            </div>
+
+        </article>
+
+        <article class="summary-card yellow">
+
+            <div class="summary-icon">
+                <i class="fas fa-chart-line"></i>
+            </div>
+
+            <div class="summary-content">
+                <div class="summary-label">
+                    Total ingresados hoy
+                </div>
+
+                <div
+                    id="kpi-ingresados"
+                    class="summary-value"
+                >
+                    --
+                </div>
+
+                <div class="summary-description">
+                    Total de llamadores del día
+                </div>
+            </div>
+
+        </article>
+
+    </section>
+
+    <!-- ==================================================
+         CONTENIDO PRINCIPAL
+         ================================================== -->
+
+    <main class="dashboard-main-grid">
+
+        <!-- COLUMNA IZQUIERDA -->
+
+        <div class="dashboard-column">
+
+            <section class="dashboard-panel waiting-panel">
+
+                <div class="panel-header">
+
+                    <div class="panel-title-group">
+                        <h2 class="panel-title">
+                            Llamadores actualmente en espera
+                        </h2>
+
+                        <div class="panel-subtitle">
+                            Ordenados desde el mayor tiempo de espera
+                        </div>
+                    </div>
+
+                    <div
+                        id="total-en-espera"
+                        class="panel-count"
+                    >
+                        0
+                    </div>
+
+                </div>
+
+                <div id="contenido-espera">
+
+                    <div class="dashboard-loading">
+                        <div>
+                            <div class="loading-spinner"></div>
+
+                            <p class="state-title">
+                                Cargando llamadores
+                            </p>
+
+                            <p class="state-description">
+                                Consultando información en tiempo real
+                            </p>
+                        </div>
+                    </div>
+
+                </div>
+
+                <div class="panel-footer">
+                    La lista se actualiza automáticamente cada 5 segundos
+                </div>
+
+            </section>
+
+           <section class="dashboard-panel evolution-panel">
+
+            <div class="panel-header">
+
+                <div class="panel-title-group">
+
+                    <h2 class="panel-title">
+                        Evolución del tiempo promedio
+                    </h2>
+
+                    <div class="panel-subtitle">
+                        Tiempo promedio de espera por hora
+                    </div>
+
+                </div>
+
+                <div class="evolution-current">
+
+                    <span class="evolution-current-label">
+                        Promedio actual
+                    </span>
+
+                    <strong id="evolucion-promedio-actual">
+                        --
+                    </strong>
+
+                </div>
+
+            </div>
+
+            <div class="evolution-status-bar">
+
+                <div class="evolution-legend-item">
+                    <span class="evolution-dot evolution-dot-green"></span>
+                    Menos de 10 min
+                </div>
+
+                <div class="evolution-legend-item">
+                    <span class="evolution-dot evolution-dot-yellow"></span>
+                    10 a 15 min
+                </div>
+
+                <div class="evolution-legend-item">
+                    <span class="evolution-dot evolution-dot-orange"></span>
+                    15 a 25 min
+                </div>
+
+                <div class="evolution-legend-item">
+                    <span class="evolution-dot evolution-dot-red"></span>
+                    25 min o más
+                </div>
+
+            </div>
+
+            <div class="evolution-chart-wrapper">
+
+                <div
+                    id="evolucion-promedio-cargando"
+                    class="evolution-state"
+                >
+                    <div class="loading-spinner"></div>
+
+                    <span>
+                        Cargando evolución del tiempo promedio...
+                    </span>
+                </div>
+
+                <div
+                    id="evolucion-promedio-error"
+                    class="evolution-state evolution-error"
+                    style="display: none;"
+                >
+                    No se pudo cargar la evolución del tiempo promedio.
+                </div>
+
+                <div
+                    id="evolucion-promedio-vacio"
+                    class="evolution-state"
+                    style="display: none;"
+                >
+                    Todavía no hay atenciones finalizadas hoy.
+                </div>
+
+                <canvas
+                    id="grafico-evolucion-promedio"
+                    aria-label="Evolución del tiempo promedio de espera"
+                ></canvas>
+
+            </div>
+
+            <div class="panel-footer">
+
+                <span>
+                    El color de la línea representa el nivel de espera
+                </span>
+
+                <span id="evolucion-ultima-actualizacion">
+                    Sin actualizar
+                </span>
+
+            </div>
+
+        </section>
+
+        </div>
+
+        <!-- COLUMNA DERECHA -->
+
+        <div class="dashboard-column">
+
+            <section class="dashboard-panel chart-panel">
+
+                <div class="panel-header">
+
+                    <div class="panel-title-group">
+                        <h2 class="panel-title">
+                            Frecuencia de atenciones por letra
+                        </h2>
+
+                        <div class="panel-subtitle">
+                            Cantidad de llamadores atendidos hoy por cada letra
+                        </div>
+                    </div>
+
+                    <i
+                        class="fas fa-chart-bar"
+                        style="color: var(--dashboard-purple);"
+                    ></i>
+
+                </div>
+
+                <div class="frequency-chart-container">
+
+                    <div
+                        id="frecuencia-letras-cargando"
+                        class="chart-loading-message"
+                    >
+                        <div class="loading-spinner"></div>
+
+                        <span>
+                            Cargando frecuencia por letra...
+                        </span>
+                    </div>
+
+                    <div
+                        id="frecuencia-letras-error"
+                        class="chart-error-message"
+                        style="display: none;"
+                    >
+                        No se pudo obtener la frecuencia por letra.
+                    </div>
+
+                    <canvas
+                        id="grafico-frecuencia-letras"
+                        aria-label="Frecuencia de atenciones por letra"
+                    ></canvas>
+
+                </div>
+
+                <div class="panel-footer">
+                    Pase el cursor sobre una barra para ver el promedio de espera
+                </div>
+
+            </section>
+
+            <section class="dashboard-panel">
+
+                <div class="panel-header">
+
+                    <div class="panel-title-group">
+                        <h2 class="panel-title">
+                            Atenciones realizadas por usuario
+                        </h2>
+
+                        <div class="panel-subtitle">
+                            Cantidad y participación sobre el total de hoy
+                        </div>
+                    </div>
+
+                    <div
+                        id="total-atenciones-usuarios"
+                        class="panel-count"
+                        style="
+                            color: var(--dashboard-blue);
+                            background: var(--dashboard-blue-soft);
+                        "
+                    >
+                        0
+                    </div>
+
+                </div>
+
+                <div class="panel-body">
+
+                    <div
+                        id="usuarios-atenciones-cargando"
+                        class="usuarios-loading"
+                    >
+                        <div class="loading-spinner"></div>
+
+                        <span>
+                            Cargando atenciones por usuario...
+                        </span>
+                    </div>
+
+                    <div
+                        id="usuarios-atenciones-error"
+                        class="usuarios-error"
+                        style="display: none;"
+                    >
+                        No se pudieron cargar las atenciones por usuario.
+                    </div>
+
+                    <div
+                        id="usuarios-atenciones-contenido"
+                        class="dashboard-table-wrapper"
+                        style="display: none;"
+                    >
+
+                        <table class="dashboard-table users-table">
+
+                            <thead>
+                                <tr>
+                                    <th style="width: 45px;">
+                                        N.º
+                                    </th>
+
+                                    <th>
+                                        Usuario
+                                    </th>
+
+                                    <th style="width: 110px;">
+                                        Atenciones
+                                    </th>
+
+                                    <th class="progress-column">
+                                        Participación
+                                    </th>
+                                </tr>
+                            </thead>
+
+                            <tbody id="tabla-atenciones-usuarios">
+                            </tbody>
+
+                        </table>
+
+                    </div>
+
+                </div>
+
+                <div class="panel-footer">
+                    Atenciones finalizadas durante el día de hoy
+                </div>
+
+            </section>
+
+            <section class="dashboard-panel">
+
+                <div class="panel-header">
+
+                    <div class="panel-title-group">
+                        <h2 class="panel-title">
+                            Resumen por franja horaria
+                        </h2>
+
+                        <div class="panel-subtitle">
+                            Ingresados, atendidos y espera promedio
+                        </div>
+                    </div>
+
+                    <i
+                        class="fas fa-calendar-day"
+                        style="color: var(--dashboard-yellow);"
+                    ></i>
+
+                </div>
+
+                <div class="panel-body">
+
+                    <div class="dashboard-table-wrapper">
+
+                        <table class="dashboard-table">
+
+                            <thead>
+                                <tr>
+                                    <th>Franja horaria</th>
+                                    <th>Ingresados</th>
+                                    <th>Atendidos</th>
+                                    <th>Promedio</th>
+                                </tr>
+                            </thead>
+
+                            <tbody>
+
+                                <tr>
+                                    <td colspan="4">
+
+                                        <div
+                                            class="placeholder-content"
+                                            style="
+                                                max-width: none;
+                                                padding: 24px 15px;
+                                            "
+                                        >
+
+                                            <p class="placeholder-text">
+                                                La información por franja
+                                                horaria se incorporará en el
+                                                próximo endpoint del
+                                                dashboard.
+                                            </p>
+
+                                        </div>
+
+                                    </td>
+                                </tr>
+
+                            </tbody>
+
+                        </table>
+
+                    </div>
+
+                </div>
+
+            </section>
+
+        </div>
+
+    </main>
+
+    <!-- ==================================================
+         PIE DEL DASHBOARD
+         ================================================== -->
+
+    <footer class="dashboard-footer">
+
+        <div class="footer-item">
+            <i class="fas fa-headset"></i>
+            Sistema de Llamadores Innova
+        </div>
+
+        <div class="footer-item">
+            <span class="connection-dot"></span>
+            Conexión activa
+        </div>
+
+        <div class="footer-item">
+            Última actualización:
+            <strong id="ultima-actualizacion">
+                --:--:--
+            </strong>
+        </div>
+
+        <div class="footer-item">
+            <i class="fas fa-sync-alt"></i>
+            Actualización cada 5 segundos
+        </div>
+
+    </footer>
+
+</div>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
+<script>
+    document.addEventListener("DOMContentLoaded", function () {
+        const urlLlamadores =
+            "{% url 'innova_app:llamadores_en_espera_ajax' %}";
+
+        const contenidoEspera =
+            document.getElementById("contenido-espera");
+
+        const totalEnEspera =
+            document.getElementById("total-en-espera");
+
+        const kpiEnEspera =
+            document.getElementById("kpi-en-espera");
+
+        const ultimaActualizacion =
+            document.getElementById("ultima-actualizacion");
+
+        const relojDashboard =
+            document.getElementById("reloj-dashboard");
+
+        const fechaActual =
+            document.getElementById("fecha-actual");
+
+        const urlAtencionesPorUsuario =
+        "{% url 'innova_app:atenciones_por_usuario_ajax' %}";
+
+        let llamadoresActuales = [];
+        let cargando = false;
+        const urlFrecuenciaPorLetra =
+        "{% url 'innova_app:frecuencia_llamadores_por_letra_ajax' %}";
+
+        const urlEvolucionTiempoPromedio =
+        "{% url 'innova_app:evolucion_tiempo_promedio_ajax' %}";
+
+        const graficoFrecuenciaCanvas =
+            document.getElementById("grafico-frecuencia-letras");
+
+        const frecuenciaLetrasCargando =
+            document.getElementById("frecuencia-letras-cargando");
+
+        const frecuenciaLetrasError =
+            document.getElementById("frecuencia-letras-error");
+
+
+        const tablaAtencionesUsuarios =
+            document.getElementById("tabla-atenciones-usuarios");
+
+        const totalAtencionesUsuarios =
+            document.getElementById("total-atenciones-usuarios");
+
+        const usuariosAtencionesCargando =
+            document.getElementById("usuarios-atenciones-cargando");
+
+        const usuariosAtencionesError =
+            document.getElementById("usuarios-atenciones-error");
+
+        const usuariosAtencionesContenido =
+            document.getElementById("usuarios-atenciones-contenido");
+
+        let cargandoAtencionesUsuarios = false;
+
+        const graficoEvolucionCanvas =
+            document.getElementById("grafico-evolucion-promedio");
+
+        const evolucionPromedioCargando =
+            document.getElementById("evolucion-promedio-cargando");
+
+        const evolucionPromedioError =
+            document.getElementById("evolucion-promedio-error");
+
+        const evolucionPromedioVacio =
+            document.getElementById("evolucion-promedio-vacio");
+
+        const evolucionPromedioActual =
+            document.getElementById("evolucion-promedio-actual");
+
+        const evolucionUltimaActualizacion =
+            document.getElementById("evolucion-ultima-actualizacion");
+
+        let graficoEvolucionPromedio = null;
+        let cargandoEvolucionPromedio = false;
+
+
+        let graficoFrecuenciaLetras = null;
+        let cargandoFrecuenciaLetras = false;   
+        function escaparHtml(valor) {
+            const elemento = document.createElement("div");
+            elemento.textContent = valor ?? "";
+            return elemento.innerHTML;
+        }
+        function obtenerColorPorPromedio(promedio) {
+            const valor = Number.parseFloat(promedio) || 0;
+
+            if (valor < 10) {
+                return "#10d981";
+            }
+
+            if (valor < 15) {
+                return "#f6c915";
+            }
+
+            if (valor < 25) {
+                return "#ff8a1f";
+            }
+
+            return "#ef4444";
+        }
+
+
+        function formatearPromedioDesdeMinutos(promedio) {
+            const valor = Number.parseFloat(promedio) || 0;
+
+            let minutos = Math.floor(valor);
+            let segundos = Math.round(
+                (valor - minutos) * 60
+            );
+
+            if (segundos === 60) {
+                minutos += 1;
+                segundos = 0;
+            }
+
+            return `${minutos} min ${String(segundos).padStart(2, "0")} seg`;
+        }
+
+
+        function crearGradienteEvolucion(contextoGrafico) {
+            const chart = contextoGrafico.chart;
+            const area = chart.chartArea;
+
+            if (!area) {
+                return "rgba(47, 140, 255, 0.18)";
+            }
+
+            const gradiente = chart.ctx.createLinearGradient(
+                0,
+                area.top,
+                0,
+                area.bottom
+            );
+
+            gradiente.addColorStop(
+                0,
+                "rgba(47, 140, 255, 0.36)"
+            );
+
+            gradiente.addColorStop(
+                0.55,
+                "rgba(47, 140, 255, 0.12)"
+            );
+
+            gradiente.addColorStop(
+                1,
+                "rgba(47, 140, 255, 0)"
+            );
+
+            return gradiente;
+        }
+        function formatearTiempo(segundosTotales) {
+            const total = Math.max(
+                0,
+                Number.parseInt(segundosTotales, 10) || 0
+            );
+
+            const horas = Math.floor(total / 3600);
+
+            const minutos = Math.floor(
+                (total % 3600) / 60
+            );
+
+            const segundos = total % 60;
+
+            const minutosTexto = String(minutos).padStart(2, "0");
+            const segundosTexto = String(segundos).padStart(2, "0");
+
+            if (horas > 0) {
+                const horasTexto = String(horas).padStart(2, "0");
+
+                return (
+                    `${horasTexto}:` +
+                    `${minutosTexto}:` +
+                    `${segundosTexto}`
+                );
+            }
+
+            return `${minutosTexto}:${segundosTexto}`;
+        }
+
+        function formatearHoraFecha(fechaIso) {
+            if (!fechaIso) {
+                return "--:--:--";
+            }
+
+            const fecha = new Date(fechaIso);
+
+            if (Number.isNaN(fecha.getTime())) {
+                return "--:--:--";
+            }
+
+            return fecha.toLocaleTimeString(
+                "es-AR",
+                {
+                    hour: "2-digit",
+                    minute: "2-digit",
+                    second: "2-digit",
+                }
+            );
+        }
+
+        function obtenerClaseTiempo(segundos) {
+            if (segundos >= 1200) {
+                return "danger";
+            }
+
+            if (segundos >= 600) {
+                return "warning";
+            }
+
+            return "";
+        }
+
+        function renderizarLlamadores() {
+            const total = llamadoresActuales.length;
+
+            totalEnEspera.textContent = total;
+            kpiEnEspera.textContent = total;
+
+            if (total === 0) {
+                contenidoEspera.innerHTML = `
+                    <div class="dashboard-empty">
+                        <div>
+                            <div
+                                class="placeholder-icon"
+                                style="
+                                    color: var(--dashboard-green);
+                                    background:
+                                        var(--dashboard-green-soft);
+                                    border-color:
+                                        rgba(16, 217, 129, 0.2);
+                                "
+                            >
+                                <i class="fas fa-check"></i>
+                            </div>
+
+                            <p class="state-title">
+                                No hay llamadores en espera
+                            </p>
+
+                            <p class="state-description">
+                                En este momento no existen llamados
+                                pendientes.
+                            </p>
+                        </div>
+                    </div>
+                `;
+
+                return;
+            }
+
+            const filas = llamadoresActuales.map(
+                function (llamador, indice) {
+                    const claseTiempo = obtenerClaseTiempo(
+                        llamador.segundos_espera
+                    );
+
+                    return `
+                        <tr data-fila-indice="${indice}">
+
+                            <td>
+                                <span class="queue-position">
+                                    ${indice + 1}
+                                </span>
+                            </td>
+
+                            <td>
+                                <span class="queue-subject">
+                                    ${escaparHtml(llamador.sujeto)}
+                                </span>
+
+                                <span class="queue-status">
+                                    En espera de atención
+                                </span>
+                            </td>
+
+                            <td>
+                                <span
+                                    class="queue-time ${claseTiempo}"
+                                    data-tiempo-indice="${indice}"
+                                >
+                                    ${formatearTiempo(
+                                        llamador.segundos_espera
+                                    )}
+                                </span>
+                            </td>
+
+                            <td>
+                                <span class="queue-from">
+                                    ${formatearHoraFecha(
+                                        llamador.fecha_alta
+                                    )}
+                                </span>
+                            </td>
+
+                        </tr>
+                    `;
+                }
+            ).join("");
+
+            contenidoEspera.innerHTML = `
+                <div class="dashboard-table-wrapper">
+
+                    <table class="dashboard-table">
+
+                        <thead>
+                            <tr>
+                                <th style="width: 55px;">N.º</th>
+                                <th>Sujeto</th>
+                                <th>Tiempo de espera</th>
+                                <th>Desde</th>
+                            </tr>
+                        </thead>
+
+                        <tbody>
+                            ${filas}
+                        </tbody>
+
+                    </table>
+
+                </div>
+            `;
+        }
+
+        function renderizarAtencionesPorUsuario(resultados) {
+            if (resultados.length === 0) {
+                tablaAtencionesUsuarios.innerHTML = `
+                    <tr>
+                        <td colspan="4">
+                            <div
+                                class="placeholder-content"
+                                style="
+                                    max-width: none;
+                                    padding: 35px 15px;
+                                "
+                            >
+                                <h3 class="placeholder-title">
+                                    Sin atenciones registradas
+                                </h3>
+
+                                <p class="placeholder-text">
+                                    Todavía no existen atenciones finalizadas hoy.
+                                </p>
+                            </div>
+                        </td>
+                    </tr>
+                `;
+
+                return;
+            }
+
+            tablaAtencionesUsuarios.innerHTML = resultados.map(
+                function (registro, indice) {
+                    const porcentaje = Number.parseFloat(
+                        registro.porcentaje
+                    ) || 0;
+
+                    return `
+                        <tr>
+                            <td>
+                                <span class="usuario-ranking">
+                                    ${indice + 1}
+                                </span>
+                            </td>
+
+                            <td>
+                                <span class="usuario-nombre">
+                                    ${escaparHtml(registro.usuario)}
+                                </span>
+                            </td>
+
+                            <td>
+                                <span class="usuario-cantidad">
+                                    ${registro.cantidad}
+                                </span>
+                            </td>
+
+                            <td>
+                                <div class="usuario-participacion">
+
+                                    <div class="dashboard-progress">
+                                        <div
+                                            class="dashboard-progress-bar"
+                                            style="width: ${porcentaje}%;"
+                                        ></div>
+                                    </div>
+
+                                    <span class="usuario-porcentaje">
+                                        ${porcentaje.toFixed(1)}%
+                                    </span>
+
+                                </div>
+                            </td>
+                        </tr>
+                    `;
+                }
+            ).join("");
+        }
+
+        function crearGraficoEvolucionPromedio(resultados) {
+            const etiquetas = resultados.map(function (registro) {
+                return registro.hora_formateada;
+            });
+
+            const promedios = resultados.map(function (registro) {
+                return Number.parseFloat(
+                    registro.promedio_minutos
+                ) || 0;
+            });
+
+            if (graficoEvolucionPromedio) {
+                graficoEvolucionPromedio.destroy();
+            }
+
+            graficoEvolucionPromedio = new Chart(
+                graficoEvolucionCanvas,
+                {
+                    type: "line",
+
+                    data: {
+                        labels: etiquetas,
+
+                        datasets: [
+                            {
+                                label: "Promedio de espera",
+                                data: promedios,
+
+                                borderColor: "#2f8cff",
+                                backgroundColor: crearGradienteEvolucion,
+
+                                fill: true,
+                                borderWidth: 3,
+
+                                /*
+                                * tension genera la curva suave.
+                                * 0 sería una línea recta entre puntos.
+                                */
+                                tension: 0.38,
+                                cubicInterpolationMode: "monotone",
+
+                                pointRadius: 5,
+                                pointHoverRadius: 8,
+                                pointBorderWidth: 2,
+                                pointHoverBorderWidth: 3,
+
+                                pointBackgroundColor: function (contexto) {
+                                    return obtenerColorPorPromedio(
+                                        contexto.raw
+                                    );
+                                },
+
+                                pointBorderColor: function (contexto) {
+                                    return obtenerColorPorPromedio(
+                                        contexto.raw
+                                    );
+                                },
+
+                                pointHoverBackgroundColor: "#ffffff",
+
+                                /*
+                                * Cada segmento cambia de color según
+                                * el promedio del punto final.
+                                */
+                                segment: {
+                                    borderColor: function (contexto) {
+                                        const valorInicio =
+                                            contexto.p0.parsed.y;
+
+                                        const valorFinal =
+                                            contexto.p1.parsed.y;
+
+                                        const promedioTramo =
+                                            (valorInicio + valorFinal) / 2;
+
+                                        return obtenerColorPorPromedio(
+                                            promedioTramo
+                                        );
+                                    },
+                                },
+                            },
+                        ],
+                    },
+
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+
+                        animation: {
+                            duration: 650,
+                            easing: "easeOutQuart",
+                        },
+
+                        interaction: {
+                            mode: "index",
+                            intersect: false,
+                        },
+
+                        layout: {
+                            padding: {
+                                top: 12,
+                                right: 10,
+                                bottom: 0,
+                                left: 4,
+                            },
+                        },
+
+                        plugins: {
+                            legend: {
+                                display: false,
+                            },
+
+                            tooltip: {
+                                enabled: true,
+                                displayColors: false,
+                                backgroundColor: "#071426",
+                                titleColor: "#f8fafc",
+                                bodyColor: "#cbd5e1",
+                                borderColor: "rgba(148, 163, 184, 0.24)",
+                                borderWidth: 1,
+                                padding: 12,
+                                cornerRadius: 8,
+
+                                callbacks: {
+                                    title: function (elementos) {
+                                        const indice =
+                                            elementos[0].dataIndex;
+
+                                        return resultados[indice]
+                                            .hora_formateada;
+                                    },
+
+                                    label: function (contexto) {
+                                        const indice =
+                                            contexto.dataIndex;
+
+                                        const registro =
+                                            resultados[indice];
+
+                                        return [
+                                            `Promedio: ${registro.promedio_formateado}`,
+                                            `Atenciones: ${registro.cantidad}`,
+                                        ];
+                                    },
+                                },
+                            },
+                        },
+
+                        scales: {
+                            x: {
+                                offset: true,
+
+                                grid: {
+                                    color: "rgba(148, 163, 184, 0.05)",
+                                    drawTicks: false,
+                                },
+
+                                border: {
+                                    color: "rgba(148, 163, 184, 0.15)",
+                                },
+
+                                ticks: {
+                                    color: "#94a3b8",
+                                    padding: 10,
+                                    maxRotation: 0,
+                                    minRotation: 0,
+
+                                    font: {
+                                        size: 11,
+                                        weight: "600",
+                                    },
+                                },
+
+                                title: {
+                                    display: true,
+                                    text: "Hora de ingreso",
+                                    color: "#64748b",
+                                    padding: {
+                                        top: 12,
+                                    },
+
+                                    font: {
+                                        size: 10,
+                                        weight: "normal",
+                                    },
+                                },
+                            },
+
+                            y: {
+                                beginAtZero: true,
+
+                                suggestedMax: Math.max(
+                                    20,
+                                    ...promedios
+                                ),
+
+                                grid: {
+                                    color: function (contexto) {
+                                        if (contexto.tick.value === 0) {
+                                            return "rgba(148, 163, 184, 0.20)";
+                                        }
+
+                                        return "rgba(148, 163, 184, 0.09)";
+                                    },
+
+                                    lineWidth: 1,
+                                },
+
+                                border: {
+                                    display: false,
+                                },
+
+                                ticks: {
+                                    color: "#94a3b8",
+                                    padding: 8,
+                                    precision: 0,
+
+                                    callback: function (valor) {
+                                        return `${valor} min`;
+                                    },
+
+                                    font: {
+                                        size: 10,
+                                    },
+                                },
+
+                                title: {
+                                    display: true,
+                                    text: "Tiempo promedio",
+                                    color: "#64748b",
+
+                                    font: {
+                                        size: 10,
+                                        weight: "normal",
+                                    },
+                                },
+                            },
+                        },
+                    },
+                }
+            );
+        }
+        function actualizarContadoresLocales() {
+            llamadoresActuales.forEach(
+                function (llamador, indice) {
+                    llamador.segundos_espera += 1;
+
+                    const elementoTiempo =
+                        document.querySelector(
+                            `[data-tiempo-indice="${indice}"]`
+                        );
+
+                    if (!elementoTiempo) {
+                        return;
+                    }
+
+                    elementoTiempo.textContent = formatearTiempo(
+                        llamador.segundos_espera
+                    );
+
+                    elementoTiempo.classList.remove(
+                        "warning",
+                        "danger"
+                    );
+
+                    const nuevaClase = obtenerClaseTiempo(
+                        llamador.segundos_espera
+                    );
+
+                    if (nuevaClase) {
+                        elementoTiempo.classList.add(nuevaClase);
+                    }
+                }
+            );
+        }
+
+        function actualizarReloj() {
+            const ahora = new Date();
+
+            relojDashboard.textContent =
+                ahora.toLocaleTimeString(
+                    "es-AR",
+                    {
+                        hour: "2-digit",
+                        minute: "2-digit",
+                        second: "2-digit",
+                    }
+                );
+        }
+
+        function establecerFechaActual() {
+            const hoy = new Date();
+
+            fechaActual.textContent =
+                hoy.toLocaleDateString(
+                    "es-AR",
+                    {
+                        weekday: "long",
+                        day: "2-digit",
+                        month: "long",
+                        year: "numeric",
+                    }
+                );
+        }
+        async function cargarAtencionesPorUsuario() {
+            if (cargandoAtencionesUsuarios) {
+                return;
+            }
+
+            cargandoAtencionesUsuarios = true;
+
+            try {
+                usuariosAtencionesError.style.display = "none";
+
+                const respuesta = await fetch(
+                    urlAtencionesPorUsuario,
+                    {
+                        method: "GET",
+                        headers: {
+                            "X-Requested-With": "XMLHttpRequest",
+                            "Accept": "application/json",
+                        },
+                        cache: "no-store",
+                    }
+                );
+
+                if (!respuesta.ok) {
+                    throw new Error(
+                        `Error HTTP ${respuesta.status}`
+                    );
+                }
+
+                const datos = await respuesta.json();
+
+                if (!datos.success) {
+                    throw new Error(
+                        datos.error ||
+                        "No fue posible cargar las atenciones."
+                    );
+                }
+
+                totalAtencionesUsuarios.textContent =
+                    datos.total_atenciones;
+
+                renderizarAtencionesPorUsuario(
+                    datos.resultados
+                );
+
+                usuariosAtencionesCargando.style.display = "none";
+                usuariosAtencionesContenido.style.display = "block";
+
+            } catch (error) {
+                console.error(
+                    "Error al cargar atenciones por usuario:",
+                    error
+                );
+
+                usuariosAtencionesCargando.style.display = "none";
+                usuariosAtencionesContenido.style.display = "none";
+
+                usuariosAtencionesError.style.display = "flex";
+                usuariosAtencionesError.textContent =
+                    "No se pudieron actualizar las atenciones por usuario.";
+
+            } finally {
+                cargandoAtencionesUsuarios = false;
+            }
+        }
+
+        async function cargarLlamadores() {
+            if (cargando) {
+                return;
+            }
+
+            cargando = true;
+
+            try {
+                const respuesta = await fetch(
+                    urlLlamadores,
+                    {
+                        method: "GET",
+                        headers: {
+                            "X-Requested-With": "XMLHttpRequest",
+                            "Accept": "application/json",
+                        },
+                        cache: "no-store",
+                    }
+                );
+
+                if (!respuesta.ok) {
+                    throw new Error(
+                        `Error HTTP ${respuesta.status}`
+                    );
+                }
+
+                const datos = await respuesta.json();
+
+                if (!datos.success) {
+                    throw new Error(
+                        datos.error ||
+                        "No fue posible obtener los llamadores."
+                    );
+                }
+
+                llamadoresActuales = datos.llamadores.map(
+                    function (llamador) {
+                        return {
+                            sujeto: llamador.sujeto,
+                            fecha_alta: llamador.fecha_alta,
+                            segundos_espera:
+                                Number.parseInt(
+                                    llamador.segundos_espera,
+                                    10
+                                ) || 0,
+                        };
+                    }
+                );
+
+                renderizarLlamadores();
+
+                ultimaActualizacion.textContent =
+                    new Date().toLocaleTimeString(
+                        "es-AR",
+                        {
+                            hour: "2-digit",
+                            minute: "2-digit",
+                            second: "2-digit",
+                        }
+                    );
+
+            } catch (error) {
+                console.error(
+                    "Error al cargar llamadores:",
+                    error
+                );
+
+                contenidoEspera.innerHTML = `
+                    <div class="dashboard-error">
+                        <div>
+                            <p class="state-title">
+                                No se pudo actualizar el panel
+                            </p>
+
+                            <p class="state-description">
+                                Se realizará un nuevo intento
+                                automáticamente.
+                            </p>
+                        </div>
+                    </div>
+                `;
+
+            } finally {
+                cargando = false;
+            }
+        }
+        function obtenerColoresBarras(cantidad) {
+            const colores = [
+                "#10d981",
+                "#2f8cff",
+                "#8b5cf6",
+                "#ff8a1f",
+                "#f6c915",
+                "#ec4899",
+                "#06b6d4",
+                "#ef4444",
+                "#84cc16",
+                "#a855f7",
+                "#14b8a6",
+                "#f97316",
+            ];
+
+            return Array.from(
+                { length: cantidad },
+                function (_, indice) {
+                    return colores[indice % colores.length];
+                }
+            );
+        }
+
+
+        function crearGraficoFrecuenciaPorLetra(resultados) {
+            const letras = resultados.map(function (registro) {
+                return registro.letra;
+            });
+
+            const cantidades = resultados.map(function (registro) {
+                return Number.parseInt(registro.cantidad, 10) || 0;
+            });
+
+            const colores = obtenerColoresBarras(resultados.length);
+
+            if (graficoFrecuenciaLetras) {
+                graficoFrecuenciaLetras.destroy();
+            }
+
+            graficoFrecuenciaLetras = new Chart(
+                graficoFrecuenciaCanvas,
+                {
+                    type: "bar",
+
+                    data: {
+                        labels: letras,
+
+                        datasets: [
+                            {
+                                label: "Atenciones",
+                                data: cantidades,
+                                backgroundColor: colores,
+                                borderColor: colores,
+                                borderWidth: 1,
+                                borderRadius: 6,
+                                borderSkipped: false,
+                                maxBarThickness: 58,
+                            },
+                        ],
+                    },
+
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+
+                        animation: {
+                            duration: 500,
+                        },
+
+                        interaction: {
+                            mode: "index",
+                            intersect: false,
+                        },
+
+                        plugins: {
+                            legend: {
+                                display: false,
+                            },
+
+                            tooltip: {
+                                displayColors: true,
+                                backgroundColor: "#0b1728",
+                                titleColor: "#f8fafc",
+                                bodyColor: "#cbd5e1",
+                                borderColor: "rgba(148, 163, 184, 0.25)",
+                                borderWidth: 1,
+                                padding: 12,
+
+                                callbacks: {
+                                    title: function (elementos) {
+                                        const indice = elementos[0].dataIndex;
+                                        return `Letra ${resultados[indice].letra}`;
+                                    },
+
+                                    label: function (contexto) {
+                                        const indice = contexto.dataIndex;
+                                        const registro = resultados[indice];
+
+                                        return [
+                                            `Atenciones: ${registro.cantidad}`,
+                                            `Promedio: ${registro.promedio_formateado}`,
+                                        ];
+                                    },
+                                },
+                            },
+                        },
+
+                        scales: {
+                            x: {
+                                grid: {
+                                    display: false,
+                                },
+
+                                border: {
+                                    color: "rgba(148, 163, 184, 0.18)",
+                                },
+
+                                ticks: {
+                                    color: "#e2e8f0",
+                                    font: {
+                                        size: 12,
+                                        weight: "bold",
+                                    },
+                                },
+
+                                title: {
+                                    display: true,
+                                    text: "Letra del llamador",
+                                    color: "#94a3b8",
+                                    font: {
+                                        size: 11,
+                                        weight: "normal",
+                                    },
+                                },
+                            },
+
+                            y: {
+                                beginAtZero: true,
+
+                                grid: {
+                                    color: "rgba(148, 163, 184, 0.10)",
+                                },
+
+                                border: {
+                                    display: false,
+                                },
+
+                                ticks: {
+                                    color: "#94a3b8",
+                                    precision: 0,
+                                    stepSize: 20,
+                                },
+
+                                title: {
+                                    display: true,
+                                    text: "Cantidad de atenciones",
+                                    color: "#94a3b8",
+                                    font: {
+                                        size: 11,
+                                        weight: "normal",
+                                    },
+                                },
+                            },
+                        },
+                    },
+                }
+            );
+        }
+        async function cargarEvolucionTiempoPromedio() {
+            if (cargandoEvolucionPromedio) {
+                return;
+            }
+
+            cargandoEvolucionPromedio = true;
+
+            try {
+                evolucionPromedioError.style.display = "none";
+                evolucionPromedioVacio.style.display = "none";
+
+                const respuesta = await fetch(
+                    urlEvolucionTiempoPromedio,
+                    {
+                        method: "GET",
+
+                        headers: {
+                            "X-Requested-With": "XMLHttpRequest",
+                            "Accept": "application/json",
+                        },
+
+                        cache: "no-store",
+                    }
+                );
+
+                if (!respuesta.ok) {
+                    throw new Error(
+                        `Error HTTP ${respuesta.status}`
+                    );
+                }
+
+                const datos = await respuesta.json();
+
+                if (!datos.success) {
+                    throw new Error(
+                        datos.error ||
+                        "No fue posible cargar la evolución."
+                    );
+                }
+
+                evolucionPromedioCargando.style.display = "none";
+
+                if (
+                    !Array.isArray(datos.resultados) ||
+                    datos.resultados.length === 0
+                ) {
+                    evolucionPromedioActual.textContent = "--";
+                    evolucionPromedioVacio.style.display = "flex";
+
+                    if (graficoEvolucionPromedio) {
+                        graficoEvolucionPromedio.destroy();
+                        graficoEvolucionPromedio = null;
+                    }
+
+                    return;
+                }
+
+                crearGraficoEvolucionPromedio(
+                    datos.resultados
+                );
+
+                const ultimoRegistro =
+                    datos.resultados[
+                        datos.resultados.length - 1
+                    ];
+
+                evolucionPromedioActual.textContent =
+                    ultimoRegistro.promedio_formateado;
+
+                evolucionPromedioActual.style.color =
+                    obtenerColorPorPromedio(
+                        ultimoRegistro.promedio_minutos
+                    );
+
+                const ahora = new Date();
+
+                evolucionUltimaActualizacion.textContent =
+                    `Actualizado ${ahora.toLocaleTimeString(
+                        "es-AR",
+                        {
+                            hour: "2-digit",
+                            minute: "2-digit",
+                            second: "2-digit",
+                        }
+                    )}`;
+
+            } catch (error) {
+                console.error(
+                    "Error al cargar evolución del promedio:",
+                    error
+                );
+
+                evolucionPromedioCargando.style.display = "none";
+                evolucionPromedioVacio.style.display = "none";
+                evolucionPromedioError.style.display = "flex";
+
+                evolucionPromedioError.textContent =
+                    "No se pudo actualizar la evolución del tiempo promedio.";
+
+            } finally {
+                cargandoEvolucionPromedio = false;
+            }
+        }
+
+        async function cargarFrecuenciaPorLetra() {
+            if (cargandoFrecuenciaLetras) {
+                return;
+            }
+
+            cargandoFrecuenciaLetras = true;
+
+            try {
+                frecuenciaLetrasError.style.display = "none";
+
+                const respuesta = await fetch(
+                    urlFrecuenciaPorLetra,
+                    {
+                        method: "GET",
+                        headers: {
+                            "X-Requested-With": "XMLHttpRequest",
+                            "Accept": "application/json",
+                        },
+                        cache: "no-store",
+                    }
+                );
+
+                if (!respuesta.ok) {
+                    throw new Error(
+                        `Error HTTP ${respuesta.status}`
+                    );
+                }
+
+                const datos = await respuesta.json();
+
+                if (!datos.success) {
+                    throw new Error(
+                        datos.error ||
+                        "No fue posible cargar la frecuencia."
+                    );
+                }
+
+                frecuenciaLetrasCargando.style.display = "none";
+
+                if (datos.resultados.length === 0) {
+                    frecuenciaLetrasError.textContent =
+                        "Todavía no existen atenciones registradas hoy.";
+
+                    frecuenciaLetrasError.style.display = "flex";
+
+                    if (graficoFrecuenciaLetras) {
+                        graficoFrecuenciaLetras.destroy();
+                        graficoFrecuenciaLetras = null;
+                    }
+
+                    return;
+                }
+
+                crearGraficoFrecuenciaPorLetra(
+                    datos.resultados
+                );
+
+            } catch (error) {
+                console.error(
+                    "Error al cargar frecuencia por letra:",
+                    error
+                );
+
+                frecuenciaLetrasCargando.style.display = "none";
+
+                frecuenciaLetrasError.textContent =
+                    "No se pudo actualizar la frecuencia por letra.";
+
+                frecuenciaLetrasError.style.display = "flex";
+
+            } finally {
+                cargandoFrecuenciaLetras = false;
+            }
+        }
+
+        establecerFechaActual();
+        actualizarReloj();
+        cargarLlamadores();
+        cargarFrecuenciaPorLetra();
+        cargarAtencionesPorUsuario();
+        cargarEvolucionTiempoPromedio();
+
+        setInterval(actualizarReloj, 1000);
+        setInterval(actualizarContadoresLocales, 1000);
+        setInterval(cargarLlamadores, 5000);
+        setInterval(cargarFrecuenciaPorLetra, 30000);
+        setInterval(cargarAtencionesPorUsuario, 30000);
+        setInterval(
+            cargarEvolucionTiempoPromedio,
+            30000
+        );
+    });
+</script>
+
+{% endblock content %}

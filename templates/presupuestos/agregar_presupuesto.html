@@ -1,914 +1,1057 @@
-{% extends 'base2.html' %}
-{% load static %}
+{% extends "base.html" %}
+
 {% block content %}
 
-
 <style>
-:root{
-    /* Parámetros para ajustar compactación rápidamente */
-    --input-padding: 0.28rem;        /* cambiar -> menor = más compacto */
-    --font-size-base: 0.88rem;      /* tamaño base de la UI */
-    --table-font-size: 0.70rem;     /* tamaño de la tabla */
-    --card-padding: 0.55rem;        /* padding interior de las cards */
-    --card-radius: 8px;
-}
+    .page-wrap {
+        max-width: 1320px;
+        margin: 0 auto;
+    }
 
-/*  AJUSTES RÁPIDOS (cambia aquí para más/menos compacto)
-   - --input-padding: reduce para hacerlo más compacto
-   - --font-size-base: tamaño base de letra
-   - --table-font-size: fuente en tabla (reduce para que entre más)
-   - TAX_RATE: variable JS (ver más abajo)
-   ========================= */
+    .form-hero {
+        background: #ffffff;
+        border-radius: 20px;
+        padding: 1.4rem 1.6rem;
+        margin-bottom: 1.2rem;
+        box-shadow: 0 10px 28px rgba(15, 76, 129, 0.14);
+        border: 1px solid #d6dce5;
+    }
 
-/* Compactar las cards */
-.card {
-    border: none;
-    border-radius: var(--card-radius);
-    margin-bottom: 0.25rem;
-    box-shadow: 0 2px 4px rgba(0,0,0,0.04);
-    padding: var(--card-padding);
-    font-size: var(--font-size-base);
-}
-textarea.form-control {
-    height: auto !important;     /* ignora la altura fija */
-    min-height: 100px !important; /* define un tamaño mínimo real */
-    line-height: 1.3;
-    resize: vertical;            /* permite agrandar manualmente */
-}
-/* Títulos más discretos */
-.card-title {
-    font-size: 0.95rem;
-    font-weight: 600;
-    color: #495057;
-    margin-bottom: 0.45rem;
-}
+    .form-hero h2 {
+        margin: 0;
+        font-weight: 900;
+        font-size: 1.65rem;
+        color: #111827;
+    }
 
-/* Inputs compactos */
-.form-control, .form-select {
-    border: 1px solid #dee2e6;
-    border-radius: 6px;
-    padding: var(--input-padding) 0.5rem;
-    font-size: 0.76rem;
-    background-color: #fff;
-    box-shadow: inset 0 1px 2px rgba(0,0,0,0.03);
-    transition: all 0.15s ease-in-out;
-    height: 25px; /* bajar si querés más compacto */
-}
+    .form-hero h2 i {
+        color: #0f4c81;
+        margin-right: 0.45rem;
+    }
 
+    .form-hero p {
+        margin: 0.35rem 0 0;
+        color: #526179;
+        font-size: 0.92rem;
+    }
 
-.form-control:focus, .form-select:focus {
-    border-color: #80bdff;
-    box-shadow: 0 0 4px rgba(0,123,255,0.18);
-}
+    .summary-card,
+    .form-card {
+        background: #ffffff;
+        border: 1px solid #d6dce5;
+        border-radius: 18px;
+        box-shadow: 0 8px 24px rgba(0,0,0,0.05);
+        overflow: hidden;
+        margin-bottom: 1rem;
+    }
 
-/* Etiquetas más pequeñas */
-label {
-    font-size: 0.79rem;
-    color: #191b1c;
-    margin-bottom: 2px;
-    display: block;
-}
+    .summary-card {
+        padding: 1.1rem;
+        background: linear-gradient(135deg, #f8fbff 0%, #ffffff 100%);
+    }
 
-/* Tabla ultra compacta */
-.table {
-    font-size: var(--table-font-size);
-    margin-bottom: 0;
-}
+    .patient-main {
+        display: flex;
+        align-items: center;
+        gap: 0.9rem;
+    }
 
-.table td, .table th {
-    padding: 0.28rem;
-    vertical-align: middle;
-    white-space: nowrap;
-}
+    .patient-avatar {
+        width: 54px;
+        height: 54px;
+        border-radius: 50%;
+        background: #e8f2ff;
+        color: #0d6efd;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.45rem;
+        border: 1px solid #b9d7ff;
+        flex-shrink: 0;
+    }
 
-/* Botones más sutiles */
-.btn-sm {
-    padding: 0.18rem 0.45rem;
-    border-radius: 6px;
-    font-size: 0.78rem;
-}
+    .patient-name {
+        font-size: 1.2rem;
+        font-weight: 900;
+        color: #111827;
+    }
 
-/* Totales más prolijos */
-.card-body.text-end p, 
-.card-body.text-end h5 {
-    margin: 0.12rem 0;
-    font-size: 0.9rem;
-}
+    .patient-subtitle {
+        color: #526179;
+        font-size: 0.88rem;
+    }
 
-/* Para forzar que la vista ocupe más ancho en pantallas grandes */
-.container.my-4 {
-    max-width: 1200px;
-}
+    .section-title {
+        background: #fbfdff;
+        border-bottom: 1px solid #dbe3ef;
+        padding: 0.85rem 1.15rem;
+        font-weight: 900;
+        color: #1f2937;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 0.75rem;
+    }
 
-/* Iconos de acción pequeños */
-.btn-danger.btn-sm, .btn-success.btn-sm {
-    line-height: 1;
-    height: 30px;
-}
+    .section-title-left {
+        display: flex;
+        align-items: center;
+        gap: 0.65rem;
+    }
 
-/* Alinear inputs a la derecha */
-#tabla-prestaciones input.precio,
-#tabla-prestaciones input.importe,
-#tabla-prestaciones input.iva,
-#tabla-prestaciones input.subtotal {
-    text-align: right;
-}
+    .section-number {
+        width: 28px;
+        height: 28px;
+        border-radius: 50%;
+        background: #0d6efd;
+        color: #ffffff;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 0.82rem;
+        font-weight: 900;
+    }
 
+    .section-body {
+        padding: 1.15rem;
+    }
 
+    .form-label {
+        font-size: 0.8rem;
+        font-weight: 800;
+        color: #1f2937;
+        margin-bottom: 0.35rem;
+    }
 
+    .form-control,
+    .form-select {
+        border-radius: 12px;
+        border: 1px solid #cfd8e3;
+        font-size: 0.9rem;
+        padding: 0.62rem 0.8rem;
+        background: #ffffff;
+    }
 
+    .form-control:focus,
+    .form-select:focus {
+        border-color: #1d7fbf;
+        box-shadow: 0 0 0 0.18rem rgba(29, 127, 191, 0.18);
+    }
 
+    .btn {
+        border-radius: 12px;
+        font-weight: 800;
+    }
 
+    .btn-sm-custom {
+        padding: 0.52rem 0.9rem;
+        font-size: 0.85rem;
+    }
 
-.input-group-sm > .form-control,
-.input-group-sm > .btn {
-    height: 24px; /* asegura que coincida con los demás */
-}
+    .actions-bar {
+        position: sticky;
+        bottom: 0;
+        background: rgba(255,255,255,0.96);
+        backdrop-filter: blur(8px);
+        border: 1px solid #d6dce5;
+        border-radius: 16px;
+        padding: 0.85rem;
+        display: flex;
+        justify-content: space-between;
+        gap: 0.75rem;
+        box-shadow: 0 -5px 20px rgba(0,0,0,0.06);
+        margin-top: 1rem;
+        z-index: 10;
+    }
 
-td {
-    vertical-align: middle !important;
-}
-.lupa-btn {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 0;            /* elimina relleno interno extra */
-  width: 38px;           /* igual ancho que alto */
-  height: 38px;          /* mismo alto que el input */
-}
+    .required-mark {
+        color: #dc2626;
+    }
 
-.lupa-btn i {
-  font-size: 14px;       /* ajusta tamaño del ícono */
-  margin: 0;             /* sin desplazamiento */
-}
+    .mini-help {
+        font-size: 0.78rem;
+        color: #6b7280;
+    }
 
+    .detalle-table {
+        min-width: 1240px;
+    }
+
+    .detalle-table thead th {
+        font-size: 0.76rem;
+        color: #374151;
+        font-weight: 900;
+        white-space: nowrap;
+        background: #f8f9fa;
+        vertical-align: middle;
+    }
+
+    .detalle-table tbody td {
+        font-size: 0.82rem;
+        vertical-align: middle;
+        padding: 0.35rem;
+    }
+
+    .detalle-table .form-control,
+    .detalle-table .form-select {
+        min-height: 34px;
+        border-radius: 9px;
+        font-size: 0.78rem;
+        padding: 0.35rem 0.45rem;
+    }
+
+    .detalle-table .input-group .btn {
+        border-radius: 9px;
+        padding: 0.25rem 0.5rem;
+    }
+
+    .detalle-table textarea.form-control {
+        min-height: 34px;
+        resize: vertical;
+    }
+
+    .detalle-row-empty .form-control,
+    .detalle-row-empty .form-select {
+        background: #fff;
+    }
+
+    .modal-confirmacion {
+        border: 0;
+        border-radius: 18px;
+        overflow: hidden;
+        box-shadow: 0 18px 45px rgba(15, 23, 42, 0.25);
+    }
+
+    .modal-confirmacion .modal-header {
+        background: #ffffff;
+        border-bottom: 1px solid #e5e7eb;
+    }
+
+    .modal-confirmacion .modal-title {
+        font-weight: 900;
+        color: #1f2937;
+    }
+
+    .modal-xl {
+        max-width: 1080px;
+    }
+
+    .selected-box {
+        background: #f8fbff;
+        border: 1px dashed #b8c7dc;
+        border-radius: 14px;
+        padding: 0.75rem 0.9rem;
+        color: #526179;
+        font-size: 0.86rem;
+    }
+
+    .prestacion-table thead th {
+        font-size: 0.8rem;
+        color: #374151;
+        font-weight: 900;
+        white-space: nowrap;
+    }
+
+    .prestacion-table tbody td {
+        font-size: 0.86rem;
+        vertical-align: middle;
+    }
+
+    .empty-row {
+        padding: 2rem !important;
+        color: #6b7280;
+        text-align: center;
+    }
+
+    .row-number {
+        width: 28px;
+        height: 28px;
+        border-radius: 50%;
+        background: #eef2ff;
+        color: #1d4ed8;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        font-weight: 900;
+        font-size: 0.78rem;
+    }
 </style>
 
-<div class="container my-4">
-    <h3 class="text-primary"><i class="fas fa-file-medical"></i> Nuevo Presupuesto</h3>
-    <form method="POST" id="form-presupuesto" autocomplete="off">
-        {% csrf_token %} 
-        <!-- Datos del paciente -->
-        <input type="hidden" name="form_token" value="{{ form_token }}">
+<div class="page-wrap">
 
-        <div class="card shadow-sm mb-2">
-            <div class="card-body">
-                <h5 class="card-title">Datos del Paciente</h5>
-                <div class="row g-2">
-                    <!-- Ajustá las clases col-md-* para controlar cuántas columnas entran -->
-                    <div class="col-md-4">
-                        <label>Nombre</label>
-                        <input type="text" name="paciente_nombre" class="form-control" required autocomplete="off">
-                    </div>
-                    <div class="col-md-2">
-                        <label>DNI</label>
-                        <input type="text" name="paciente_dni" class="form-control" autocomplete="off" required="true">
-                    </div>
-                    <div class="col-md-2">
-                        <label>Edad</label>
-                        <input type="number" name="paciente_edad" class="form-control" autocomplete="off">
-                    </div>
-                    
-                    <div class="col-md-4">
-                        <label><span>Dirección</span>
-                        </label>
-                        <input type="text" name="paciente_direccion" class="form-control" autocomplete="off">
-                    </div>
-                    <div class="col-md-3">
-                        <label>Teléfono</label>
-                        <input type="text" name="paciente_telefono" class="form-control" autocomplete="new-password">
-                    </div>
-                    <div class="col-md-3">
-                        <label>Email</label>
-                        <input type="text" name="paciente_email" class="form-control" autocomplete="new-password">
-                    </div>
-                    <div class="col-md-4">
-                        <label>Obra Social</label>
-                        <select name="obra_social" class="form-select" required>
-                            <option value="">Seleccione una obra social..</option>
-                            {% for obra_social in obras_sociales %}
-                                {% if obra_social.id == 190 %}
-                                <option value="{{ obra_social.id }}" selected>{{ obra_social.nombre }}</option>
+    <div class="form-hero">
+        <div class="d-flex justify-content-between align-items-start gap-3">
+            <div>
+                <h2>
+                    <i class="fas fa-file-signature"></i>
+                    Nueva Orden de Autorización
+                </h2>
+                <p>
+                    Carga de orden vinculada al preingreso, con prestaciones cargadas directamente en la tabla.
+                </p>
+            </div>
 
-                                {% else %}
-                                <option value="{{ obra_social.id }}">{{ obra_social.nombre }}</option>
+            <a href="{% url 'gestion_app:detalle_preingreso' preingreso.id %}" class="btn btn-outline-secondary btn-sm-custom">
+                <i class="fas fa-arrow-left"></i> Volver al preingreso
+            </a>
+        </div>
+    </div>
 
-                                {% endif%} 
-                            {% endfor %}
-                        </select>
-                    </div>
+    <div class="summary-card">
+        <div class="patient-main">
+            <div class="patient-avatar">
+                <i class="fas fa-user-injured"></i>
+            </div>
+
+            <div>
+                <div class="patient-name">
+                    {{ preingreso.paciente.apellido }}, {{ preingreso.paciente.nombre }}
                 </div>
-            </div> 
-            <div class="card-body">
-                <h5 class="card-title">Datos Adicionales</h5>
-                <div class="row g-2">
-                    <div class="col-md-4">
-                        <label>Medico</label>
-                        <select name="medico" class="form-select" required>
-                            <option value="">Seleccione un médico...</option>
-                            {% for medico in medicos %}
-                                <option value="{{ medico.id }}">{{ medico.nombre }}</option>
+
+                <div class="patient-subtitle">
+                    DNI {{ preingreso.paciente.dni|default:"-" }}
+                    {% if preingreso.obra_social %}
+                        · {{ preingreso.obra_social.nombre }}
+                    {% endif %}
+                    {% if preingreso.plan %}
+                        · Plan {{ preingreso.plan.nombre }}
+                    {% endif %}
+                    {% if preingreso.fecha_probable_ingreso %}
+                        · Ingreso probable {{ preingreso.fecha_probable_ingreso|date:"d/m/Y" }}
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <form method="post" id="formOrden">
+        {% csrf_token %}
+
+        <input type="hidden" name="detalles_json" id="detalles_json">
+
+        <div class="form-card">
+            <div class="section-title">
+                <div class="section-title-left">
+                    <span class="section-number">1</span>
+                    Datos de la orden
+                </div>
+            </div>
+
+            <div class="section-body">
+                <div class="row g-3">
+
+                    <div class="col-md-3">
+                        <label class="form-label">
+                            Tipo de orden <span class="required-mark">*</span>
+                        </label>
+                        <select name="tipo" class="form-select" required>
+                            <option value="">Seleccione...</option>
+                            {% for value, label in tipos_orden %}
+                                <option value="{{ value }}">{{ label }}</option>
                             {% endfor %}
                         </select>
                     </div>
-                    <div class="col-md-5">
-                        <label>Diagnóstico</label>
-                        <input type="text" name="diagnostico" class="form-control" autocomplete="off">
-                    </div>
+
                     <div class="col-md-3">
-                    <label for="fecha_presupuesto">Fecha</label>
-                    <input id="fecha_presupuesto"
-                            name="fecha_presupuesto"
-                            type="date"
-                            class="form-control"
-                            required>
+                        <label class="form-label">Fecha</label>
+                        <input type="date" name="fecha" class="form-control">
                     </div>
-                    <div class="col-md-6">
-                        <label>Observaciones</label>
-                        <input type="text" name="observaciones" class="form-control" autocomplete="off">
+
+                    <div class="col-md-3">
+                        <label class="form-label">Número cupón / orden</label>
+                        <input type="text"
+                               name="numero_cupon"
+                               class="form-control"
+                               placeholder="Ej: 123456">
                     </div>
-                    <div class="col-md-2">
-                        <label>Episodio asociado</label>
-                        <input type="text" name="episodio" class="form-control" autocomplete="off">
+
+                    <div class="col-md-3">
+                        <label class="form-label">Estado general</label>
+
+                        <div class="selected-box">
+                            <div class="form-check form-switch mb-0">
+                                <input class="form-check-input"
+                                       type="checkbox"
+                                       role="switch"
+                                       name="autorizada"
+                                       id="orden_autorizada">
+                                <label class="form-check-label fw-bold" for="orden_autorizada">
+                                    Orden autorizada
+                                </label>
+                            </div>
+                        </div>
+
+                        <div class="mini-help mt-1">
+                            También se puede autorizar cada detalle individualmente.
+                        </div>
                     </div>
+
+                    <div class="col-md-12">
+                        <label class="form-label">Observaciones de la orden</label>
+                        <textarea name="observaciones"
+                                  class="form-control"
+                                  rows="2"
+                                  placeholder="Observaciones generales de la orden..."></textarea>
+                    </div>
+
                 </div>
             </div>
         </div>
 
-        <!-- Tabla de prestaciones -->
-        <div class="card shadow-sm mb-2">
-            <div class="card-body">
-                <h5 class="card-title d-flex justify-content-between align-items-center">
-                    Prestaciones
+        <div class="form-card">
+            <div class="section-title">
+                <div class="section-title-left">
+                    <span class="section-number">2</span>
+                    Detalles de la orden
+                </div>
 
-                    <!-- Controles extras -->
-                    <div class="d-flex align-items-center gap-3">
-                        <!-- Checkbox IVA -->
-                        <label class="form-check-label" for="chk-iva">IVA</label>
-                        <div class="form-check form-check-inline mb-0">
-                            <input class="form-check-input" type="checkbox" id="chek-iva" checked>
-                        </div>
+                <button type="button"
+                        class="btn btn-primary btn-sm-custom"
+                        id="btnAgregarFilaDetalle">
+                    <i class="fas fa-plus-circle"></i> Agregar fila
+                </button>
+            </div>
 
-                        <!-- Proporcional Medicamentos -->
-                        <div class="d-flex align-items-center">
-                            <label for="med-prop" class="me-1 mb-0">Prop. Medicamentos</label>
-                            <select id="med-prop" class="form-select form-select-sm" style="width: 80px;">
-                                <option value="40">40%</option>
-                                <option value="45">45%</option>
-                                <option value="50" selected>50%</option>
-                                <option value="55">55%</option>
-                                <option value="60">60%</option>
-                            </select>
-                        </div>
+            <div class="section-body">
+                <div id="detalleError" class="alert alert-danger d-none mb-3"></div>
 
-                        <!-- Botón Medicamentos -->
-                        <button type="button" id="btn-medicamentos" class="btn btn-info btn-sm">
-                            <i class="fas fa-pills"></i> Agregar Prop Medicamentos
-                        </button>
-                    </div>
-                </h5>
-
-                <div class="table-responsive mt-2">
-                    <table class="table table-bordered align-middle" id="tabla-prestaciones">
-                        <thead class="table-light">
+                <div class="table-responsive border rounded-3">
+                    <table class="table table-sm table-hover align-middle mb-0 detalle-table" id="tablaDetallesOrden">
+                        <thead>
                             <tr>
-                                <th style="width:90px">Código</th>
-                                <th style="width:70px">Tipo</th>
-                                <th style="width:240px">Prestación</th> 
-                                <th style="width:50px">Cant.</th>
-                                <th style="width:100px">Precio U.</th>
-                                <th style="width:100px">Importe</th>
-                                <th style="width:100px">IVA</th>
-                                <th style="width:100px">Total</th>
-                                <th style="width:45px"></th>
+                                <th class="text-center" style="width:42px;">#</th>
+                                <th style="width:170px;">Código</th>
+                                <th style="width:230px;">Prestación</th>
+                                <th style="width:180px;">Médico</th>
+                                <th class="text-center" style="width:75px;">Cant.</th>
+                                <th style="width:135px;">H/G</th>
+                                <th style="width:145px;">Honorario</th>
+                                <th style="width:125px;">Desde</th>
+                                <th style="width:125px;">Hasta</th>
+                                <th class="text-center" style="width:105px;">Aut.</th>
+                                <th style="width:190px;">Obs.</th>
+                                <th class="text-end" style="width:55px;"></th>
                             </tr>
                         </thead>
-                        <tbody>
+
+                        <tbody id="detallesBody">
                             <tr class="fila-detalle">
-                                <td >
+                                <td class="text-center">
+                                    <span class="row-number">1</span>
+                                    <input type="hidden" class="detalle_prestacion_id">
+                                </td>
+
+                                <td>
                                     <div class="input-group input-group-sm">
-                                        <input type="text" name="codigo" class="form-control codigo" autocomplete="off">
-                                        <button type="button" class="btn btn-outline-secondary lupa-btn" data-bs-toggle="modal" data-bs-target="#modalBusqueda">
+                                        <input type="text"
+                                               class="form-control detalle_prestacion_codigo"
+                                               placeholder="Código"
+                                               autocomplete="off">
+                                        <button type="button"
+                                                class="btn btn-outline-primary btnBuscarPrestacionFila"
+                                                title="Buscar prestación"
+                                                data-bs-toggle="modal"
+                                                data-bs-target="#modalBuscarPrestacion">
                                             <i class="fas fa-search"></i>
                                         </button>
                                     </div>
-                                </td> 
+                                </td>
+
                                 <td>
-                                    <select name="tipo" class="form-control tipo">
-                                        <option value="gastos" selected>Gastos</option>
-                                        <option value="especialista">Especialista</option>
-                                        <option value="todo">Todo</option>
+                                    <input type="text"
+                                           class="form-control detalle_prestacion_nombre"
+                                           placeholder="Prestación"
+                                           autocomplete="off">
+                                </td>
+
+                                <td>
+                                    <select class="form-select detalle_medico_id">
+                                        <option value="">Seleccione...</option>
+                                        {% for medico in medicos %}
+                                            <option value="{{ medico.id }}">
+                                                {{ medico.apellido }}, {{ medico.nombre }}
+                                            </option>
+                                        {% endfor %}
                                     </select>
                                 </td>
-                                <td><input type="text" name="prestacion" class="form-control prestacion"></td>
-                                <td><input type="number" name="cantidad" class="form-control cantidad" value="1" min="1"></td>
-                                <td><input type="number" name="precio" class="form-control precio" readonly step="0.01" value="0.00"></td>
-                                <td><input type="text" name="importe" class="form-control importe" readonly value="0.00"></td>
-                                <td><input type="text" name="iva" class="form-control iva" readonly value="0.00"></td>
-                                <td><input type="text" name="subtotal" class="form-control subtotal" readonly value="0.00"></td>
-                                <td class="d-flex gap-1 justify-content-center">
-                                    <!-- Botón comentario -->
-                                    <button type="button" class="btn btn-outline-secondary btn-sm btn-comentario" title="Agregar comentario">
-                                        <i class="fas fa-comment-dots"></i>
-                                    </button>
 
-                                    <!-- Botón eliminar -->
-                                    <button type="button" class="btn btn-danger btn-sm eliminar-fila">
-                                        <i class="fas fa-times"></i>
-                                    </button>
+                                <td>
+                                    <input type="number"
+                                           class="form-control text-center detalle_cantidad"
+                                           value="1"
+                                           min="1">
+                                </td>
 
-                                    <!-- Input oculto donde se guardará el comentario -->
-                                    <input type="hidden" name="comentario" class="comentario">
+                                <td>
+                                    <select class="form-select detalle_honorarios_gastos">
+                                        <option value="">Seleccione...</option>
+                                        {% for value, label in honorarios_gastos %}
+                                            <option value="{{ value }}">{{ label }}</option>
+                                        {% endfor %}
+                                    </select>
+                                </td>
+
+                                <td>
+                                    <select class="form-select detalle_tipo_honorario">
+                                        <option value="">Seleccione...</option>
+                                        {% for value, label in tipos_honorario %}
+                                            <option value="{{ value }}">{{ label }}</option>
+                                        {% endfor %}
+                                    </select>
+                                </td>
+
+                                <td>
+                                    <input type="date" class="form-control detalle_fecha_desde">
+                                </td>
+
+                                <td>
+                                    <input type="date" class="form-control detalle_fecha_hasta">
+                                </td>
+
+                                <td class="text-center">
+                                    <div class="form-check form-switch d-flex justify-content-center mb-0">
+                                        <input class="form-check-input detalle_autorizada"
+                                               type="checkbox"
+                                               role="switch"
+                                               title="Detalle autorizado">
+                                    </div>
+                                </td>
+
+                                <td>
+                                    <textarea class="form-control detalle_observaciones"
+                                              rows="1"
+                                              placeholder="Obs."></textarea>
+                                </td>
+
+                                <td class="text-end">
+                                    <button type="button"
+                                            class="btn btn-outline-danger btn-sm eliminarFilaDetalle"
+                                            title="Eliminar fila">
+                                        <i class="fas fa-trash"></i>
+                                    </button>
                                 </td>
                             </tr>
                         </tbody>
                     </table>
                 </div>
-                <div class="row">
-                    <div class="mt-2 col-md-6">
-                        <button type="button" id="agregar-fila" class="btn btn-success btn-sm"><i class="fas fa-plus"></i> Agregar Prestación</button>
-                    </div>
-                    <div class="card-body text-end mt-0 col-md-6">
-                        <p><strong>Importe sin iva:</strong> $<span id="subtotal">0.00</span></p>
-                        <p><strong>IVA (21%):</strong> $<span id="iva">0.00</span></p>
-                        <h5><strong>Total:</strong> $<span id="total">0.00</span></h5>
-                    </div>
-                </div>
-            </div>
-        </div> 
 
-        <div class="text-end">
-        <button type="button" class="btn btn-primary" id="btnGuardarPresupuesto">
-            <i class="fas fa-save"></i> Guardar Presupuesto
-        </button>
-        </div>
-
-
-        <!-- Mini modal para comentarios -->
-        <div class="modal fade" id="modalComentario" tabindex="-1" aria-labelledby="modalComentarioLabel" aria-hidden="true">
-            <div class="modal-dialog modal-sm modal-dialog-centered">
-                <div class="modal-content">
-                    <div class="modal-header bg-info text-white py-2">
-                        <h6 class="modal-title" id="modalComentarioLabel"><i class="fas fa-comment-dots me-2"></i>Comentario</h6>
-                        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
-                    </div>
-                    <div class="modal-body">
-                        <textarea id="textoComentario" class="form-control" rows="1" placeholder="Escribí un comentario..."></textarea>
-                    </div>
-                    <div class="modal-footer py-2">
-                        <button type="button" class="btn btn-light btn-sm" data-bs-dismiss="modal">Cancelar</button>
-                        <button type="button" class="btn btn-primary btn-sm" id="btnGuardarComentario">Guardar</button>
-                    </div>
+                <div class="mini-help mt-2">
+                    Cargue los detalles directamente en la tabla. La lupa permite buscar prestaciones y completar la fila seleccionada.
                 </div>
             </div>
         </div>
-        <!-- Modal Buscador -->
-        <div class="modal fade" id="modalBusqueda" tabindex="-1" aria-labelledby="modalBusquedaLabel" aria-hidden="true">
-        <div class="modal-dialog modal-lg">
-            <div class="modal-content">
-            
+
+        <div class="actions-bar">
+            <a href="{% url 'gestion_app:detalle_preingreso' preingreso.id %}" class="btn btn-outline-secondary">
+                <i class="fas fa-times"></i> Cancelar
+            </a>
+
+            <button type="button"
+                    class="btn btn-primary px-4"
+                    data-bs-toggle="modal"
+                    data-bs-target="#modalConfirmarGuardado">
+                <i class="fas fa-save"></i> Guardar orden
+            </button>
+        </div>
+
+    </form>
+
+</div>
+
+<div class="modal fade" id="modalBuscarPrestacion" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-xl modal-dialog-centered modal-dialog-scrollable">
+        <div class="modal-content modal-confirmacion">
+
             <div class="modal-header">
-                <h5 class="modal-title" id="modalBusquedaLabel">Buscar Nomenclador</h5>
+                <h5 class="modal-title">
+                    <i class="fas fa-search text-primary"></i>
+                    Buscar prestación
+                </h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
 
             <div class="modal-body">
-                <div class="input-group mb-3">
-                <input type="text" id="busqueda" class="form-control" placeholder="Buscar por código o nombre...">
-                <button type="button" class="btn btn-primary" id="btnBuscar">Buscar</button>
+
+                <div class="row g-2 mb-3">
+                    <div class="col-md-10">
+                        <input type="text"
+                               id="buscarPrestacionInput"
+                               class="form-control"
+                               placeholder="Buscar por código, nombre, tipo o categoría...">
+                        <div class="mini-help mt-1">
+                            Ingrese al menos 2 caracteres. Se mostrarán 15 resultados por vez.
+                        </div>
+                    </div>
+
+                    <div class="col-md-2 d-grid align-self-start">
+                        <button type="button" class="btn btn-primary" id="btnBuscarPrestacion">
+                            <i class="fas fa-search"></i> Buscar
+                        </button>
+                    </div>
                 </div>
 
-                <table class="table table-hover table-sm" id="tablaResultados">
-                <thead>
-                    <tr>
-                    <th>Código</th>
-                    <th>Nombre</th>
-                    <th>Gastos</th>
-                    <th>Especialista</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    <!-- Se llena dinámicamente -->
-                </tbody>
-                </table>
-            </div>
-            </div>
-        </div>
-        </div>
-
-
-        <!-- Modal de Confirmación --> 
-        <div class="modal fade" id="modalConfirmacion" tabindex="-1" aria-labelledby="modalConfirmacionLabel" aria-hidden="true">
-            <div class="modal-dialog modal-dialog-centered">
-                <div class="modal-content border-0 shadow-sm">
-                <div class="modal-header bg-primary text-white">
-                    <h6 class="modal-title" id="modalConfirmacionLabel">
-                    <i class="fas fa-save me-2"></i> Confirmar guardado
-                    </h6>
-                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+                <div id="prestacionesResultadoInfo" class="text-muted small mb-2">
+                    No se cargan prestaciones automáticamente. Realice una búsqueda para comenzar.
                 </div>
-                <div class="modal-body text-center">
-                    <p class="mb-2">¿Deseás guardar este presupuesto?</p>
-                    <small class="text-muted">Podrás editarlo más adelante si es necesario.</small>
+
+                <div class="table-responsive border rounded-3">
+                    <table class="table table-sm table-hover align-middle mb-0 prestacion-table">
+                        <thead class="table-light">
+                            <tr>
+                                <th>Código</th>
+                                <th>Prestación</th>
+                                <th>Tipo</th>
+                                <th>Categoría</th>
+                                <th class="text-end">Acción</th>
+                            </tr>
+                        </thead>
+
+                        <tbody id="prestacionesResultadoBody">
+                            <tr>
+                                <td colspan="5" class="empty-row">
+                                    <i class="fas fa-magnifying-glass"></i>
+                                    Busque una prestación por código o nombre.
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
                 </div>
-                <div class="modal-footer justify-content-center border-0">
-                    <button type="button" class="btn btn-light btn-sm" data-bs-dismiss="modal">Cancelar</button>
-                    <button type="button" class="btn btn-primary btn-sm" id="btnConfirmarGuardar">
-                    <i class="fas fa-check"></i> Guardar
+
+                <div class="d-grid mt-3">
+                    <button type="button"
+                            id="btnCargarMasPrestaciones"
+                            class="btn btn-outline-primary d-none">
+                        <i class="fas fa-chevron-down"></i> Cargar 15 más
                     </button>
                 </div>
-                </div>
-            </div>
-        </div>
 
-    </form>
+            </div>
+
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="modalConfirmarGuardado" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content modal-confirmacion">
+
+            <div class="modal-header">
+                <h5 class="modal-title">
+                    <i class="fas fa-check-circle text-primary"></i>
+                    Confirmar orden
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+
+            <div class="modal-body">
+                ¿Desea guardar la orden con todos sus detalles?
+            </div>
+
+            <div class="modal-footer">
+                <button type="button"
+                        class="btn btn-outline-secondary"
+                        data-bs-dismiss="modal">
+                    Cancelar
+                </button>
+
+                <button type="button"
+                        class="btn btn-primary"
+                        onclick="guardarOrden();">
+                    <i class="fas fa-save"></i> Sí, guardar
+                </button>
+            </div>
+
+        </div>
+    </div>
 </div>
 
 <script>
-/* ===========================================
-   CONFIGURACIÓN GENERAL
-   =========================================== */
-const TAX_RATE = 0.21;   // Tasa de IVA
-const DECIMALS = 2;      // Cantidad de decimales mostrados
+    let prestacionPage = 1;
+    let prestacionQuery = "";
+    let prestacionHasNext = false;
+    let filaActualPrestacion = null;
 
-let filaActualBuscador = null; // Fila activa del modal buscador
+    const buscarPrestacionesUrl = "{% url 'gestion_app:buscar_prestaciones_ajax' %}";
 
-
-/* ===========================================
-   FORMATEO Y CONVERSIÓN DE NÚMEROS
-   =========================================== */
-
-/** Formatea número al estilo argentino (puntos miles, coma decimal). */
-function formatearNumeroAR(numero) {
-    if (numero === null || numero === undefined || numero === "") return "";
-    
-    // Eliminar todo lo que no sea número
-    numero = numero.toString().replace(/\D/g, '');
-    
-    // Convertir a float y dividir entre 100 para los decimales
-    let n = (parseFloat(numero) / 100).toFixed(2);
-
-    // Separar entero y decimal
-    let partes = n.split(".");
-    let entero = partes[0];
-    let decimal = partes[1];
-
-    // Agregar puntos cada 3 dígitos
-    entero = entero.replace(/\B(?=(\d{3})+(?!\d))/g, ".");
-
-    return entero + "," + decimal;
-}
-/** Convierte string "123.456,78" → 123456.78 */
-function parsearNumeroAR(str) {
-    if (!str) return 0;
-    return parseFloat(str.replace(/\./g, "").replace(",", "."));
-}
-
-
-/*  ===========================================
-    Cuando se setea el codigo y el mismo sale de alli
-    FOCUS - OFF
-    ===========================================  */  
-
-
-document.getElementById("tabla-prestaciones").addEventListener("blur", async e => {
-    if (!e.target.classList.contains("codigo")) return;
-    const codigo = e.target.value.trim();
-
-    const fila = e.target.closest("tr");    
-    if (!codigo){ 
-        return;
-    } 
-    try {
-        const obraSocialId = document.querySelector("select[name='obra_social']").value;
-        const url = "{% url 'presupuestos_app:get_prestacion' codigo='__codigo__' %}"
-            .replace("__codigo__", encodeURIComponent(codigo));
-        const resp = await fetch(`${url}?obra_social=${obraSocialId}`);
-        if (!resp.ok) throw new Error();
-        const data = await resp.json();
-
-        fila.querySelector(".tipo").value = "gastos";
-        fila.querySelector(".prestacion").value = data.nombre || fila.querySelector(".prestacion").value;
-        fila.querySelector(".precio").value = (parseFloat(data.precio) || 0).toFixed(DECIMALS);
-        if (!fila.querySelector(".cantidad").value) fila.querySelector(".cantidad").value = 1;
-
-
-        // 💡 NUEVO: permitir editar si no es de tipo IPS 
-        if (data.tipo && data.tipo.toLowerCase() === "particular") {
-            fila.querySelector(".precio").removeAttribute("readonly");
-            fila.querySelector(".precio").classList.add("bg-light");
-        } else {
-            fila.querySelector(".precio").setAttribute("readonly", true);
-            fila.querySelector(".precio").classList.remove("bg-light");
+    function escapeHtml(value) {
+        if (value === null || value === undefined) {
+            return "";
         }
 
-
-        calcularTotales();
-    } catch {
-        console.warn("Prestación no encontrada:", codigo);
+        return String(value)
+            .replaceAll("&", "&amp;")
+            .replaceAll("<", "&lt;")
+            .replaceAll(">", "&gt;")
+            .replaceAll('"', "&quot;")
+            .replaceAll("'", "&#039;");
     }
-}, true);
 
-
-/*  ===========================================
-    Cuando se Busca con el buscador
-    BUSCADOR DE PRESTACIONES
-    ===========================================  */  
-  const $f = document.getElementById('fecha_presupuesto');
-  const hoy = new Date().toISOString().split('T')[0]; // YYYY-MM-DD
-  $f.value = hoy;   // por defecto hoy
-  $f.max = hoy;     // no permitir fechas futuras
-  // opcional: mínimo
-  // $f.min = '2024-01-01';
-
-
-// Guarda la fila actual al abrir modal
-
-document.addEventListener("click", e => {
-    if (e.target.closest(".lupa-btn")) {
-        filaActualBuscador = e.target.closest("tr");
-    }
-});
-
-// Buscar prestaciones desde el modal
-
-document.getElementById("btnBuscar").addEventListener("click", async () => {
-    const termino = document.getElementById("busqueda").value.trim();
-    if (!termino) return alert("Por favor ingresa un término de búsqueda.");
-
-    const tbody = document.querySelector("#tablaResultados tbody");
-    tbody.innerHTML = '<tr><td colspan="4" class="text-center text-muted">Buscando...</td></tr>';
-
-    try {
-        const resp = await fetch(`{% url 'presupuestos_app:buscar_nomenclador' %}?q=${encodeURIComponent(termino)}`);
-        if (!resp.ok) throw new Error("Error al buscar en el servidor");
-        const resultados = await resp.json();
-
-        tbody.innerHTML = resultados.length
-            ? resultados.map(item => `
-                <tr style="cursor:pointer">
-                    <td>${item.codigo}</td>
-                    <td>${item.nombre}</td>
-                    <td>${item.gastos}</td>
-                    <td>${item.especialista}</td>
-                </tr>`).join("")
-            : '<tr><td colspan="4" class="text-center text-muted">Sin resultados</td></tr>';
-
-        // Vincular click en resultados
-        tbody.querySelectorAll("tr").forEach((tr, i) =>
-            tr.addEventListener("click", () => seleccionarItem(resultados[i]))
-        );
-    } catch (err) {
-        console.error(err);
-        tbody.innerHTML = '<tr><td colspan="4" class="text-center text-danger">Error al cargar datos</td></tr>';
-    }
-});
-
-/** Completa la fila con los datos del ítem seleccionado. */
-async function seleccionarItem(item) {
-    const modal = bootstrap.Modal.getInstance(document.getElementById("modalBusqueda"));
-    modal.hide();
-    if (!filaActualBuscador) return;
-
-    const fila = filaActualBuscador;
-    fila.querySelector(".codigo").value = item.codigo;
-
-    try {
-        const obraSocialId = document.querySelector("select[name='obra_social']").value;
-        
-        const url = "{% url 'presupuestos_app:get_prestacion' codigo='__codigo__' %}"
-            .replace("__codigo__", encodeURIComponent(item.codigo));
-
-        const resp = await fetch(`${url}?obra_social=${obraSocialId}`);
-        if (!resp.ok) throw new Error("Error en la respuesta del servidor");
-        const data = await resp.json();
-
-        fila.querySelector(".tipo").value = "gastos";
-        fila.querySelector(".prestacion").value = data.nombre || "";
-        fila.querySelector(".precio").value = (parseFloat(data.precio) || 0).toFixed(DECIMALS);
-        if (!fila.querySelector(".cantidad").value) fila.querySelector(".cantidad").value = 1; 
-
-        
-        // 💡 NUEVO: permitir editar si no es de tipo IPS
-        console.log("El tipo es :", data.tipo)
-        if (data.tipo && data.tipo.toLowerCase() === "particular") {
-            fila.querySelector(".precio").removeAttribute("readonly");
-            fila.querySelector(".precio").classList.add("bg-light");
-        } else {
-            fila.querySelector(".precio").setAttribute("readonly", true);
-            fila.querySelector(".precio").classList.remove("bg-light");
-        }
-
-        calcularTotales();
-    } catch (err) {
-        console.error("Error:", err);
-        alert("No se encontró la prestación para el código " + item.codigo);
-    }
-}
-
-
-/* ===========================================
-   CÁLCULOS DE FILA Y TOTALES
-   =========================================== */
-
-/** Recalcula los importes de una fila (importe, IVA, subtotal). */
-function actualizarFila(tr) {
-    const precio = parsearNumeroAR(tr.querySelector(".precio").value);
-    const cantidad = parseFloat(tr.querySelector(".cantidad").value) || 0;
-    const importe = precio * cantidad;
-    const iva = importe * TAX_RATE;
-    const total = importe + iva;
-
-    tr.querySelector(".importe").value = formatearNumeroAR(importe);
-    tr.querySelector(".iva").value = formatearNumeroAR(iva);
-    tr.querySelector(".subtotal").value = formatearNumeroAR(total);
-}
-
-/** Calcula los totales generales del presupuesto. */
-function calcularTotales() {
-    let subtotal = 0, ivaTotal = 0;
-    const ivaIncluido = document.getElementById("chek-iva")?.checked ?? true;
-
-    document.querySelectorAll("#tabla-prestaciones tbody tr").forEach(tr => {
-        const cantidad = parseFloat(tr.querySelector(".cantidad")?.value) || 0;
-        const precio = parseFloat(tr.querySelector(".precio")?.value) || 0;
-        const importe = cantidad * precio;
-        const iva = ivaIncluido ? importe * TAX_RATE : 0;
-        const total = importe + iva; 
-        tr.querySelector(".importe").value = formatearNumeroAR(importe.toFixed(2));
-        tr.querySelector(".iva").value = formatearNumeroAR(iva.toFixed(2));
-        tr.querySelector(".subtotal").value = formatearNumeroAR(total.toFixed(2));
-        
-        subtotal += importe;
-        ivaTotal += iva;
-    });
-
-    const total = subtotal + (ivaIncluido ? ivaTotal : 0);
-    document.getElementById("subtotal").textContent = formatearNumeroAR(subtotal.toFixed(2));
-    document.getElementById("iva").textContent = formatearNumeroAR(ivaIncluido ? ivaTotal.toFixed(2) : 0);
-    document.getElementById("total").textContent = formatearNumeroAR(total.toFixed(2));
-}
-
-
-
-/* ===========================================
-   MANEJO DE TABLA DE PRESTACIONES
-   =========================================== */
-
-/* Aca esta funcion agrega proporcionales en medicamento */
-document.getElementById("btn-medicamentos").addEventListener("click", function() {
-    const porcentaje = parseFloat(document.getElementById("med-prop").value) / 100; // 0.4, 0.5, etc.
-    const tbody = document.querySelector("#tabla-prestaciones tbody");
-    const ivaIncluido = document.getElementById("chek-iva")?.checked ?? true;
-    // Función auxiliar para procesar un código base y crear/actualizar fila proporcional
-    function procesarCodigoBase(codigoBase, codigoDestino, nombrePrestacion) {
-        // Buscar fila existente (la proporcional)
-        let filaExistente = Array.from(tbody.querySelectorAll("tr"))
-            .find(f => f.querySelector(".codigo").value.trim() === codigoDestino);
-
-        // Sumamos cantidades y precios proporcionales de todas las filas con codigoBase
-        let totalCantidad = 0;
-        let totalPrecio = 0;
-
-        Array.from(tbody.querySelectorAll("tr")).forEach(fila => {
-            const codigo = fila.querySelector(".codigo").value.trim();
-            if (codigo === codigoBase &&codigoDestino!='medquir') {
-                const cantidad = parseFloat(fila.querySelector(".cantidad").value) || 0;
-                const precioOriginal = parseFloat(fila.querySelector(".precio").value) || 0;
-                totalCantidad += cantidad;
-                totalPrecio += precioOriginal * porcentaje * cantidad;
+    function actualizarNumeracionFilas() {
+        document.querySelectorAll("#detallesBody tr.fila-detalle").forEach((tr, index) => {
+            const number = tr.querySelector(".row-number");
+            if (number) {
+                number.textContent = index + 1;
             }
         });
-        if(codigoDestino=='medquir'){
-            Array.from(tbody.querySelectorAll("tr")).forEach(fila => {
-                const codigo = fila.querySelector(".codigo").value.trim(); 
-                if (parseInt(codigo) <140000 || parseInt(codigo)>700000) {
-                    const cantidad = parseFloat(fila.querySelector(".cantidad").value) || 0;
-                    const precioOriginal = parseFloat(fila.querySelector(".precio").value) || 0; 
-                    totalPrecio += precioOriginal * porcentaje * cantidad; 
-                }
+    }
+
+    function limpiarFilaDetalle(fila) {
+        fila.querySelector(".detalle_prestacion_id").value = "";
+        fila.querySelector(".detalle_prestacion_codigo").value = "";
+        fila.querySelector(".detalle_prestacion_nombre").value = "";
+        fila.querySelector(".detalle_medico_id").value = "";
+        fila.querySelector(".detalle_cantidad").value = 1;
+        fila.querySelector(".detalle_honorarios_gastos").value = "";
+        fila.querySelector(".detalle_tipo_honorario").value = "";
+        fila.querySelector(".detalle_fecha_desde").value = "";
+        fila.querySelector(".detalle_fecha_hasta").value = "";
+        fila.querySelector(".detalle_autorizada").checked = false;
+        fila.querySelector(".detalle_observaciones").value = "";
+    }
+
+    function agregarFilaDetalle() {
+        const tbody = document.getElementById("detallesBody");
+        const template = tbody.querySelector("tr.fila-detalle");
+        const nuevaFila = template.cloneNode(true);
+
+        limpiarFilaDetalle(nuevaFila);
+        tbody.appendChild(nuevaFila);
+        actualizarNumeracionFilas();
+
+        const codigoInput = nuevaFila.querySelector(".detalle_prestacion_codigo");
+        if (codigoInput) {
+            codigoInput.focus();
+        }
+    }
+
+    function eliminarFilaDetalle(fila) {
+        const tbody = document.getElementById("detallesBody");
+        const filas = tbody.querySelectorAll("tr.fila-detalle");
+
+        if (filas.length > 1) {
+            fila.remove();
+        } else {
+            limpiarFilaDetalle(fila);
+        }
+
+        actualizarNumeracionFilas();
+    }
+
+    function seleccionarPrestacion(prestacion) {
+        if (!filaActualPrestacion) {
+            return;
+        }
+
+        filaActualPrestacion.querySelector(".detalle_prestacion_id").value = prestacion.id || "";
+        filaActualPrestacion.querySelector(".detalle_prestacion_codigo").value = prestacion.codigo || "";
+        filaActualPrestacion.querySelector(".detalle_prestacion_nombre").value = prestacion.nombre || "";
+
+        const cantidad = filaActualPrestacion.querySelector(".detalle_cantidad");
+        if (!cantidad.value || parseInt(cantidad.value) <= 0) {
+            cantidad.value = 1;
+        }
+
+        const modalBuscar = bootstrap.Modal.getInstance(document.getElementById("modalBuscarPrestacion"));
+        if (modalBuscar) {
+            modalBuscar.hide();
+        }
+
+        filaActualPrestacion.querySelector(".detalle_medico_id").focus();
+    }
+
+    function renderPrestaciones(prestaciones, append = false) {
+        const tbody = document.getElementById("prestacionesResultadoBody");
+
+        if (!append) {
+            tbody.innerHTML = "";
+        }
+
+        if (prestaciones.length === 0 && !append) {
+            tbody.innerHTML = `
+                <tr>
+                    <td colspan="5" class="empty-row">
+                        <i class="fas fa-circle-info"></i>
+                        No se encontraron prestaciones.
+                    </td>
+                </tr>
+            `;
+            return;
+        }
+
+        prestaciones.forEach(prestacion => {
+            const tr = document.createElement("tr");
+
+            tr.innerHTML = `
+                <td><strong>${escapeHtml(prestacion.codigo || "-")}</strong></td>
+                <td>
+                    <strong>${escapeHtml(prestacion.nombre || "-")}</strong>
+                    <div class="mini-help">${escapeHtml(prestacion.descripcion || "")}</div>
+                </td>
+                <td>${escapeHtml(prestacion.tipo || "-")}</td>
+                <td>${escapeHtml(prestacion.categoria || "-")}</td>
+                <td class="text-end">
+                    <button type="button" class="btn btn-sm btn-primary">
+                        <i class="fas fa-check"></i> Seleccionar
+                    </button>
+                </td>
+            `;
+
+            tr.querySelector("button").addEventListener("click", function () {
+                seleccionarPrestacion(prestacion);
             });
-            totalCantidad=1;
-        }
 
-        if (totalCantidad === 0) return; // no hay filas base, nada que hacer
-
-        const iva = ivaIncluido ? totalPrecio * TAX_RATE : 0;
-        const subtotal = totalPrecio + iva;
-
-        if (!filaExistente) {
-            // Creamos nueva fila basada en la primera fila del codigoBase
-            const filaBase = Array.from(tbody.querySelectorAll("tr"))
-                .find(f => f.querySelector(".codigo").value.trim() === codigoBase);
-
-            if (!filaBase) return; // seguridad por si no se encuentra
-
-            const nuevaFila = filaBase.cloneNode(true);
-
-            // Seteamos valores proporcionales
-            nuevaFila.querySelector(".codigo").value = codigoDestino;
-            nuevaFila.querySelector(".prestacion").value = nombrePrestacion;
-            nuevaFila.querySelector(".cantidad").value = totalCantidad;
-            nuevaFila.querySelector(".precio").value = (totalPrecio / totalCantidad).toFixed(DECIMALS);
-            nuevaFila.querySelector(".comentario").value = ""
-            // Insertamos al final
-            tbody.appendChild(nuevaFila);
-        } else {
-            // Actualizamos fila existente
-            filaExistente.querySelector(".cantidad").value = totalCantidad;
-            filaExistente.querySelector(".precio").value = (totalPrecio / totalCantidad).toFixed(DECIMALS);
-        }
+            tbody.appendChild(tr);
+        });
     }
 
-    // --- Procesamos códigos fijos ---
-    procesarCodigoBase("430101", "medint", "Medicamentos y descartables en Internado");
-    procesarCodigoBase("400101", "meduti", "Medicamentos y descartables en UTI");
-    procesarCodigoBase("TQ", "medtq", "Medicamentos y descartables en derecho quirurgico");
-    procesarCodigoBase("430130", "medid", "Medicamentos y descartables en Internacion de dia");
-    // --- Nueva lógica para generar MEDQUIR ---
-    Array.from(tbody.querySelectorAll("tr")).forEach(fila => {
-        const codigo = fila.querySelector(".codigo").value.trim();
+    function buscarPrestaciones(reset = true) {
+        const input = document.getElementById("buscarPrestacionInput");
+        const info = document.getElementById("prestacionesResultadoInfo");
+        const btnMas = document.getElementById("btnCargarMasPrestaciones");
+        const tbody = document.getElementById("prestacionesResultadoBody");
 
-        // Si es un código numérico y cumple la condición (<140000 o >720000)
-        if (!isNaN(codigo) && (parseInt(codigo) < 140000 || parseInt(codigo) > 720000)) {
-            procesarCodigoBase(codigo, "medquir", "Medicamentos y descartables en Quirófano");
-            
+        if (reset) {
+            prestacionPage = 1;
+            prestacionQuery = input.value.trim();
         }
+
+        if (prestacionQuery.length < 2) {
+            info.innerText = "Ingrese al menos 2 caracteres para buscar.";
+            tbody.innerHTML = `
+                <tr>
+                    <td colspan="5" class="empty-row">
+                        <i class="fas fa-magnifying-glass"></i>
+                        Busque una prestación por código o nombre.
+                    </td>
+                </tr>
+            `;
+            btnMas.classList.add("d-none");
+            return;
+        }
+
+        info.innerText = "Buscando prestaciones...";
+
+        if (reset) {
+            tbody.innerHTML = `
+                <tr>
+                    <td colspan="5" class="empty-row">
+                        <i class="fas fa-spinner fa-spin"></i>
+                        Buscando...
+                    </td>
+                </tr>
+            `;
+        }
+
+        fetch(`${buscarPrestacionesUrl}?q=${encodeURIComponent(prestacionQuery)}&page=${prestacionPage}`)
+            .then(response => response.json())
+            .then(data => {
+                renderPrestaciones(data.results || [], !reset);
+
+                prestacionHasNext = data.has_next;
+
+                if (prestacionHasNext) {
+                    btnMas.classList.remove("d-none");
+                } else {
+                    btnMas.classList.add("d-none");
+                }
+
+                if ((data.results || []).length === 0 && reset) {
+                    info.innerText = "No se encontraron prestaciones.";
+                } else {
+                    info.innerText = "Resultados encontrados.";
+                }
+            })
+            .catch(() => {
+                info.innerText = "Ocurrió un error al buscar prestaciones.";
+                tbody.innerHTML = `
+                    <tr>
+                        <td colspan="5" class="empty-row text-danger">
+                            No se pudo realizar la búsqueda.
+                        </td>
+                    </tr>
+                `;
+            });
+    }
+
+    function filaTieneDatos(fila) {
+        const prestacionId = fila.querySelector(".detalle_prestacion_id").value.trim();
+        const codigo = fila.querySelector(".detalle_prestacion_codigo").value.trim();
+        const nombre = fila.querySelector(".detalle_prestacion_nombre").value.trim();
+        const observaciones = fila.querySelector(".detalle_observaciones").value.trim();
+
+        return Boolean(prestacionId || codigo || nombre || observaciones);
+    }
+
+    function obtenerTextoSelect(select) {
+        if (!select || !select.value) {
+            return "";
+        }
+
+        return select.options[select.selectedIndex]?.text?.trim() || "";
+    }
+
+    function armarDetallesDesdeTabla() {
+        const detalles = [];
+        const errores = [];
+
+        document.querySelectorAll("#detallesBody tr.fila-detalle").forEach((fila, index) => {
+            if (!filaTieneDatos(fila)) {
+                return;
+            }
+
+            const prestacionId = fila.querySelector(".detalle_prestacion_id").value.trim();
+            const prestacionCodigo = fila.querySelector(".detalle_prestacion_codigo").value.trim();
+            const prestacionNombre = fila.querySelector(".detalle_prestacion_nombre").value.trim();
+            const medicoSelect = fila.querySelector(".detalle_medico_id");
+            const cantidad = fila.querySelector(".detalle_cantidad").value || 1;
+            const hgSelect = fila.querySelector(".detalle_honorarios_gastos");
+            const thSelect = fila.querySelector(".detalle_tipo_honorario");
+            const fechaDesde = fila.querySelector(".detalle_fecha_desde").value;
+            const fechaHasta = fila.querySelector(".detalle_fecha_hasta").value;
+            const autorizada = fila.querySelector(".detalle_autorizada").checked;
+            const observaciones = fila.querySelector(".detalle_observaciones").value.trim();
+
+            if (!prestacionId) {
+                errores.push(`Fila ${index + 1}: debe seleccionar una prestación desde la lupa.`);
+            }
+
+            if (!cantidad || parseInt(cantidad) <= 0) {
+                errores.push(`Fila ${index + 1}: la cantidad debe ser mayor a cero.`);
+            }
+
+            detalles.push({
+                prestacion_id: prestacionId,
+                prestacion_codigo: prestacionCodigo,
+                prestacion_nombre: prestacionNombre,
+                medico_id: medicoSelect.value,
+                medico_texto: medicoSelect.value ? obtenerTextoSelect(medicoSelect) : "",
+                cantidad: cantidad,
+                honorarios_gastos: hgSelect.value,
+                honorarios_gastos_texto: hgSelect.value ? obtenerTextoSelect(hgSelect) : "",
+                tipo_honorario: thSelect.value,
+                tipo_honorario_texto: thSelect.value ? obtenerTextoSelect(thSelect) : "",
+                fecha_desde: fechaDesde,
+                fecha_hasta: fechaHasta,
+                autorizada: autorizada,
+                observaciones: observaciones,
+            });
+        });
+
+        return { detalles, errores };
+    }
+
+    function mostrarErrorDetalle(mensaje) {
+        const errorBox = document.getElementById("detalleError");
+        errorBox.innerHTML = mensaje;
+        errorBox.classList.remove("d-none");
+        errorBox.scrollIntoView({ behavior: "smooth", block: "center" });
+    }
+
+    function limpiarErrorDetalle() {
+        const errorBox = document.getElementById("detalleError");
+        errorBox.innerHTML = "";
+        errorBox.classList.add("d-none");
+    }
+
+    function guardarOrden() {
+        const form = document.getElementById("formOrden");
+
+        limpiarErrorDetalle();
+
+        if (!form.checkValidity()) {
+            form.reportValidity();
+            return;
+        }
+
+        const resultado = armarDetallesDesdeTabla();
+
+        if (resultado.detalles.length === 0) {
+            const modal = bootstrap.Modal.getInstance(document.getElementById("modalConfirmarGuardado"));
+            if (modal) {
+                modal.hide();
+            }
+
+            mostrarErrorDetalle("Debe cargar al menos un detalle en la orden.");
+            return;
+        }
+
+        if (resultado.errores.length > 0) {
+            const modal = bootstrap.Modal.getInstance(document.getElementById("modalConfirmarGuardado"));
+            if (modal) {
+                modal.hide();
+            }
+
+            mostrarErrorDetalle(resultado.errores.map(error => `<div>${escapeHtml(error)}</div>`).join(""));
+            return;
+        }
+
+        document.getElementById("detalles_json").value = JSON.stringify(resultado.detalles);
+        form.submit();
+    }
+
+    document.addEventListener("DOMContentLoaded", function () {
+        const btnBuscarPrestacion = document.getElementById("btnBuscarPrestacion");
+        const buscarPrestacionInput = document.getElementById("buscarPrestacionInput");
+        const btnCargarMasPrestaciones = document.getElementById("btnCargarMasPrestaciones");
+        const btnAgregarFilaDetalle = document.getElementById("btnAgregarFilaDetalle");
+        const tablaDetalles = document.getElementById("tablaDetallesOrden");
+
+        btnAgregarFilaDetalle.addEventListener("click", agregarFilaDetalle);
+
+        tablaDetalles.addEventListener("click", function (e) {
+            const btnBuscar = e.target.closest(".btnBuscarPrestacionFila");
+            if (btnBuscar) {
+                filaActualPrestacion = btnBuscar.closest("tr.fila-detalle");
+                const codigo = filaActualPrestacion.querySelector(".detalle_prestacion_codigo").value.trim();
+                buscarPrestacionInput.value = codigo;
+                return;
+            }
+
+            const btnEliminar = e.target.closest(".eliminarFilaDetalle");
+            if (btnEliminar) {
+                eliminarFilaDetalle(btnEliminar.closest("tr.fila-detalle"));
+            }
+        });
+
+        tablaDetalles.addEventListener("keydown", function (e) {
+            if (e.key === "Enter" && e.target.classList.contains("detalle_prestacion_codigo")) {
+                e.preventDefault();
+                filaActualPrestacion = e.target.closest("tr.fila-detalle");
+                buscarPrestacionInput.value = e.target.value.trim();
+                new bootstrap.Modal(document.getElementById("modalBuscarPrestacion")).show();
+                if (buscarPrestacionInput.value.length >= 2) {
+                    buscarPrestaciones(true);
+                }
+            }
+        });
+
+        btnBuscarPrestacion.addEventListener("click", function () {
+            buscarPrestaciones(true);
+        });
+
+        buscarPrestacionInput.addEventListener("keydown", function (e) {
+            if (e.key === "Enter") {
+                e.preventDefault();
+                buscarPrestaciones(true);
+            }
+        });
+
+        btnCargarMasPrestaciones.addEventListener("click", function () {
+            if (prestacionHasNext) {
+                prestacionPage += 1;
+                buscarPrestaciones(false);
+            }
+        });
+
+        document.getElementById("modalBuscarPrestacion").addEventListener("shown.bs.modal", function () {
+            buscarPrestacionInput.focus();
+            if (buscarPrestacionInput.value.trim().length >= 2) {
+                buscarPrestaciones(true);
+            }
+        });
+
+        actualizarNumeracionFilas();
     });
-
-    // Recalculamos totales generales
-    calcularTotales();
-});
-
-
-
-
-
-/** Crea una nueva fila en la tabla. */
-function agregarFila() {
-    const tbody = document.querySelector("#tabla-prestaciones tbody");
-    const template = tbody.querySelector("tr.fila-detalle");
-    const fila = template.cloneNode(true);
-    fila.querySelector(".precio").setAttribute("readonly", true);
-    fila.querySelector(".precio").classList.remove("bg-light");
-    fila.querySelectorAll("input").forEach(el => {
-        el.value = el.classList.contains("cantidad") ? 1 : "";
-        if (el.classList.contains("precio")) el.value = (0).toFixed(DECIMALS);
-    });
-
-    tbody.appendChild(fila); 
-}
-
-/** Elimina fila (o limpia si es la última). */
-function eliminarFila(tr) {
-    const tbody = document.querySelector("#tabla-prestaciones tbody");
-    if (tbody.querySelectorAll("tr").length > 1) {
-        tr.remove();
-    } else {
-        tr.querySelectorAll("input").forEach(i => i.value = i.classList.contains("cantidad") ? 1 : "");
-    }
-    calcularTotales();
-}
-
-
-/* ===========================================
-   EVENTOS GLOBALES
-   =========================================== */
-
-// Recalcular cuando cambian campos editables
-document.addEventListener("input", e => {
-    const tr = e.target.closest("#tabla-prestaciones tr");
-    if (tr && ["precio", "cantidad", "codigo", "prestacion"].some(c => e.target.classList.contains(c))) {
-        calcularTotales();
-    }
-});
-
-
-
-// Cambio de tipo (gastos/especialista/todo)
-document.getElementById("tabla-prestaciones").addEventListener("change", e => {
-    if (!e.target.classList.contains("tipo")) return;
-    const fila = e.target.closest("tr");
-    const codigo = fila.querySelector(".codigo").value;
-    const tipo = e.target.value;
-    const obraSocialId = document.querySelector("select[name='obra_social']").value;
-    const url = "{% url 'presupuestos_app:get_tipo' codigo='__codigo__' %}"
-        .replace("__codigo__", encodeURIComponent(codigo));
-
-    fetch(`${url}?tipo=${tipo}&obra_social=${obraSocialId}`)
-        .then(r => r.json())
-        .then(data => { 
-            const cantidad = parseFloat(fila.querySelector(".cantidad").value) || 1;
-            const precio = parseFloat(data.precio) || 0; 
-
-            fila.querySelector(".precio").value = precio.toFixed(2); 
-            calcularTotales();
-        })
-        .catch(err => console.error("Error al traer tipo:", err));
-});
-
-// Botones agregar/eliminar fila
-document.getElementById("agregar-fila").addEventListener("click", agregarFila);
-document.addEventListener("click", e => {
-    const btn = e.target.closest(".eliminar-fila");
-    if (btn) {
-        eliminarFila(btn.closest("tr"));
-    }
-});
-
-// Cambio de IVA incluido
-document.getElementById("chek-iva").addEventListener("change", calcularTotales);
-
-// Inicialización
-document.addEventListener("DOMContentLoaded", () => {
-    document.querySelectorAll("#tabla-prestaciones tbody tr").forEach(actualizarFila);
-    calcularTotales();
-    window.history.pushState({}, "");
-    window.addEventListener("popstate", () => {
-        window.location.href = "{% url 'presupuestos_app:presupuestos' %}";
-    });
-});
-
-
-/* ===========================================
-   CONFIRMACIÓN DE GUARDADO
-   =========================================== */
-
-document.getElementById("btnGuardarPresupuesto").addEventListener("click", () => {
-    const form = document.getElementById("form-presupuesto");
-
-    // ejecuta la validación HTML5 normal
-    if (!form.checkValidity()) {
-        form.reportValidity();   // muestra los mensajes de error del navegador
-        return;                  // cancela el envío si hay errores
-    }
-    new bootstrap.Modal(document.getElementById("modalConfirmacion")).show();
-});
-
-document.getElementById("btnConfirmarGuardar").addEventListener("click", () => {
-    bootstrap.Modal.getInstance(document.getElementById("modalConfirmacion")).hide();
-    document.getElementById("form-presupuesto").submit();
-});
-
-
-
-
-/* ===========================================
-   COMENTARIOS EN CADA FILA
-   =========================================== */
-let filaComentarioActual = null;
-
-document.addEventListener("click", e => {
-    // Si se hace clic en el ícono de comentario
-    if (e.target.closest(".btn-comentario")) {
-        filaComentarioActual = e.target.closest("tr");
-        const comentarioGuardado = filaComentarioActual.querySelector(".comentario").value || "";
-        document.getElementById("textoComentario").value = comentarioGuardado;
-        const modal = new bootstrap.Modal(document.getElementById("modalComentario"));
-        modal.show();
-    }
-});
-
-document.getElementById("btnGuardarComentario").addEventListener("click", () => {
-    const texto = document.getElementById("textoComentario").value.trim();
-    if (filaComentarioActual) {
-        // Guardar comentario en input oculto
-        const inputHidden = filaComentarioActual.querySelector(".comentario");
-        inputHidden.value = texto;
-
-        // Cambiar color del ícono si hay comentario
-        const btn = filaComentarioActual.querySelector(".btn-comentario");
-        const icon = btn.querySelector("i");
-        if (texto) {
-            btn.classList.remove("btn-outline-secondary");
-            btn.classList.add("btn-warning");
-            icon.classList.remove("fa-comment-dots");
-            icon.classList.add("fa-comment");
-        } else {
-            btn.classList.remove("btn-warning");
-            btn.classList.add("btn-outline-secondary");
-            icon.classList.remove("fa-comment");
-            icon.classList.add("fa-comment-dots");
-        }
-    }
-
-    bootstrap.Modal.getInstance(document.getElementById("modalComentario")).hide();
-});
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 </script>
 
 {% endblock %}
