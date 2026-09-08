@@ -873,6 +873,51 @@ Dashboard de llamadores
     }
 
     /* ======================================================
+       ALTAS MEDICAS PENDIENTES DE CIERRE
+       ====================================================== */
+
+    .medical-discharge-panel {
+        min-height: 360px;
+    }
+
+    .medical-discharge-count {
+        color: var(--dashboard-orange);
+        background: var(--dashboard-orange-soft);
+    }
+
+    .episode-id {
+        color: #f8fafc;
+        font-weight: 800;
+        font-variant-numeric: tabular-nums;
+    }
+
+    .patient-name {
+        color: #f8fafc;
+        font-weight: 700;
+    }
+
+    .medical-discharge-time {
+        color: #b9c4d1;
+        font-size: 0.8rem;
+        font-variant-numeric: tabular-nums;
+    }
+
+    .administrative-wait {
+        color: var(--dashboard-green);
+        font-size: 0.93rem;
+        font-weight: 800;
+        font-variant-numeric: tabular-nums;
+    }
+
+    .administrative-wait.warning {
+        color: var(--dashboard-yellow);
+    }
+
+    .administrative-wait.danger {
+        color: var(--dashboard-red);
+    }
+
+    /* ======================================================
        RESPONSIVE
        ====================================================== */
 
@@ -1039,7 +1084,7 @@ Dashboard de llamadores
 
             <div class="summary-content">
                 <div class="summary-label">
-                    Atendidos hoy
+                    Llamados hoy
                 </div>
 
                 <div
@@ -1050,7 +1095,7 @@ Dashboard de llamadores
                 </div>
 
                 <div class="summary-description">
-                    Se conectará al próximo indicador
+                    Llamados finalizados válidos
                 </div>
             </div>
 
@@ -1075,7 +1120,7 @@ Dashboard de llamadores
                 </div>
 
                 <div class="summary-description">
-                    Promedio entre alta y atención
+                    Promedio desde emisión hasta llamado
                 </div>
             </div>
 
@@ -1100,7 +1145,7 @@ Dashboard de llamadores
                 </div>
 
                 <div class="summary-description">
-                    Mayor demora registrada
+                    Mayor espera hasta el llamado
                 </div>
             </div>
 
@@ -1114,7 +1159,7 @@ Dashboard de llamadores
 
             <div class="summary-content">
                 <div class="summary-label">
-                    Total ingresados hoy
+                    Total Emitidos hoy
                 </div>
 
                 <div
@@ -1125,7 +1170,7 @@ Dashboard de llamadores
                 </div>
 
                 <div class="summary-description">
-                    Total de llamadores del día
+                    Total de tickets del día
                 </div>
             </div>
 
@@ -1270,7 +1315,7 @@ Dashboard de llamadores
                     class="evolution-state"
                     style="display: none;"
                 >
-                    Todavía no hay atenciones finalizadas hoy.
+                    Todavía no hay llamados finalizados válidos hoy.
                 </div>
 
                 <canvas
@@ -1306,11 +1351,11 @@ Dashboard de llamadores
 
                     <div class="panel-title-group">
                         <h2 class="panel-title">
-                            Frecuencia de atenciones por letra
+                            Frecuencia de llamados por letra
                         </h2>
 
                         <div class="panel-subtitle">
-                            Cantidad de llamadores atendidos hoy por cada letra
+                            Cantidad de llamadores con llamado válido hoy por cada letra
                         </div>
                     </div>
 
@@ -1344,7 +1389,7 @@ Dashboard de llamadores
 
                     <canvas
                         id="grafico-frecuencia-letras"
-                        aria-label="Frecuencia de atenciones por letra"
+                        aria-label="Frecuencia de llamados por letra"
                     ></canvas>
 
                 </div>
@@ -1361,11 +1406,11 @@ Dashboard de llamadores
 
                     <div class="panel-title-group">
                         <h2 class="panel-title">
-                            Atenciones realizadas por usuario
+                            Cierres realizados por usuario
                         </h2>
 
                         <div class="panel-subtitle">
-                            Cantidad y participación sobre el total de hoy
+                            Cantidad de cierres y participación sobre el total de hoy
                         </div>
                     </div>
 
@@ -1441,85 +1486,54 @@ Dashboard de llamadores
                 </div>
 
                 <div class="panel-footer">
-                    Atenciones finalizadas durante el día de hoy
+                    Cierres registrados durante el día de hoy
                 </div>
 
             </section>
-
-            <section class="dashboard-panel">
-
-                <div class="panel-header">
-
-                    <div class="panel-title-group">
-                        <h2 class="panel-title">
-                            Resumen por franja horaria
-                        </h2>
-
-                        <div class="panel-subtitle">
-                            Ingresados, atendidos y espera promedio
-                        </div>
-                    </div>
-
-                    <i
-                        class="fas fa-calendar-day"
-                        style="color: var(--dashboard-yellow);"
-                    ></i>
-
-                </div>
-
-                <div class="panel-body">
-
-                    <div class="dashboard-table-wrapper">
-
-                        <table class="dashboard-table">
-
-                            <thead>
-                                <tr>
-                                    <th>Franja horaria</th>
-                                    <th>Ingresados</th>
-                                    <th>Atendidos</th>
-                                    <th>Promedio</th>
-                                </tr>
-                            </thead>
-
-                            <tbody>
-
-                                <tr>
-                                    <td colspan="4">
-
-                                        <div
-                                            class="placeholder-content"
-                                            style="
-                                                max-width: none;
-                                                padding: 24px 15px;
-                                            "
-                                        >
-
-                                            <p class="placeholder-text">
-                                                La información por franja
-                                                horaria se incorporará en el
-                                                próximo endpoint del
-                                                dashboard.
-                                            </p>
-
-                                        </div>
-
-                                    </td>
-                                </tr>
-
-                            </tbody>
-
-                        </table>
-
-                    </div>
-
-                </div>
-
-            </section>
+ 
 
         </div>
 
     </main>
+
+    <!-- ==================================================
+         ALTAS MEDICAS PENDIENTES - PANEL INDEPENDIENTE
+         ================================================== -->
+
+    <section class="dashboard-panel medical-discharge-panel">
+                <div class="panel-header">
+                    <div class="panel-title-group">
+                        <h2 class="panel-title">
+                            Altas médicas pendientes de cierre administrativo
+                        </h2>
+                        <div class="panel-subtitle">
+                            Episodios con alta médica de ayer y hoy sin egreso administrativo
+                        </div>
+                    </div>
+                    <div
+                        id="total-altas-pendientes"
+                        class="panel-count medical-discharge-count"
+                    >
+                        0
+                    </div>
+                </div>
+                <div id="contenido-altas-pendientes">
+                    <div class="dashboard-loading">
+                        <div>
+                            <div class="loading-spinner"></div>
+                            <p class="state-title">
+                                Cargando altas médicas pendientes
+                            </p>
+                            <p class="state-description">
+                                Consultando episodios sin cierre administrativo
+                            </p>
+                        </div>
+                    </div>
+                </div>
+                <div class="panel-footer">
+                    Verde: menos de 30 min · Amarillo: 30 a 59 min · Rojo: 60 min o más
+                </div>
+            </section>
 
     <!-- ==================================================
          PIE DEL DASHBOARD
@@ -1558,6 +1572,12 @@ Dashboard de llamadores
         const urlLlamadores =
             "{% url 'innova_app:llamadores_en_espera_ajax' %}";
 
+        const urlResumenDashboard =
+            "{% url 'innova_app:dashboard_resumen_ajax' %}";
+
+        const urlAltasMedicasPendientes =
+            "{% url 'innova_app:altas_medicas_pendientes_ajax' %}";
+
         const contenidoEspera =
             document.getElementById("contenido-espera");
 
@@ -1566,6 +1586,20 @@ Dashboard de llamadores
 
         const kpiEnEspera =
             document.getElementById("kpi-en-espera");
+
+        const kpiAtendidos = document.getElementById("kpi-atendidos");
+        const kpiPromedio = document.getElementById("kpi-promedio");
+        const kpiMaximo = document.getElementById("kpi-maximo");
+        const kpiIngresados = document.getElementById("kpi-ingresados");
+
+        const contenidoAltasPendientes =
+            document.getElementById("contenido-altas-pendientes");
+
+        const totalAltasPendientes =
+            document.getElementById("total-altas-pendientes");
+
+        let altasMedicasPendientes = [];
+        let cargandoAltasMedicas = false;
 
         const ultimaActualizacion =
             document.getElementById("ultima-actualizacion");
@@ -1772,6 +1806,136 @@ Dashboard de llamadores
             }
 
             return "";
+        }
+
+        function obtenerClaseEsperaAdministrativa(segundos) {
+            const total = Number.parseInt(segundos, 10) || 0;
+
+            if (total >= 3600) {
+                return "danger";
+            }
+
+            if (total >= 1800) {
+                return "warning";
+            }
+
+            return "";
+        }
+
+        function formatearFechaHora(fechaIso) {
+            if (!fechaIso) {
+                return "--";
+            }
+
+            const fecha = new Date(fechaIso);
+
+            if (Number.isNaN(fecha.getTime())) {
+                return "--";
+            }
+
+            return fecha.toLocaleString(
+                "es-AR",
+                {
+                    day: "2-digit",
+                    month: "2-digit",
+                    hour: "2-digit",
+                    minute: "2-digit",
+                }
+            );
+        }
+
+        function renderizarAltasMedicasPendientes() {
+            const total = altasMedicasPendientes.length;
+            totalAltasPendientes.textContent = total;
+
+            if (total === 0) {
+                contenidoAltasPendientes.innerHTML = `
+                    <div class="dashboard-empty">
+                        <div>
+                            <div
+                                class="placeholder-icon"
+                                style="
+                                    color: var(--dashboard-green);
+                                    background: var(--dashboard-green-soft);
+                                    border-color: rgba(16, 217, 129, 0.2);
+                                "
+                            >
+                                <i class="fas fa-check"></i>
+                            </div>
+                            <p class="state-title">
+                                No hay altas médicas pendientes
+                            </p>
+                            <p class="state-description">
+                                No existen episodios de ayer u hoy pendientes de cierre administrativo.
+                            </p>
+                        </div>
+                    </div>
+                `;
+                return;
+            }
+
+            const filas = altasMedicasPendientes.map(
+                function (registro, indice) {
+                    const claseTiempo = obtenerClaseEsperaAdministrativa(
+                        registro.espera_segundos
+                    );
+
+                    return `
+                        <tr>
+                            <td>
+                                <span class="queue-position">
+                                    ${indice + 1}
+                                </span>
+                            </td>
+                            <td>
+                                <span class="episode-id">
+                                    ${escaparHtml(registro.episodio)}
+                                </span>
+                            </td>
+                            <td>
+                                <span class="patient-name">
+                                    ${escaparHtml(registro.paciente)}
+                                </span>
+                                <span class="queue-status">
+                                    Pendiente de egreso administrativo
+                                </span>
+                            </td>
+                            <td>
+                                <span class="medical-discharge-time">
+                                    ${formatearFechaHora(registro.fecha_egreso_medico)}
+                                </span>
+                            </td>
+                            <td>
+                                <span
+                                    class="administrative-wait ${claseTiempo}"
+                                    data-alta-tiempo-indice="${indice}"
+                                >
+                                    ${formatearTiempo(registro.espera_segundos)}
+                                </span>
+                            </td>
+                        </tr>
+                    `;
+                }
+            ).join("");
+
+            contenidoAltasPendientes.innerHTML = `
+                <div class="dashboard-table-wrapper">
+                    <table class="dashboard-table">
+                        <thead>
+                            <tr>
+                                <th style="width: 55px;">N.º</th>
+                                <th>Episodio</th>
+                                <th>Paciente</th>
+                                <th>Alta médica</th>
+                                <th>Espera cierre</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            ${filas}
+                        </tbody>
+                    </table>
+                </div>
+            `;
         }
 
         function renderizarLlamadores() {
@@ -2101,7 +2265,7 @@ Dashboard de llamadores
 
                                         return [
                                             `Promedio: ${registro.promedio_formateado}`,
-                                            `Atenciones: ${registro.cantidad}`,
+                                            `Llamados: ${registro.cantidad}`,
                                         ];
                                     },
                                 },
@@ -2236,6 +2400,40 @@ Dashboard de llamadores
             );
         }
 
+        function actualizarContadoresAltasMedicas() {
+            altasMedicasPendientes.forEach(
+                function (registro, indice) {
+                    registro.espera_segundos += 1;
+
+                    const elementoTiempo =
+                        document.querySelector(
+                            `[data-alta-tiempo-indice="${indice}"]`
+                        );
+
+                    if (!elementoTiempo) {
+                        return;
+                    }
+
+                    elementoTiempo.textContent = formatearTiempo(
+                        registro.espera_segundos
+                    );
+
+                    elementoTiempo.classList.remove(
+                        "warning",
+                        "danger"
+                    );
+
+                    const nuevaClase = obtenerClaseEsperaAdministrativa(
+                        registro.espera_segundos
+                    );
+
+                    if (nuevaClase) {
+                        elementoTiempo.classList.add(nuevaClase);
+                    }
+                }
+            );
+        }
+
         function actualizarReloj() {
             const ahora = new Date();
 
@@ -2264,6 +2462,110 @@ Dashboard de llamadores
                     }
                 );
         }
+        async function cargarResumenDashboard() {
+            try {
+                const respuesta = await fetch(
+                    urlResumenDashboard,
+                    {
+                        method: "GET",
+                        headers: {
+                            "X-Requested-With": "XMLHttpRequest",
+                            "Accept": "application/json",
+                        },
+                        cache: "no-store",
+                    }
+                );
+
+                if (!respuesta.ok) {
+                    throw new Error(`Error HTTP ${respuesta.status}`);
+                }
+
+                const datos = await respuesta.json();
+
+                if (!datos.success) {
+                    throw new Error(datos.error || "No fue posible cargar el resumen.");
+                }
+
+                kpiAtendidos.textContent = Number(datos.total_llamados || 0).toLocaleString("es-AR");
+                kpiPromedio.textContent = datos.promedio_formateado || "0 min 00 seg";
+                kpiMaximo.textContent = datos.maximo_formateado || "0 min 00 seg";
+                kpiIngresados.textContent = Number(datos.total_ingresados || 0).toLocaleString("es-AR");
+            } catch (error) {
+                console.error("Error al cargar resumen del dashboard:", error);
+            }
+        }
+
+        async function cargarAltasMedicasPendientes() {
+            if (cargandoAltasMedicas) {
+                return;
+            }
+
+            cargandoAltasMedicas = true;
+
+            try {
+                const respuesta = await fetch(
+                    urlAltasMedicasPendientes,
+                    {
+                        method: "GET",
+                        headers: {
+                            "X-Requested-With": "XMLHttpRequest",
+                            "Accept": "application/json",
+                        },
+                        cache: "no-store",
+                    }
+                );
+
+                if (!respuesta.ok) {
+                    throw new Error(`Error HTTP ${respuesta.status}`);
+                }
+
+                const datos = await respuesta.json();
+
+                if (!datos.success) {
+                    throw new Error(
+                        datos.error ||
+                        "No fue posible obtener las altas médicas pendientes."
+                    );
+                }
+
+                altasMedicasPendientes = datos.resultados.map(
+                    function (registro) {
+                        return {
+                            episodio: registro.episodio,
+                            paciente: registro.paciente,
+                            fecha_egreso_medico: registro.fecha_egreso_medico,
+                            espera_segundos: Number.parseInt(
+                                registro.espera_segundos,
+                                10
+                            ) || 0,
+                        };
+                    }
+                );
+
+                renderizarAltasMedicasPendientes();
+            } catch (error) {
+                console.error(
+                    "Error al cargar altas médicas pendientes:",
+                    error
+                );
+
+                contenidoAltasPendientes.innerHTML = `
+                    <div class="dashboard-error">
+                        <div>
+                            <p class="state-title">
+                                No se pudieron actualizar las altas médicas
+                            </p>
+                            <p class="state-description">
+                                Se realizará un nuevo intento automáticamente.
+                            </p>
+                        </div>
+                    </div>
+                `;
+            } finally {
+                cargandoAltasMedicas = false;
+            }
+        }
+
         async function cargarAtencionesPorUsuario() {
             if (cargandoAtencionesUsuarios) {
                 return;
@@ -2515,7 +2817,7 @@ Dashboard de llamadores
                                         const registro = resultados[indice];
 
                                         return [
-                                            `Atenciones: ${registro.cantidad}`,
+                                            `Llamados: ${registro.cantidad}`,
                                             `Promedio: ${registro.promedio_formateado}`,
                                         ];
                                     },
@@ -2571,7 +2873,7 @@ Dashboard de llamadores
 
                                 title: {
                                     display: true,
-                                    text: "Cantidad de atenciones",
+                                    text: "Cantidad de llamados",
                                     color: "#94a3b8",
                                     font: {
                                         size: 11,
@@ -2729,7 +3031,7 @@ Dashboard de llamadores
 
                 if (datos.resultados.length === 0) {
                     frecuenciaLetrasError.textContent =
-                        "Todavía no existen atenciones registradas hoy.";
+                        "Todavía no existen llamados válidos registrados hoy.";
 
                     frecuenciaLetrasError.style.display = "flex";
 
@@ -2766,13 +3068,18 @@ Dashboard de llamadores
         establecerFechaActual();
         actualizarReloj();
         cargarLlamadores();
+        cargarAltasMedicasPendientes();
+        cargarResumenDashboard();
         cargarFrecuenciaPorLetra();
         cargarAtencionesPorUsuario();
         cargarEvolucionTiempoPromedio();
 
         setInterval(actualizarReloj, 1000);
         setInterval(actualizarContadoresLocales, 1000);
+        setInterval(actualizarContadoresAltasMedicas, 1000);
         setInterval(cargarLlamadores, 5000);
+        setInterval(cargarAltasMedicasPendientes, 15000);
+        setInterval(cargarResumenDashboard, 30000);
         setInterval(cargarFrecuenciaPorLetra, 30000);
         setInterval(cargarAtencionesPorUsuario, 30000);
         setInterval(

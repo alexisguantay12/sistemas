@@ -1,0 +1,3119 @@
+{% extends "base3.html" %}
+
+{% load static %}
+
+{% block content %}
+
+<style>
+
+    :root {
+        --dashboard-bg: #07111f;
+        --dashboard-panel: #0d1a2b;
+        --dashboard-panel-soft: #111f32;
+
+        --dashboard-border:
+            rgba(148, 163, 184, 0.15);
+
+        --dashboard-text: #f8fafc;
+        --dashboard-muted: #94a3b8;
+
+        --dashboard-green: #10d981;
+        --dashboard-blue: #2f8cff;
+        --dashboard-purple: #8b5cf6;
+        --dashboard-orange: #ff8a1f;
+        --dashboard-yellow: #f6c915;
+        --dashboard-red: #ef4444;
+
+        --green-soft:
+            rgba(16, 217, 129, 0.13);
+
+        --blue-soft:
+            rgba(47, 140, 255, 0.13);
+
+        --purple-soft:
+            rgba(139, 92, 246, 0.14);
+
+        --orange-soft:
+            rgba(255, 138, 31, 0.14);
+
+        --yellow-soft:
+            rgba(246, 201, 21, 0.14);
+    }
+
+
+    body {
+        background: var(--dashboard-bg);
+    }
+
+
+    .statistics-wrapper {
+        min-height: calc(100vh - 60px);
+
+        padding: 16px;
+
+        color: var(--dashboard-text);
+
+        background:
+            radial-gradient(
+                circle at top left,
+                rgba(47, 140, 255, 0.08),
+                transparent 28%
+            ),
+            linear-gradient(
+                135deg,
+                #06101d 0%,
+                #091525 48%,
+                #06101d 100%
+            );
+    }
+
+
+    /* =====================================================
+       HEADER
+       ===================================================== */
+
+    .statistics-header {
+
+        display: flex;
+
+        align-items: center;
+        justify-content: space-between;
+
+        gap: 20px;
+
+        margin-bottom: 12px;
+
+        padding: 18px 22px;
+
+        border:
+            1px solid var(--dashboard-border);
+
+        border-radius: 12px;
+
+        background:
+            linear-gradient(
+                135deg,
+                rgba(15, 30, 49, 0.98),
+                rgba(10, 23, 39, 0.98)
+            );
+
+        box-shadow:
+            0 12px 35px rgba(0, 0, 0, 0.18);
+    }
+
+
+    .statistics-brand {
+
+        display: flex;
+
+        align-items: center;
+
+        gap: 16px;
+    }
+
+
+    .statistics-icon {
+
+        width: 52px;
+        height: 52px;
+
+        flex-shrink: 0;
+
+        display: flex;
+
+        align-items: center;
+        justify-content: center;
+
+        border-radius: 14px;
+
+        color: #ffffff;
+
+        font-size: 1.45rem;
+
+        background:
+            linear-gradient(
+                145deg,
+                rgba(139, 92, 246, 0.28),
+                rgba(139, 92, 246, 0.08)
+            );
+
+        border:
+            1px solid rgba(139, 92, 246, 0.25);
+    }
+
+
+    .statistics-title {
+
+        margin: 0;
+
+        color: #f8fafc;
+
+        font-size: 1.55rem;
+
+        font-weight: 750;
+    }
+
+
+    .statistics-subtitle {
+
+        margin: 5px 0 0;
+
+        color: var(--dashboard-muted);
+
+        font-size: 0.84rem;
+    }
+
+
+    .period-display {
+
+        padding: 9px 13px;
+
+        border:
+            1px solid rgba(47, 140, 255, 0.18);
+
+        border-radius: 8px;
+
+        color: #dbeafe;
+
+        background:
+            rgba(47, 140, 255, 0.08);
+
+        font-size: 0.75rem;
+    }
+
+
+
+    /* =====================================================
+       FILTROS
+       ===================================================== */
+
+    .filter-panel {
+
+        margin-bottom: 12px;
+
+        padding: 15px 18px;
+
+        border:
+            1px solid var(--dashboard-border);
+
+        border-radius: 10px;
+
+        background:
+            linear-gradient(
+                145deg,
+                rgba(14, 28, 46, 0.98),
+                rgba(9, 22, 38, 0.98)
+            );
+    }
+
+
+    .filter-main {
+
+        display: flex;
+
+        flex-wrap: wrap;
+
+        align-items: end;
+
+        gap: 14px;
+    }
+
+
+    .filter-group {
+
+        min-width: 170px;
+    }
+
+
+    .filter-label {
+
+        display: block;
+
+        margin-bottom: 6px;
+
+        color: #cbd5e1;
+
+        font-size: 0.69rem;
+
+        font-weight: 700;
+
+        text-transform: uppercase;
+    }
+
+
+    .filter-input {
+
+        width: 100%;
+
+        height: 40px;
+
+        padding:
+            7px 10px;
+
+        color: #f8fafc;
+
+        background:
+            rgba(2, 10, 22, 0.45);
+
+        border:
+            1px solid rgba(148, 163, 184, 0.22);
+
+        border-radius: 7px;
+
+        outline: none;
+    }
+
+
+    .filter-input:focus {
+
+        border-color:
+            rgba(47, 140, 255, 0.75);
+
+        box-shadow:
+            0 0 0 3px
+            rgba(47, 140, 255, 0.10);
+    }
+
+
+    .filter-input::-webkit-calendar-picker-indicator {
+
+        filter: invert(1);
+
+        opacity: 0.7;
+    }
+
+
+    .btn-consultar {
+
+        height: 40px;
+
+        padding: 0 18px;
+
+        border: 0;
+
+        border-radius: 7px;
+
+        color: white;
+
+        background: #2f8cff;
+
+        font-size: 0.8rem;
+
+        font-weight: 700;
+    }
+
+
+    .btn-consultar:hover {
+
+        background: #1977df;
+    }
+
+
+    .btn-consultar:disabled {
+
+        opacity: 0.6;
+
+        cursor: not-allowed;
+    }
+
+
+    .quick-filters {
+
+        display: flex;
+
+        flex-wrap: wrap;
+
+        gap: 7px;
+
+        margin-top: 13px;
+    }
+
+
+    .quick-filter {
+
+        padding: 6px 11px;
+
+        border:
+            1px solid rgba(148, 163, 184, 0.18);
+
+        border-radius: 6px;
+
+        color: #aebdce;
+
+        background:
+            rgba(148, 163, 184, 0.05);
+
+        font-size: 0.7rem;
+
+        cursor: pointer;
+
+        transition: 0.15s ease;
+    }
+
+
+    .quick-filter:hover {
+
+        color: #ffffff;
+
+        border-color:
+            rgba(47, 140, 255, 0.35);
+
+        background:
+            rgba(47, 140, 255, 0.10);
+    }
+
+
+
+    /* =====================================================
+       KPI
+       ===================================================== */
+
+    .summary-grid {
+
+        display: grid;
+
+        grid-template-columns:
+            repeat(5, minmax(0, 1fr));
+
+        gap: 12px;
+
+        margin-bottom: 12px;
+    }
+
+
+    .summary-card {
+
+        min-height: 122px;
+
+        display: flex;
+
+        align-items: flex-start;
+
+        gap: 13px;
+
+        padding: 17px;
+
+        border:
+            1px solid var(--dashboard-border);
+
+        border-radius: 10px;
+
+        background:
+            linear-gradient(
+                145deg,
+                rgba(17, 31, 50, 0.98),
+                rgba(11, 25, 42, 0.98)
+            );
+
+        box-shadow:
+            0 9px 26px rgba(0, 0, 0, 0.15);
+    }
+
+
+    .summary-icon {
+
+        width: 47px;
+        height: 47px;
+
+        flex-shrink: 0;
+
+        display: flex;
+
+        align-items: center;
+        justify-content: center;
+
+        border-radius: 13px;
+
+        font-size: 1.2rem;
+    }
+
+
+    .green .summary-icon {
+        color: var(--dashboard-green);
+        background: var(--green-soft);
+    }
+
+    .blue .summary-icon {
+        color: var(--dashboard-blue);
+        background: var(--blue-soft);
+    }
+
+    .purple .summary-icon {
+        color: var(--dashboard-purple);
+        background: var(--purple-soft);
+    }
+
+    .orange .summary-icon {
+        color: var(--dashboard-orange);
+        background: var(--orange-soft);
+    }
+
+    .yellow .summary-icon {
+        color: var(--dashboard-yellow);
+        background: var(--yellow-soft);
+    }
+
+
+    .summary-label {
+
+        margin-bottom: 7px;
+
+        color: #cbd5e1;
+
+        font-size: 0.66rem;
+
+        font-weight: 750;
+
+        text-transform: uppercase;
+    }
+
+
+    .summary-value {
+
+        color: #f8fafc;
+
+        font-size: 1.8rem;
+
+        font-weight: 780;
+
+        line-height: 1.1;
+
+        font-variant-numeric:
+            tabular-nums;
+    }
+
+
+    .summary-description {
+
+        margin-top: 8px;
+
+        color: var(--dashboard-muted);
+
+        font-size: 0.69rem;
+
+        line-height: 1.35;
+    }
+
+
+
+    /* =====================================================
+       PANELES
+       ===================================================== */
+
+    .statistics-grid {
+
+        display: grid;
+
+        grid-template-columns:
+            repeat(2, minmax(0, 1fr));
+
+        gap: 12px;
+
+        margin-bottom: 12px;
+    }
+
+
+    .statistics-panel {
+
+        border:
+            1px solid var(--dashboard-border);
+
+        border-radius: 10px;
+
+        background:
+            linear-gradient(
+                145deg,
+                rgba(14, 28, 46, 0.98),
+                rgba(9, 22, 38, 0.98)
+            );
+
+        overflow: hidden;
+
+        box-shadow:
+            0 9px 27px rgba(0, 0, 0, 0.14);
+    }
+
+
+    .panel-header {
+
+        min-height: 58px;
+
+        display: flex;
+
+        align-items: center;
+
+        justify-content: space-between;
+
+        gap: 14px;
+
+        padding: 14px 16px;
+
+        border-bottom:
+            1px solid var(--dashboard-border);
+    }
+
+
+    .panel-title {
+
+        margin: 0;
+
+        color: #f8fafc;
+
+        font-size: 0.88rem;
+
+        font-weight: 750;
+
+        text-transform: uppercase;
+    }
+
+
+    .panel-subtitle {
+
+        margin-top: 4px;
+
+        color: var(--dashboard-muted);
+
+        font-size: 0.69rem;
+    }
+
+
+    .chart-container {
+
+        position: relative;
+
+        width: 100%;
+
+        height: 340px;
+
+        padding:
+            18px 16px 12px;
+    }
+
+
+    .chart-container canvas {
+
+        width: 100% !important;
+        height: 100% !important;
+    }
+
+
+
+    /* =====================================================
+       TABLA USUARIOS / DETALLE
+       ===================================================== */
+
+    .table-wrapper {
+
+        width: 100%;
+
+        overflow-x: auto;
+    }
+
+
+    .statistics-table {
+
+        width: 100%;
+
+        border-collapse: collapse;
+
+        color: #e2e8f0;
+    }
+
+
+    .statistics-table thead th {
+
+        padding:
+            11px 12px;
+
+        color: #aebdce;
+
+        background:
+            rgba(148, 163, 184, 0.08);
+
+        font-size: 0.67rem;
+
+        font-weight: 700;
+
+        text-align: left;
+
+        text-transform: uppercase;
+
+        white-space: nowrap;
+    }
+
+
+    .statistics-table tbody td {
+
+        padding:
+            12px;
+
+        border-bottom:
+            1px solid
+            rgba(148, 163, 184, 0.10);
+
+        font-size: 0.78rem;
+
+        vertical-align: middle;
+    }
+
+
+    .statistics-table tbody tr:hover {
+
+        background:
+            rgba(47, 140, 255, 0.05);
+    }
+
+
+    .ranking {
+
+        width: 27px;
+        height: 27px;
+
+        display: inline-flex;
+
+        align-items: center;
+        justify-content: center;
+
+        border-radius: 50%;
+
+        color: var(--dashboard-blue);
+
+        background:
+            var(--blue-soft);
+
+        font-size: 0.72rem;
+
+        font-weight: 800;
+    }
+
+
+    .progress-wrapper {
+
+        min-width: 130px;
+
+        display: flex;
+
+        align-items: center;
+
+        gap: 10px;
+    }
+
+
+    .progress-background {
+
+        flex: 1;
+
+        height: 7px;
+
+        border-radius: 999px;
+
+        background:
+            rgba(148, 163, 184, 0.12);
+
+        overflow: hidden;
+    }
+
+
+    .progress-value {
+
+        height: 100%;
+
+        border-radius: inherit;
+
+        background:
+            linear-gradient(
+                90deg,
+                #1686ff,
+                #46a4ff
+            );
+    }
+
+
+    .percentage {
+
+        width: 45px;
+
+        color: #cbd5e1;
+
+        font-size: 0.71rem;
+
+        text-align: right;
+    }
+
+
+
+    /* =====================================================
+       ESTADOS
+       ===================================================== */
+
+    .state-box {
+
+        min-height: 260px;
+
+        display: flex;
+
+        align-items: center;
+        justify-content: center;
+
+        padding: 25px;
+
+        color: var(--dashboard-muted);
+
+        font-size: 0.77rem;
+
+        text-align: center;
+    }
+
+
+    .loading-spinner {
+
+        width: 33px;
+        height: 33px;
+
+        margin:
+            0 auto 12px;
+
+        border:
+            3px solid
+            rgba(148, 163, 184, 0.18);
+
+        border-top-color:
+            var(--dashboard-blue);
+
+        border-radius: 50%;
+
+        animation:
+            statisticsSpin
+            0.8s
+            linear
+            infinite;
+    }
+
+
+    @keyframes statisticsSpin {
+
+        to {
+            transform:
+                rotate(360deg);
+        }
+    }
+
+
+    .error-message {
+
+        color: #fecaca;
+    }
+
+
+    .panel-footer {
+
+        padding:
+            10px 15px;
+
+        border-top:
+            1px solid var(--dashboard-border);
+
+        color: var(--dashboard-muted);
+
+        background:
+            rgba(148, 163, 184, 0.025);
+
+        font-size: 0.68rem;
+
+        text-align: center;
+    }
+
+
+
+    /* =====================================================
+       TABLA DETALLE COMPLETA
+       ===================================================== */
+
+    .daily-panel {
+
+        margin-bottom: 12px;
+    }
+
+
+    .daily-table-container {
+
+        max-height: 500px;
+
+        overflow: auto;
+    }
+
+
+
+    /* =====================================================
+       RESPONSIVE
+       ===================================================== */
+
+    @media (max-width: 1350px) {
+
+        .summary-grid {
+            grid-template-columns:
+                repeat(3, minmax(0, 1fr));
+        }
+
+    }
+
+
+    @media (max-width: 950px) {
+
+        .statistics-grid {
+            grid-template-columns: 1fr;
+        }
+
+        .statistics-header {
+            align-items: flex-start;
+            flex-direction: column;
+        }
+
+        .summary-grid {
+            grid-template-columns:
+                repeat(2, minmax(0, 1fr));
+        }
+
+    }
+
+
+    @media (max-width: 580px) {
+
+        .statistics-wrapper {
+            padding: 9px;
+        }
+
+        .summary-grid {
+            grid-template-columns: 1fr;
+        }
+
+        .filter-main {
+            display: block;
+        }
+
+        .filter-group {
+            margin-bottom: 10px;
+        }
+
+        .btn-consultar {
+            width: 100%;
+        }
+
+        .statistics-title {
+            font-size: 1.25rem;
+        }
+
+    }
+
+</style>
+
+
+<div class="statistics-wrapper">
+
+
+    <!-- ==================================================
+         ENCABEZADO
+         ================================================== -->
+
+    <header class="statistics-header">
+
+        <div class="statistics-brand">
+
+            <div class="statistics-icon">
+                <i class="fas fa-chart-column"></i>
+            </div>
+
+            <div>
+
+                <h1 class="statistics-title">
+                    Estadísticas de Llamadores
+                </h1>
+
+                <p class="statistics-subtitle">
+                    Análisis histórico de ingreso,
+                    atención y tiempos de espera
+                </p>
+
+            </div>
+
+        </div>
+
+
+        <div
+            id="periodo-mostrado"
+            class="period-display"
+        >
+            Seleccione un período
+        </div>
+
+    </header>
+
+
+
+    <!-- ==================================================
+         FILTROS
+         ================================================== -->
+
+    <section class="filter-panel">
+
+        <div class="filter-main">
+
+            <div class="filter-group">
+
+                <label
+                    for="fecha-desde"
+                    class="filter-label"
+                >
+                    Desde
+                </label>
+
+                <input
+                    type="date"
+                    id="fecha-desde"
+                    class="filter-input"
+                >
+
+            </div>
+
+
+            <div class="filter-group">
+
+                <label
+                    for="fecha-hasta"
+                    class="filter-label"
+                >
+                    Hasta
+                </label>
+
+                <input
+                    type="date"
+                    id="fecha-hasta"
+                    class="filter-input"
+                >
+
+            </div>
+
+
+            <button
+                type="button"
+                id="btn-consultar"
+                class="btn-consultar"
+            >
+                <i class="fas fa-search me-1"></i>
+                Consultar
+            </button>
+
+        </div>
+
+
+        <div class="quick-filters">
+
+            <button
+                type="button"
+                class="quick-filter"
+                data-rango="hoy"
+            >
+                Hoy
+            </button>
+
+            <button
+                type="button"
+                class="quick-filter"
+                data-rango="ayer"
+            >
+                Ayer
+            </button>
+
+            <button
+                type="button"
+                class="quick-filter"
+                data-rango="7dias"
+            >
+                Últimos 7 días
+            </button>
+
+            <button
+                type="button"
+                class="quick-filter"
+                data-rango="mes"
+            >
+                Este mes
+            </button>
+
+            <button
+                type="button"
+                class="quick-filter"
+                data-rango="mes-anterior"
+            >
+                Mes anterior
+            </button>
+
+        </div>
+
+    </section>
+
+
+
+    <!-- ==================================================
+         KPI
+         ================================================== -->
+
+    <section class="summary-grid">
+
+
+        <article class="summary-card yellow">
+
+            <div class="summary-icon">
+                <i class="fas fa-users"></i>
+            </div>
+
+            <div>
+
+                <div class="summary-label">
+                    Total Emitidos
+                </div>
+
+                <div
+                    id="kpi-ingresados"
+                    class="summary-value"
+                >
+                    --
+                </div>
+
+                <div class="summary-description">
+                    Llamadores generados en el período
+                </div>
+
+            </div>
+
+        </article>
+
+
+
+        <article class="summary-card blue">
+
+            <div class="summary-icon">
+                <i class="fas fa-user-check"></i>
+            </div>
+
+            <div>
+
+                <div class="summary-label">
+                    Total llamados
+                </div>
+
+                <div
+                    id="kpi-atendidos"
+                    class="summary-value"
+                >
+                    --
+                </div>
+
+                <div class="summary-description">
+                    Llamadores con llamado válido finalizado
+                </div>
+
+            </div>
+
+        </article>
+
+
+
+        <article class="summary-card green">
+
+            <div class="summary-icon">
+                <i class="fas fa-percent"></i>
+            </div>
+
+            <div>
+
+                <div class="summary-label">
+                    Porcentaje llamado
+                </div>
+
+                <div
+                    id="kpi-porcentaje"
+                    class="summary-value"
+                >
+                    --%
+                </div>
+
+                <div class="summary-description">
+                    Proporción de emitidos con llamado válido
+                </div>
+
+            </div>
+
+        </article>
+
+
+
+        <article class="summary-card purple">
+
+            <div class="summary-icon">
+                <i class="fas fa-clock"></i>
+            </div>
+
+            <div>
+
+                <div class="summary-label">
+                    Tiempo promedio
+                </div>
+
+                <div
+                    id="kpi-promedio"
+                    class="summary-value"
+                >
+                    --
+                </div>
+
+                <div class="summary-description">
+                    Promedio de espera del período
+                </div>
+
+            </div>
+
+        </article>
+
+
+
+        <article class="summary-card orange">
+
+            <div class="summary-icon">
+                <i class="fas fa-hourglass-end"></i>
+            </div>
+
+            <div>
+
+                <div class="summary-label">
+                    Tiempo máximo
+                </div>
+
+                <div
+                    id="kpi-maximo"
+                    class="summary-value"
+                >
+                    --
+                </div>
+
+                <div class="summary-description">
+                    Mayor espera hasta el llamado
+                </div>
+
+            </div>
+
+        </article>
+
+
+    </section>
+
+
+
+    <!-- ==================================================
+         PRIMERA FILA DE GRAFICOS
+         ================================================== -->
+
+    <section class="statistics-grid">
+
+
+        <!-- EVOLUCION -->
+
+        <article class="statistics-panel">
+
+            <div class="panel-header">
+
+                <div>
+
+                    <h2 class="panel-title">
+                        Tiempo de espera promedio por letra
+                    </h2>
+
+                    <div class="panel-subtitle">
+                        Promedio de espera por cada letra del llamador
+                    </div>
+
+                </div>
+
+                <i
+                    class="fas fa-chart-bar"
+                    style="color: var(--dashboard-blue);"
+                ></i>
+
+            </div>
+
+
+            <div class="chart-container">
+
+                <div
+                    id="estado-promedio-letra"
+                    class="state-box"
+                >
+                    Seleccione un período
+                </div>
+
+                <canvas
+                    id="grafico-promedio-letra"
+                    style="display:none;"
+                ></canvas>
+
+            </div>
+
+        </article>
+
+
+
+        <!-- FRECUENCIA LETRAS -->
+
+        <article class="statistics-panel">
+
+            <div class="panel-header">
+
+                <div>
+
+                    <h2 class="panel-title">
+                        Frecuencia por letra
+                    </h2>
+
+                    <div class="panel-subtitle">
+                        Cantidad de llamados válidos por tipo de llamador
+                    </div>
+
+                </div>
+
+                <i
+                    class="fas fa-chart-bar"
+                    style="color: var(--dashboard-purple);"
+                ></i>
+
+            </div>
+
+
+            <div class="chart-container">
+
+                <div
+                    id="estado-frecuencia"
+                    class="state-box"
+                >
+                    Seleccione un período
+                </div>
+
+                <canvas
+                    id="grafico-frecuencia"
+                    style="display:none;"
+                ></canvas>
+
+            </div>
+
+        </article>
+
+    </section>
+
+
+
+    <!-- ==================================================
+         SEGUNDA FILA
+         ================================================== -->
+
+    <section class="statistics-grid">
+
+
+        <!-- EVOLUCION DIARIA -->
+
+        <article class="statistics-panel">
+
+            <div class="panel-header">
+
+                <div>
+
+                    <h2 class="panel-title">
+                        Evolución del tiempo promedio
+                    </h2>
+
+                    <div class="panel-subtitle">
+                        Tiempo promedio de espera por día
+                    </div>
+
+                </div>
+
+                <i
+                    class="fas fa-chart-line"
+                    style="color: var(--dashboard-blue);"
+                ></i>
+
+            </div>
+
+            <div class="chart-container">
+
+                <div
+                    id="estado-evolucion"
+                    class="state-box"
+                >
+                    Seleccione un período
+                </div>
+
+                <canvas
+                    id="grafico-evolucion"
+                    style="display:none;"
+                ></canvas>
+
+            </div>
+
+        </article>
+
+
+        <!-- USUARIOS -->
+
+        <article class="statistics-panel">
+
+            <div class="panel-header">
+
+                <div>
+
+                    <h2 class="panel-title">
+                        Cierres por usuario
+                    </h2>
+
+                    <div class="panel-subtitle">
+                        Participación de cierres por operador
+                    </div>
+
+                </div>
+
+                <span
+                    id="total-usuarios-atenciones"
+                    style="
+                        color: var(--dashboard-blue);
+                        font-weight: 800;
+                    "
+                >
+                    0
+                </span>
+
+            </div>
+
+
+            <div
+                id="estado-usuarios"
+                class="state-box"
+            >
+                Seleccione un período
+            </div>
+
+
+            <div
+                id="contenido-usuarios"
+                class="table-wrapper"
+                style="display:none;"
+            >
+
+                <table class="statistics-table">
+
+                    <thead>
+
+                        <tr>
+                            <th style="width:45px;">
+                                N.º
+                            </th>
+
+                            <th>
+                                Usuario
+                            </th>
+
+                            <th>
+                                Atenciones
+                            </th>
+
+                            <th style="width:40%;">
+                                Participación
+                            </th>
+                        </tr>
+
+                    </thead>
+
+                    <tbody
+                        id="tabla-usuarios"
+                    >
+                    </tbody>
+
+                </table>
+
+            </div>
+
+        </article>
+
+
+    </section>
+
+
+
+    <!-- EMITIDOS VS LLAMADOS -->
+
+    <section class="statistics-panel daily-panel">
+
+            <div class="panel-header">
+
+                <div>
+
+                    <h2 class="panel-title">
+                        Emitidos vs llamados
+                    </h2>
+
+                    <div class="panel-subtitle">
+                        Comparación diaria entre tickets emitidos y llamados válidos
+                    </div>
+
+                </div>
+
+                <i
+                    class="fas fa-chart-area"
+                    style="color: var(--dashboard-green);"
+                ></i>
+
+            </div>
+
+
+            <div class="chart-container">
+
+                <div
+                    id="estado-volumen"
+                    class="state-box"
+                >
+                    Seleccione un período
+                </div>
+
+                <canvas
+                    id="grafico-volumen"
+                    style="display:none;"
+                ></canvas>
+
+            </div>
+
+    </section>
+
+
+
+
+
+    <!-- ==================================================
+         DETALLE DIARIO
+         ================================================== -->
+
+    <section
+        class="statistics-panel daily-panel"
+    >
+
+        <div class="panel-header">
+
+            <div>
+
+                <h2 class="panel-title">
+                    Detalle diario
+                </h2>
+
+                <div class="panel-subtitle">
+                    Emitidos, llamados,
+                    porcentaje y tiempos de espera
+                </div>
+
+            </div>
+
+            <i
+                class="fas fa-calendar-days"
+                style="color: var(--dashboard-yellow);"
+            ></i>
+
+        </div>
+
+
+        <div
+            id="estado-detalle"
+            class="state-box"
+        >
+            Seleccione un período
+        </div>
+
+
+        <div
+            id="contenido-detalle"
+            class="daily-table-container"
+            style="display:none;"
+        >
+
+            <table class="statistics-table">
+
+                <thead>
+
+                    <tr>
+                        <th>Fecha</th>
+                        <th>Emitidos</th>
+                        <th>Llamados</th>
+                        <th>% llamado</th>
+                        <th>Promedio</th>
+                        <th>Máximo</th>
+                    </tr>
+
+                </thead>
+
+                <tbody
+                    id="tabla-detalle"
+                >
+                </tbody>
+
+            </table>
+
+        </div>
+
+
+        <div class="panel-footer">
+            Los tiempos promedio y máximo se calculan desde la emisión del ticket hasta el llamado válido
+        </div>
+
+    </section>
+
+
+</div>
+
+
+<script
+    src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"
+></script>
+
+
+<script>
+
+document.addEventListener(
+    "DOMContentLoaded",
+    function () {
+
+
+        /* ==================================================
+           URLS
+           ================================================== */
+
+        const urlResumen =
+            "{% url 'innova_app:estadisticas_resumen_ajax' %}";
+
+        const urlFrecuencia =
+            "{% url 'innova_app:estadisticas_frecuencia_por_letra_ajax' %}";
+
+        const urlPromedioLetra =
+            "{% url 'innova_app:estadisticas_promedio_por_letra_ajax' %}";
+
+        const urlUsuarios =
+            "{% url 'innova_app:estadisticas_atenciones_por_usuario_ajax' %}";
+
+        const urlEvolucion =
+            "{% url 'innova_app:estadisticas_evolucion_ajax' %}";
+
+        const urlDetalle =
+            "{% url 'innova_app:estadisticas_detalle_diario_ajax' %}";
+
+
+        /* ==================================================
+           ELEMENTOS
+           ================================================== */
+
+        const fechaDesde =
+            document.getElementById("fecha-desde");
+
+        const fechaHasta =
+            document.getElementById("fecha-hasta");
+
+        const btnConsultar =
+            document.getElementById("btn-consultar");
+
+        const periodoMostrado =
+            document.getElementById("periodo-mostrado");
+
+
+        const kpiIngresados =
+            document.getElementById("kpi-ingresados");
+
+        const kpiAtendidos =
+            document.getElementById("kpi-atendidos");
+
+        const kpiPorcentaje =
+            document.getElementById("kpi-porcentaje");
+
+        const kpiPromedio =
+            document.getElementById("kpi-promedio");
+
+        const kpiMaximo =
+            document.getElementById("kpi-maximo");
+
+
+        const estadoPromedioLetra =
+            document.getElementById("estado-promedio-letra");
+
+        const estadoEvolucion =
+            document.getElementById("estado-evolucion");
+
+        const estadoFrecuencia =
+            document.getElementById("estado-frecuencia");
+
+        const estadoVolumen =
+            document.getElementById("estado-volumen");
+
+        const estadoUsuarios =
+            document.getElementById("estado-usuarios");
+
+        const estadoDetalle =
+            document.getElementById("estado-detalle");
+
+
+        const canvasPromedioLetra =
+            document.getElementById("grafico-promedio-letra");
+
+        const canvasEvolucion =
+            document.getElementById("grafico-evolucion");
+
+        const canvasFrecuencia =
+            document.getElementById("grafico-frecuencia");
+
+        const canvasVolumen =
+            document.getElementById("grafico-volumen");
+
+
+        const contenidoUsuarios =
+            document.getElementById("contenido-usuarios");
+
+        const tablaUsuarios =
+            document.getElementById("tabla-usuarios");
+
+        const totalUsuariosAtenciones =
+            document.getElementById(
+                "total-usuarios-atenciones"
+            );
+
+
+        const contenidoDetalle =
+            document.getElementById("contenido-detalle");
+
+        const tablaDetalle =
+            document.getElementById("tabla-detalle");
+
+
+        let chartPromedioLetra = null;
+        let chartEvolucion = null;
+        let chartFrecuencia = null;
+        let chartVolumen = null;
+
+
+
+        /* ==================================================
+           FUNCIONES GENERALES
+           ================================================== */
+
+        function fechaIsoLocal(fecha) {
+
+            const year =
+                fecha.getFullYear();
+
+            const month =
+                String(
+                    fecha.getMonth() + 1
+                ).padStart(2, "0");
+
+            const day =
+                String(
+                    fecha.getDate()
+                ).padStart(2, "0");
+
+            return `${year}-${month}-${day}`;
+        }
+
+
+        function formatearFechaArgentina(valor) {
+
+            if (!valor) {
+                return "";
+            }
+
+            const partes =
+                valor.split("-");
+
+            return (
+                `${partes[2]}/` +
+                `${partes[1]}/` +
+                `${partes[0]}`
+            );
+        }
+
+
+        function escaparHtml(valor) {
+
+            const elemento =
+                document.createElement("div");
+
+            elemento.textContent =
+                valor ?? "";
+
+            return elemento.innerHTML;
+        }
+
+
+        function parametrosConsulta() {
+
+            return (
+                "?fecha_desde=" +
+                encodeURIComponent(
+                    fechaDesde.value
+                ) +
+                "&fecha_hasta=" +
+                encodeURIComponent(
+                    fechaHasta.value
+                )
+            );
+        }
+
+
+        function mostrarCargando(elemento) {
+
+            elemento.style.display =
+                "flex";
+
+            elemento.classList.remove(
+                "error-message"
+            );
+
+            elemento.innerHTML = `
+                <div>
+                    <div class="loading-spinner"></div>
+                    Consultando información...
+                </div>
+            `;
+        }
+
+
+        function mostrarError(
+            elemento,
+            mensaje
+        ) {
+
+            elemento.style.display =
+                "flex";
+
+            elemento.classList.add(
+                "error-message"
+            );
+
+            elemento.innerHTML =
+                escaparHtml(mensaje);
+        }
+
+
+        function mostrarVacio(
+            elemento,
+            mensaje
+        ) {
+
+            elemento.style.display =
+                "flex";
+
+            elemento.classList.remove(
+                "error-message"
+            );
+
+            elemento.innerHTML =
+                escaparHtml(mensaje);
+        }
+
+
+        async function obtenerJson(url) {
+
+            const respuesta =
+                await fetch(
+                    url + parametrosConsulta(),
+                    {
+                        method: "GET",
+
+                        headers: {
+                            "X-Requested-With":
+                                "XMLHttpRequest",
+
+                            "Accept":
+                                "application/json",
+                        },
+
+                        cache: "no-store",
+                    }
+                );
+
+
+            const datos =
+                await respuesta.json();
+
+
+            if (
+                !respuesta.ok ||
+                !datos.success
+            ) {
+
+                throw new Error(
+                    datos.error ||
+                    "No fue posible obtener los datos."
+                );
+            }
+
+
+            return datos;
+        }
+
+
+
+        /* ==================================================
+           RESUMEN
+           ================================================== */
+
+        async function cargarResumen() {
+
+            kpiIngresados.textContent =
+                "...";
+
+            kpiAtendidos.textContent =
+                "...";
+
+            kpiPorcentaje.textContent =
+                "...";
+
+            kpiPromedio.textContent =
+                "...";
+
+            kpiMaximo.textContent =
+                "...";
+
+
+            try {
+
+                const datos =
+                    await obtenerJson(
+                        urlResumen
+                    );
+
+
+                kpiIngresados.textContent =
+                    Number(
+                        datos.total_ingresados
+                    ).toLocaleString("es-AR");
+
+
+                kpiAtendidos.textContent =
+                    Number(
+                        datos.total_llamados
+                    ).toLocaleString("es-AR");
+
+
+                kpiPorcentaje.textContent =
+                    `${datos.porcentaje_llamados}%`;
+
+
+                kpiPromedio.textContent =
+                    datos.promedio_formateado;
+
+
+                kpiMaximo.textContent =
+                    datos.maximo_formateado;
+
+
+            } catch (error) {
+
+                console.error(
+                    "Error resumen:",
+                    error
+                );
+
+
+                kpiIngresados.textContent =
+                    "--";
+
+                kpiAtendidos.textContent =
+                    "--";
+
+                kpiPorcentaje.textContent =
+                    "--";
+
+                kpiPromedio.textContent =
+                    "--";
+
+                kpiMaximo.textContent =
+                    "--";
+            }
+
+        }
+
+
+
+        /* ==================================================
+           PROMEDIO DE ESPERA POR LETRA
+           ================================================== */
+
+        async function cargarPromedioLetra() {
+            mostrarCargando(estadoPromedioLetra);
+            canvasPromedioLetra.style.display = "none";
+            try {
+                const datos = await obtenerJson(urlPromedioLetra);
+                if (!Array.isArray(datos.resultados) || datos.resultados.length === 0) {
+                    mostrarVacio(estadoPromedioLetra, "No existen llamados válidos para el período seleccionado.");
+                    return;
+                }
+                estadoPromedioLetra.style.display = "none";
+                canvasPromedioLetra.style.display = "block";
+                if (chartPromedioLetra) chartPromedioLetra.destroy();
+                const colores = ["#10d981", "#2f8cff", "#8b5cf6", "#ff8a1f", "#f6c915", "#ec4899", "#06b6d4", "#ef4444", "#84cc16", "#a855f7", "#14b8a6", "#f97316"];
+                chartPromedioLetra = new Chart(canvasPromedioLetra, {
+                    type: "bar",
+                    data: {
+                        labels: datos.resultados.map(item => item.letra),
+                        datasets: [{
+                            label: "Tiempo promedio",
+                            data: datos.resultados.map(item => Number(item.promedio_minutos)),
+                            backgroundColor: datos.resultados.map((_, index) => colores[index % colores.length]),
+                            borderRadius: 6,
+                            maxBarThickness: 58
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            legend: { display: false },
+                            tooltip: {
+                                callbacks: {
+                                    label: function(context) {
+                                        const registro = datos.resultados[context.dataIndex];
+                                        return [`Promedio: ${registro.promedio_formateado}`, `Llamados: ${registro.cantidad}`];
+                                    }
+                                }
+                            }
+                        },
+                        scales: {
+                            x: { ticks: { color: "#e2e8f0" }, grid: { display: false } },
+                            y: {
+                                beginAtZero: true,
+                                title: { display: true, text: "Minutos", color: "#94a3b8" },
+                                ticks: { color: "#94a3b8", callback: value => `${value} min` },
+                                grid: { color: "rgba(148,163,184,0.09)" }
+                            }
+                        }
+                    }
+                });
+            } catch (error) {
+                console.error("Error promedio por letra:", error);
+                mostrarError(estadoPromedioLetra, error.message);
+            }
+        }
+
+
+        /* ==================================================
+           EVOLUCION
+           ================================================== */
+
+        async function cargarEvolucion() {
+
+            mostrarCargando(
+                estadoEvolucion
+            );
+
+            canvasEvolucion.style.display =
+                "none";
+
+
+            try {
+
+                const datos =
+                    await obtenerJson(
+                        urlEvolucion
+                    );
+
+
+                if (
+                    !Array.isArray(
+                        datos.resultados
+                    ) ||
+                    datos.resultados.length === 0
+                ) {
+
+                    mostrarVacio(
+                        estadoEvolucion,
+                        "No existen llamados válidos para el período seleccionado."
+                    );
+
+                    return;
+                }
+
+
+                estadoEvolucion.style.display =
+                    "none";
+
+                canvasEvolucion.style.display =
+                    "block";
+
+
+                if (chartEvolucion) {
+                    chartEvolucion.destroy();
+                }
+
+
+                const etiquetas =
+                    datos.resultados.map(
+                        registro =>
+                            registro.fecha_formateada
+                    );
+
+
+                const valores =
+                    datos.resultados.map(
+                        registro =>
+                            Number(
+                                registro.promedio_minutos
+                            )
+                    );
+
+
+                chartEvolucion =
+                    new Chart(
+                        canvasEvolucion,
+                        {
+
+                            type: "line",
+
+                            data: {
+
+                                labels:
+                                    etiquetas,
+
+                                datasets: [
+                                    {
+                                        label:
+                                            "Promedio de espera",
+
+                                        data:
+                                            valores,
+
+                                        borderColor:
+                                            "#2f8cff",
+
+                                        backgroundColor:
+                                            "rgba(47,140,255,0.12)",
+
+                                        fill:
+                                            true,
+
+                                        tension:
+                                            0.35,
+
+                                        borderWidth:
+                                            3,
+
+                                        pointRadius:
+                                            4,
+
+                                        pointHoverRadius:
+                                            7,
+                                    }
+                                ]
+
+                            },
+
+
+                            options: {
+
+                                responsive:
+                                    true,
+
+                                maintainAspectRatio:
+                                    false,
+
+                                interaction: {
+                                    mode: "index",
+                                    intersect: false,
+                                },
+
+                                plugins: {
+
+                                    legend: {
+                                        display: false,
+                                    },
+
+                                    tooltip: {
+
+                                        callbacks: {
+
+                                            label:
+                                                function (
+                                                    context
+                                                ) {
+
+                                                    const registro =
+                                                        datos.resultados[
+                                                            context.dataIndex
+                                                        ];
+
+                                                    return [
+                                                        `Promedio: ${registro.promedio_formateado}`,
+                                                        `Atenciones: ${registro.cantidad}`,
+                                                    ];
+                                                }
+
+                                        }
+
+                                    }
+
+                                },
+
+
+                                scales: {
+
+                                    x: {
+
+                                        ticks: {
+                                            color:
+                                                "#94a3b8",
+                                        },
+
+                                        grid: {
+                                            color:
+                                                "rgba(148,163,184,0.05)",
+                                        }
+
+                                    },
+
+
+                                    y: {
+
+                                        beginAtZero:
+                                            true,
+
+                                        ticks: {
+
+                                            color:
+                                                "#94a3b8",
+
+                                            callback:
+                                                function (
+                                                    value
+                                                ) {
+                                                    return `${value} min`;
+                                                }
+
+                                        },
+
+                                        grid: {
+                                            color:
+                                                "rgba(148,163,184,0.09)",
+                                        }
+
+                                    }
+
+                                }
+
+                            }
+
+                        }
+                    );
+
+
+            } catch (error) {
+
+                console.error(
+                    "Error evolución:",
+                    error
+                );
+
+                mostrarError(
+                    estadoEvolucion,
+                    error.message
+                );
+            }
+
+        }
+
+
+
+        /* ==================================================
+           FRECUENCIA
+           ================================================== */
+
+        async function cargarFrecuencia() {
+
+            mostrarCargando(
+                estadoFrecuencia
+            );
+
+            canvasFrecuencia.style.display =
+                "none";
+
+
+            try {
+
+                const datos =
+                    await obtenerJson(
+                        urlFrecuencia
+                    );
+
+
+                if (
+                    !Array.isArray(
+                        datos.resultados
+                    ) ||
+                    datos.resultados.length === 0
+                ) {
+
+                    mostrarVacio(
+                        estadoFrecuencia,
+                        "No existen llamados válidos para el período seleccionado."
+                    );
+
+                    return;
+                }
+
+
+                estadoFrecuencia.style.display =
+                    "none";
+
+                canvasFrecuencia.style.display =
+                    "block";
+
+
+                if (chartFrecuencia) {
+                    chartFrecuencia.destroy();
+                }
+
+
+                const colores = [
+                    "#10d981",
+                    "#2f8cff",
+                    "#8b5cf6",
+                    "#ff8a1f",
+                    "#f6c915",
+                    "#ec4899",
+                    "#06b6d4",
+                    "#ef4444",
+                    "#84cc16",
+                    "#a855f7",
+                    "#14b8a6",
+                    "#f97316",
+                ];
+
+
+                chartFrecuencia =
+                    new Chart(
+                        canvasFrecuencia,
+                        {
+
+                            type: "bar",
+
+                            data: {
+
+                                labels:
+                                    datos.resultados.map(
+                                        item =>
+                                            item.letra
+                                    ),
+
+                                datasets: [
+                                    {
+
+                                        label:
+                                            "Atenciones",
+
+                                        data:
+                                            datos.resultados.map(
+                                                item =>
+                                                    item.cantidad
+                                            ),
+
+                                        backgroundColor:
+                                            datos.resultados.map(
+                                                function (
+                                                    _,
+                                                    index
+                                                ) {
+
+                                                    return colores[
+                                                        index %
+                                                        colores.length
+                                                    ];
+                                                }
+                                            ),
+
+                                        borderRadius:
+                                            6,
+
+                                        maxBarThickness:
+                                            58,
+
+                                    }
+                                ]
+
+                            },
+
+
+                            options: {
+
+                                responsive:
+                                    true,
+
+                                maintainAspectRatio:
+                                    false,
+
+                                plugins: {
+
+                                    legend: {
+                                        display: false,
+                                    },
+
+                                    tooltip: {
+
+                                        callbacks: {
+
+                                            label:
+                                                function (
+                                                    context
+                                                ) {
+
+                                                    const registro =
+                                                        datos.resultados[
+                                                            context.dataIndex
+                                                        ];
+
+                                                    return [
+                                                        `Atenciones: ${registro.cantidad}`,
+                                                        `Promedio: ${registro.promedio_formateado}`,
+                                                    ];
+                                                }
+
+                                        }
+
+                                    }
+
+                                },
+
+
+                                scales: {
+
+                                    x: {
+
+                                        ticks: {
+                                            color:
+                                                "#e2e8f0",
+                                        },
+
+                                        grid: {
+                                            display:
+                                                false,
+                                        }
+
+                                    },
+
+                                    y: {
+
+                                        beginAtZero:
+                                            true,
+
+                                        ticks: {
+                                            color:
+                                                "#94a3b8",
+
+                                            precision:
+                                                0,
+                                        },
+
+                                        grid: {
+                                            color:
+                                                "rgba(148,163,184,0.09)",
+                                        }
+
+                                    }
+
+                                }
+
+                            }
+
+                        }
+                    );
+
+
+            } catch (error) {
+
+                console.error(
+                    "Error frecuencia:",
+                    error
+                );
+
+                mostrarError(
+                    estadoFrecuencia,
+                    error.message
+                );
+            }
+
+        }
+
+
+
+        /* ==================================================
+           USUARIOS
+           ================================================== */
+
+        async function cargarUsuarios() {
+
+            mostrarCargando(
+                estadoUsuarios
+            );
+
+            contenidoUsuarios.style.display =
+                "none";
+
+
+            try {
+
+                const datos =
+                    await obtenerJson(
+                        urlUsuarios
+                    );
+
+
+                totalUsuariosAtenciones.textContent =
+                    Number(
+                        datos.total_atenciones
+                    ).toLocaleString("es-AR");
+
+
+                if (
+                    !Array.isArray(
+                        datos.resultados
+                    ) ||
+                    datos.resultados.length === 0
+                ) {
+
+                    mostrarVacio(
+                        estadoUsuarios,
+                        "No existen cierres registrados para el período seleccionado."
+                    );
+
+                    return;
+                }
+
+
+                tablaUsuarios.innerHTML =
+                    datos.resultados.map(
+                        function (
+                            registro,
+                            indice
+                        ) {
+
+                            const porcentaje =
+                                Number(
+                                    registro.porcentaje
+                                ) || 0;
+
+
+                            return `
+                                <tr>
+
+                                    <td>
+                                        <span class="ranking">
+                                            ${indice + 1}
+                                        </span>
+                                    </td>
+
+                                    <td>
+                                        ${escaparHtml(
+                                            registro.usuario
+                                        )}
+                                    </td>
+
+                                    <td>
+                                        <strong>
+                                            ${Number(
+                                                registro.cantidad
+                                            ).toLocaleString(
+                                                "es-AR"
+                                            )}
+                                        </strong>
+                                    </td>
+
+                                    <td>
+
+                                        <div
+                                            class="progress-wrapper"
+                                        >
+
+                                            <div
+                                                class="progress-background"
+                                            >
+
+                                                <div
+                                                    class="progress-value"
+                                                    style="
+                                                        width:
+                                                        ${porcentaje}%;
+                                                    "
+                                                >
+                                                </div>
+
+                                            </div>
+
+                                            <span
+                                                class="percentage"
+                                            >
+                                                ${porcentaje.toFixed(1)}%
+                                            </span>
+
+                                        </div>
+
+                                    </td>
+
+                                </tr>
+                            `;
+
+                        }
+                    ).join("");
+
+
+                estadoUsuarios.style.display =
+                    "none";
+
+                contenidoUsuarios.style.display =
+                    "block";
+
+
+            } catch (error) {
+
+                console.error(
+                    "Error usuarios:",
+                    error
+                );
+
+                mostrarError(
+                    estadoUsuarios,
+                    error.message
+                );
+            }
+
+        }
+
+
+
+        /* ==================================================
+           DETALLE Y GRAFICO VOLUMEN
+           ================================================== */
+
+        async function cargarDetalle() {
+
+            mostrarCargando(
+                estadoDetalle
+            );
+
+            mostrarCargando(
+                estadoVolumen
+            );
+
+
+            contenidoDetalle.style.display =
+                "none";
+
+            canvasVolumen.style.display =
+                "none";
+
+
+            try {
+
+                const datos =
+                    await obtenerJson(
+                        urlDetalle
+                    );
+
+
+                if (
+                    !Array.isArray(
+                        datos.resultados
+                    ) ||
+                    datos.resultados.length === 0
+                ) {
+
+                    mostrarVacio(
+                        estadoDetalle,
+                        "No existen registros para el período seleccionado."
+                    );
+
+                    mostrarVacio(
+                        estadoVolumen,
+                        "No existen registros para el período seleccionado."
+                    );
+
+                    return;
+                }
+
+
+                /* ================================
+                   TABLA
+                   ================================ */
+
+                tablaDetalle.innerHTML =
+                    datos.resultados.map(
+                        function (
+                            registro
+                        ) {
+
+                            return `
+                                <tr>
+
+                                    <td>
+                                        <strong>
+                                            ${escaparHtml(
+                                                registro.fecha_formateada
+                                            )}
+                                        </strong>
+                                    </td>
+
+                                    <td>
+                                        ${Number(
+                                            registro.ingresados
+                                        ).toLocaleString(
+                                            "es-AR"
+                                        )}
+                                    </td>
+
+                                    <td>
+                                        ${Number(
+                                            registro.llamados
+                                        ).toLocaleString(
+                                            "es-AR"
+                                        )}
+                                    </td>
+
+                                    <td>
+                                        ${Number(
+                                            registro.porcentaje_llamados
+                                        ).toFixed(1)}%
+                                    </td>
+
+                                    <td>
+                                        ${escaparHtml(
+                                            registro.promedio_formateado
+                                        )}
+                                    </td>
+
+                                    <td>
+                                        ${escaparHtml(
+                                            registro.maximo_formateado
+                                        )}
+                                    </td>
+
+                                </tr>
+                            `;
+
+                        }
+                    ).join("");
+
+
+                estadoDetalle.style.display =
+                    "none";
+
+                contenidoDetalle.style.display =
+                    "block";
+
+
+                /* ================================
+                   GRAFICO VOLUMEN
+                   ================================ */
+
+                estadoVolumen.style.display =
+                    "none";
+
+                canvasVolumen.style.display =
+                    "block";
+
+
+                if (chartVolumen) {
+                    chartVolumen.destroy();
+                }
+
+
+                chartVolumen =
+                    new Chart(
+                        canvasVolumen,
+                        {
+
+                            type:
+                                "bar",
+
+                            data: {
+
+                                labels:
+                                    datos.resultados.map(
+                                        item =>
+                                            item.fecha_formateada
+                                    ),
+
+                                datasets: [
+
+                                    {
+                                        label:
+                                            "Emitidos",
+
+                                        data:
+                                            datos.resultados.map(
+                                                item =>
+                                                    item.ingresados
+                                            ),
+
+                                        backgroundColor:
+                                            "rgba(246,201,21,0.72)",
+
+                                        borderColor:
+                                            "#f6c915",
+
+                                        borderWidth:
+                                            1,
+
+                                        borderRadius:
+                                            4,
+                                    },
+
+                                    {
+                                        label:
+                                            "Llamados",
+
+                                        data:
+                                            datos.resultados.map(
+                                                item =>
+                                                    item.llamados
+                                            ),
+
+                                        backgroundColor:
+                                            "rgba(16,217,129,0.72)",
+
+                                        borderColor:
+                                            "#10d981",
+
+                                        borderWidth:
+                                            1,
+
+                                        borderRadius:
+                                            4,
+                                    }
+
+                                ]
+
+                            },
+
+
+                            options: {
+
+                                responsive:
+                                    true,
+
+                                maintainAspectRatio:
+                                    false,
+
+                                interaction: {
+                                    mode: "index",
+                                    intersect: false,
+                                },
+
+                                plugins: {
+
+                                    legend: {
+
+                                        labels: {
+                                            color:
+                                                "#cbd5e1",
+                                        }
+
+                                    }
+
+                                },
+
+
+                                scales: {
+
+                                    x: {
+
+                                        ticks: {
+                                            color:
+                                                "#94a3b8",
+                                        },
+
+                                        grid: {
+                                            display:
+                                                false,
+                                        }
+
+                                    },
+
+                                    y: {
+
+                                        beginAtZero:
+                                            true,
+
+                                        ticks: {
+
+                                            color:
+                                                "#94a3b8",
+
+                                            precision:
+                                                0,
+
+                                        },
+
+                                        grid: {
+                                            color:
+                                                "rgba(148,163,184,0.09)",
+                                        }
+
+                                    }
+
+                                }
+
+                            }
+
+                        }
+                    );
+
+
+            } catch (error) {
+
+                console.error(
+                    "Error detalle:",
+                    error
+                );
+
+
+                mostrarError(
+                    estadoDetalle,
+                    error.message
+                );
+
+
+                mostrarError(
+                    estadoVolumen,
+                    error.message
+                );
+            }
+
+        }
+
+
+
+        /* ==================================================
+           CONSULTA GENERAL
+           ================================================== */
+
+        async function consultarEstadisticas() {
+
+            if (
+                !fechaDesde.value ||
+                !fechaHasta.value
+            ) {
+
+                alert(
+                    "Debe seleccionar ambas fechas."
+                );
+
+                return;
+            }
+
+
+            if (
+                fechaDesde.value >
+                fechaHasta.value
+            ) {
+
+                alert(
+                    "La fecha desde no puede ser mayor que la fecha hasta."
+                );
+
+                return;
+            }
+
+
+            btnConsultar.disabled =
+                true;
+
+
+            periodoMostrado.textContent =
+                (
+                    "Período: " +
+                    formatearFechaArgentina(
+                        fechaDesde.value
+                    ) +
+                    " al " +
+                    formatearFechaArgentina(
+                        fechaHasta.value
+                    )
+                );
+
+
+            try {
+
+                await Promise.allSettled([
+                    cargarResumen(),
+                    cargarPromedioLetra(),
+                    cargarEvolucion(),
+                    cargarFrecuencia(),
+                    cargarUsuarios(),
+                    cargarDetalle(),
+                ]);
+
+            } finally {
+
+                btnConsultar.disabled =
+                    false;
+            }
+
+        }
+
+
+
+        /* ==================================================
+           FILTROS RAPIDOS
+           ================================================== */
+
+        function aplicarRango(rango) {
+
+            const hoy =
+                new Date();
+
+            let desde =
+                new Date(hoy);
+
+            let hasta =
+                new Date(hoy);
+
+
+            if (rango === "ayer") {
+
+                desde.setDate(
+                    desde.getDate() - 1
+                );
+
+                hasta =
+                    new Date(desde);
+
+            }
+
+
+            if (rango === "7dias") {
+
+                desde.setDate(
+                    desde.getDate() - 6
+                );
+
+            }
+
+
+            if (rango === "mes") {
+
+                desde =
+                    new Date(
+                        hoy.getFullYear(),
+                        hoy.getMonth(),
+                        1
+                    );
+
+            }
+
+
+            if (
+                rango ===
+                "mes-anterior"
+            ) {
+
+                desde =
+                    new Date(
+                        hoy.getFullYear(),
+                        hoy.getMonth() - 1,
+                        1
+                    );
+
+                hasta =
+                    new Date(
+                        hoy.getFullYear(),
+                        hoy.getMonth(),
+                        0
+                    );
+
+            }
+
+
+            fechaDesde.value =
+                fechaIsoLocal(desde);
+
+            fechaHasta.value =
+                fechaIsoLocal(hasta);
+
+
+            consultarEstadisticas();
+        }
+
+
+
+        document
+            .querySelectorAll(
+                ".quick-filter"
+            )
+            .forEach(
+                function (boton) {
+
+                    boton.addEventListener(
+                        "click",
+                        function () {
+
+                            aplicarRango(
+                                boton.dataset.rango
+                            );
+
+                        }
+                    );
+
+                }
+            );
+
+
+
+        btnConsultar.addEventListener(
+            "click",
+            consultarEstadisticas
+        );
+
+
+
+        /* ==================================================
+           PERIODO INICIAL
+           ESTE MES
+           ================================================== */
+
+        const hoy =
+            new Date();
+
+        const primerDiaMes =
+            new Date(
+                hoy.getFullYear(),
+                hoy.getMonth(),
+                1
+            );
+
+
+        fechaDesde.value =
+            fechaIsoLocal(
+                primerDiaMes
+            );
+
+
+        fechaHasta.value =
+            fechaIsoLocal(
+                hoy
+            );
+
+
+        consultarEstadisticas();
+
+    }
+);
+
+</script>
+
+
+{% endblock content %}

@@ -26,7 +26,16 @@
         .navbar-custom {
             background-color: #1b2a49;
         }
+        .navbar-custom .nav-link.active {
+            color: #ffffff;
+            background: rgba(255, 255, 255, 0.12);
+            border-radius: 7px;
+        }
 
+        .navbar-custom .nav-link {
+            padding-left: 12px;
+            padding-right: 12px;
+        }
         .navbar-custom .navbar-brand,
         .navbar-custom .nav-link {
             color: #ffffff;
@@ -70,7 +79,32 @@
             <span class="navbar-toggler-icon"></span>
         </button>
         <div class="collapse navbar-collapse" id="navbarNav">
-            <ul class="navbar-nav ms-auto"> 
+
+            <ul class="navbar-nav me-auto ms-lg-4">
+
+                <li class="nav-item">
+                    <a
+                        class="nav-link {% if request.resolver_match.url_name == 'dashboard_llamadores' %}active fw-bold{% endif %}"
+                        href="{% url 'innova_app:dashboard_llamadores' %}"
+                    >
+                        <i class="fas fa-chart-line me-1"></i>
+                        Dashboard
+                    </a>
+                </li>
+
+                <li class="nav-item">
+                    <a
+                        class="nav-link {% if request.resolver_match.url_name == 'estadisticas_llamadores' %}active fw-bold{% endif %}"
+                        href="{% url 'innova_app:estadisticas_llamadores' %}"
+                    >
+                        <i class="fas fa-chart-bar me-1"></i>
+                        Estadísticas
+                    </a>
+                </li>
+
+            </ul>
+
+            <ul class="navbar-nav ms-auto">
                 <li class="nav-item dropdown">
                     <a class="nav-link dropdown-toggle d-flex align-items-center" href="#" id="userDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
                         <i class="fas fa-user-circle me-2"></i>  {{ request.user.username }}
