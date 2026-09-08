@@ -37,7 +37,11 @@ Dashboard de llamadores
     body {
         background: var(--dashboard-bg);
     }
-
+    .medical-stay {
+        color: #b9c4d1;
+        font-size: 0.85rem;
+        font-weight: 600;
+    }
     .dashboard-wrapper {
         min-height: calc(100vh - 60px);
         padding: 16px;
@@ -1406,11 +1410,11 @@ Dashboard de llamadores
 
                     <div class="panel-title-group">
                         <h2 class="panel-title">
-                            Cierres realizados por usuario
+                            Atenciones realizadas por usuario
                         </h2>
 
                         <div class="panel-subtitle">
-                            Cantidad de cierres y participación sobre el total de hoy
+                            Cantidad de atenciones y participación sobre el total de hoy
                         </div>
                     </div>
 
@@ -1486,7 +1490,7 @@ Dashboard de llamadores
                 </div>
 
                 <div class="panel-footer">
-                    Cierres registrados durante el día de hoy
+                    Atenciones registrados durante el día de hoy
                 </div>
 
             </section>
@@ -1901,6 +1905,11 @@ Dashboard de llamadores
                                 </span>
                             </td>
                             <td>
+                                <span class="medical-stay">
+                                    ${escaparHtml(registro.estadia || "Sin ubicación")}
+                                </span>
+                            </td>
+                            <td>
                                 <span class="medical-discharge-time">
                                     ${formatearFechaHora(registro.fecha_egreso_medico)}
                                 </span>
@@ -1926,6 +1935,7 @@ Dashboard de llamadores
                                 <th style="width: 55px;">N.º</th>
                                 <th>Episodio</th>
                                 <th>Paciente</th>
+                                <th>Ubicación</th>
                                 <th>Alta médica</th>
                                 <th>Espera cierre</th>
                             </tr>
@@ -2534,6 +2544,7 @@ Dashboard de llamadores
                             episodio: registro.episodio,
                             paciente: registro.paciente,
                             fecha_egreso_medico: registro.fecha_egreso_medico,
+                            estadia: registro.estadia,
                             espera_segundos: Number.parseInt(
                                 registro.espera_segundos,
                                 10

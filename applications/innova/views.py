@@ -276,10 +276,53 @@ def frecuencia_llamadores_por_letra_ajax(request):
 @require_GET
 def atenciones_por_usuario_ajax(request):
     """
-    Este indicador mantiene la logica original: cuenta cierres de llamables por IdUsuarioBaja.
-    No representa necesariamente al usuario que genero el llamado en pantalla.
+    Cuenta atenciones reales por usuario.
+
+    Una atención válida requiere:
+    - Solicitud con IdEstadoActual = 5.
+    - Llamado con IdEstadoActual = 4.
+    - Se toma el primer llamado válido de cada llamable.
+    - El usuario de la atención es IdUsuarioAlta del llamado.
+    - Los llamables sin llamado válido no participan.
     """
+
     consulta = """
+        ;WITH LlamablesDia AS (
+            SELECT Id
+            FROM Llamadores.Llamadores_Llamables
+            WHERE IdTipoLlamable = 3
+            AND FechaAlta >= CONVERT(date, GETDATE())
+            AND FechaAlta < DATEADD(DAY, 1, CONVERT(date, GETDATE()))
+        ),
+        Solicitudes AS (
+            SELECT s.Id AS IdSolicitud,s.Id_Llamable,s.IdPuestoAtencion,s.IdEstadoActual
+            FROM Llamadores.Llamadores_SolicitudesDeLlamado s
+            INNER JOIN LlamablesDia ll ON ll.Id = s.Id_Llamable
+            UNION ALL
+            SELECT s.IdSolicitud,s.Id_Llamable,s.IdPuestoAtencion,s.IdEstadoActual
+            FROM Llamadores.Llamadores_SolicitudesDeLlamado_Historico s
+            INNER JOIN LlamablesDia ll ON ll.Id = s.Id_Llamable
+        ),
+        Llamados AS (
+            SELECT l.IdSolicitud,l.FechaAlta,l.IdEstadoActual,l.IdUsuarioAlta
+            FROM Llamadores.Llamadores_Llamados l
+            INNER JOIN Solicitudes s ON s.IdSolicitud = l.IdSolicitud
+            UNION ALL
+            SELECT l.IdSolicitud,l.FechaAlta,l.IdEstadoActual,l.IdUsuarioAlta
+            FROM Llamadores.Llamadores_Llamados_Historico l
+            INNER JOIN Solicitudes s ON s.IdSolicitud = l.IdSolicitud
+        ),
+        LlamadosValidos AS (
+            SELECT s.Id_Llamable,l.FechaAlta AS FechaLlamado,l.IdUsuarioAlta,
+                ROW_NUMBER() OVER (
+                    PARTITION BY s.Id_Llamable
+                    ORDER BY l.FechaAlta ASC
+                ) AS rn
+            FROM Solicitudes s
+            INNER JOIN Llamados l ON l.IdSolicitud = s.IdSolicitud
+            WHERE s.IdEstadoActual = 5
+            AND l.IdEstadoActual = 4
+        )
         SELECT
             CONCAT(
                 UPPER(LEFT(LEFT(LTRIM(p.Nombres), CHARINDEX(' ', LTRIM(p.Nombres) + ' ') - 1), 1)),
@@ -289,44 +332,60 @@ def atenciones_por_usuario_ajax(request):
                 LOWER(SUBSTRING(LEFT(LTRIM(p.Apellido), CHARINDEX(' ', LTRIM(p.Apellido) + ' ') - 1), 2, 100))
             ) AS Usuario,
             COUNT(*) AS Atenciones
-        FROM Llamadores.Llamadores_Llamables ll
-        INNER JOIN Usuarios u ON ll.IdUsuarioBaja = u.id
-        INNER JOIN Personas p ON p.id = u.IdPersona
-        WHERE ll.FechaBaja IS NOT NULL
-        AND ll.IdTipoLlamable = 3
-        AND ll.FechaAlta >= CONVERT(date, GETDATE())
-        AND ll.FechaAlta < DATEADD(DAY, 1, CONVERT(date, GETDATE()))
-        GROUP BY CONCAT(
-            UPPER(LEFT(LEFT(LTRIM(p.Nombres), CHARINDEX(' ', LTRIM(p.Nombres) + ' ') - 1), 1)),
-            LOWER(SUBSTRING(LEFT(LTRIM(p.Nombres), CHARINDEX(' ', LTRIM(p.Nombres) + ' ') - 1), 2, 100)),
-            ' ',
-            UPPER(LEFT(LEFT(LTRIM(p.Apellido), CHARINDEX(' ', LTRIM(p.Apellido) + ' ') - 1), 1)),
-            LOWER(SUBSTRING(LEFT(LTRIM(p.Apellido), CHARINDEX(' ', LTRIM(p.Apellido) + ' ') - 1), 2, 100))
-        )
+        FROM LlamadosValidos lv
+        INNER JOIN Usuarios u ON u.Id = lv.IdUsuarioAlta
+        INNER JOIN Personas p ON p.Id = u.IdPersona
+        WHERE lv.rn = 1
+        GROUP BY
+            lv.IdUsuarioAlta,
+            CONCAT(
+                UPPER(LEFT(LEFT(LTRIM(p.Nombres), CHARINDEX(' ', LTRIM(p.Nombres) + ' ') - 1), 1)),
+                LOWER(SUBSTRING(LEFT(LTRIM(p.Nombres), CHARINDEX(' ', LTRIM(p.Nombres) + ' ') - 1), 2, 100)),
+                ' ',
+                UPPER(LEFT(LEFT(LTRIM(p.Apellido), CHARINDEX(' ', LTRIM(p.Apellido) + ' ') - 1), 1)),
+                LOWER(SUBSTRING(LEFT(LTRIM(p.Apellido), CHARINDEX(' ', LTRIM(p.Apellido) + ' ') - 1), 2, 100))
+            )
         ORDER BY Atenciones DESC;
     """
+
     try:
         with connections["externa_readonly"].cursor() as cursor:
             cursor.execute(consulta)
             filas = cursor.fetchall()
-        total_atenciones = sum(int(fila[1] or 0) for fila in filas)
+
+        total_atenciones = sum(
+            int(fila[1] or 0)
+            for fila in filas
+        )
+
         resultados = []
+
         for usuario, atenciones in filas:
             atenciones = int(atenciones or 0)
-            porcentaje = round(atenciones * 100 / total_atenciones, 1) if total_atenciones else 0
+
+            porcentaje = (
+                round(
+                    atenciones * 100 / total_atenciones,
+                    1
+                )
+                if total_atenciones
+                else 0
+            )
+
             resultados.append({
                 "usuario": usuario or "Sin identificar",
                 "cantidad": atenciones,
                 "porcentaje": porcentaje,
             })
+
         return JsonResponse({
             "success": True,
             "total_atenciones": total_atenciones,
             "resultados": resultados,
         })
+
     except Exception as error:
         return respuesta_error(error)
-
 
 @login_required
 @require_GET
@@ -655,13 +714,52 @@ def estadisticas_promedio_por_letra_ajax(request):
     except Exception as error:
         return respuesta_error(error)
 
-
 @login_required
 @require_GET
 def estadisticas_atenciones_por_usuario_ajax(request):
     try:
         fecha_desde, fecha_hasta = obtener_rango_fechas(request)
+
         consulta = """
+            ;WITH LlamablesPeriodo AS (
+                SELECT Id
+                FROM Llamadores.Llamadores_Llamables
+                WHERE IdTipoLlamable = 3
+                AND FechaAlta >= %s
+                AND FechaAlta < DATEADD(DAY, 1, %s)
+            ),
+            Solicitudes AS (
+                SELECT s.Id AS IdSolicitud,s.Id_Llamable,s.IdEstadoActual
+                FROM Llamadores.Llamadores_SolicitudesDeLlamado s
+                INNER JOIN LlamablesPeriodo ll ON ll.Id = s.Id_Llamable
+                UNION ALL
+                SELECT s.IdSolicitud,s.Id_Llamable,s.IdEstadoActual
+                FROM Llamadores.Llamadores_SolicitudesDeLlamado_Historico s
+                INNER JOIN LlamablesPeriodo ll ON ll.Id = s.Id_Llamable
+            ),
+            Llamados AS (
+                SELECT l.IdSolicitud,l.FechaAlta,l.IdEstadoActual,l.IdUsuarioAlta
+                FROM Llamadores.Llamadores_Llamados l
+                INNER JOIN Solicitudes s ON s.IdSolicitud = l.IdSolicitud
+                UNION ALL
+                SELECT l.IdSolicitud,l.FechaAlta,l.IdEstadoActual,l.IdUsuarioAlta
+                FROM Llamadores.Llamadores_Llamados_Historico l
+                INNER JOIN Solicitudes s ON s.IdSolicitud = l.IdSolicitud
+            ),
+            LlamadosValidos AS (
+                SELECT
+                    s.Id_Llamable,
+                    l.FechaAlta AS FechaLlamado,
+                    l.IdUsuarioAlta,
+                    ROW_NUMBER() OVER (
+                        PARTITION BY s.Id_Llamable
+                        ORDER BY l.FechaAlta ASC
+                    ) AS rn
+                FROM Solicitudes s
+                INNER JOIN Llamados l ON l.IdSolicitud = s.IdSolicitud
+                WHERE s.IdEstadoActual = 5
+                AND l.IdEstadoActual = 4
+            )
             SELECT
                 CONCAT(
                     UPPER(LEFT(LEFT(LTRIM(p.Nombres), CHARINDEX(' ', LTRIM(p.Nombres) + ' ') - 1), 1)),
@@ -671,41 +769,65 @@ def estadisticas_atenciones_por_usuario_ajax(request):
                     LOWER(SUBSTRING(LEFT(LTRIM(p.Apellido), CHARINDEX(' ', LTRIM(p.Apellido) + ' ') - 1), 2, 100))
                 ) AS Usuario,
                 COUNT(*) AS Atenciones
-            FROM Llamadores.Llamadores_Llamables ll
-            INNER JOIN Usuarios u ON ll.IdUsuarioBaja = u.id
-            INNER JOIN Personas p ON p.id = u.IdPersona
-            WHERE ll.FechaBaja IS NOT NULL
-            AND ll.IdTipoLlamable = 3
-            AND ll.FechaAlta >= %s
-            AND ll.FechaAlta < DATEADD(DAY, 1, %s)
-            GROUP BY CONCAT(
-                UPPER(LEFT(LEFT(LTRIM(p.Nombres), CHARINDEX(' ', LTRIM(p.Nombres) + ' ') - 1), 1)),
-                LOWER(SUBSTRING(LEFT(LTRIM(p.Nombres), CHARINDEX(' ', LTRIM(p.Nombres) + ' ') - 1), 2, 100)),
-                ' ',
-                UPPER(LEFT(LEFT(LTRIM(p.Apellido), CHARINDEX(' ', LTRIM(p.Apellido) + ' ') - 1), 1)),
-                LOWER(SUBSTRING(LEFT(LTRIM(p.Apellido), CHARINDEX(' ', LTRIM(p.Apellido) + ' ') - 1), 2, 100))
-            )
+            FROM LlamadosValidos lv
+            INNER JOIN Usuarios u ON u.Id = lv.IdUsuarioAlta
+            INNER JOIN Personas p ON p.Id = u.IdPersona
+            WHERE lv.rn = 1
+            GROUP BY
+                lv.IdUsuarioAlta,
+                CONCAT(
+                    UPPER(LEFT(LEFT(LTRIM(p.Nombres), CHARINDEX(' ', LTRIM(p.Nombres) + ' ') - 1), 1)),
+                    LOWER(SUBSTRING(LEFT(LTRIM(p.Nombres), CHARINDEX(' ', LTRIM(p.Nombres) + ' ') - 1), 2, 100)),
+                    ' ',
+                    UPPER(LEFT(LEFT(LTRIM(p.Apellido), CHARINDEX(' ', LTRIM(p.Apellido) + ' ') - 1), 1)),
+                    LOWER(SUBSTRING(LEFT(LTRIM(p.Apellido), CHARINDEX(' ', LTRIM(p.Apellido) + ' ') - 1), 2, 100))
+                )
             ORDER BY Atenciones DESC;
         """
+
         with connections["externa_readonly"].cursor() as cursor:
-            cursor.execute(consulta, [fecha_desde, fecha_hasta])
+            cursor.execute(
+                consulta,
+                [fecha_desde, fecha_hasta]
+            )
             filas = cursor.fetchall()
-        total_atenciones = sum(int(fila[1] or 0) for fila in filas)
+
+        total_atenciones = sum(
+            int(fila[1] or 0)
+            for fila in filas
+        )
+
         resultados = []
+
         for usuario, atenciones in filas:
             atenciones = int(atenciones or 0)
-            porcentaje = round(atenciones * 100 / total_atenciones, 1) if total_atenciones else 0
+
+            porcentaje = (
+                round(
+                    atenciones * 100 / total_atenciones,
+                    1
+                )
+                if total_atenciones
+                else 0
+            )
+
             resultados.append({
                 "usuario": usuario or "Sin identificar",
                 "cantidad": atenciones,
                 "porcentaje": porcentaje,
             })
-        return JsonResponse({"success": True, "total_atenciones": total_atenciones, "resultados": resultados})
+
+        return JsonResponse({
+            "success": True,
+            "total_atenciones": total_atenciones,
+            "resultados": resultados,
+        })
+
     except ValueError as error:
         return respuesta_error(error, 400)
+
     except Exception as error:
         return respuesta_error(error)
-
 
 @login_required
 @require_GET
@@ -897,9 +1019,14 @@ def altas_medicas_pendientes_ajax(request):
             e.Id AS Episodio,
             CONCAT(p.Apellido, ', ', p.Nombres) AS Paciente,
             e.FechaDeEgresoMedico,
+            CONCAT(c.Nombre, ' - ',h.nombre,' - ', ze.Nombre) AS Estadia,
             DATEDIFF(SECOND, e.FechaDeEgresoMedico, GETDATE()) AS EsperaSegundos
         FROM Internacion.Episodios e
         INNER JOIN Personas p ON p.Id = e.IdPersona
+        INNER JOIN Internacion.Camas c ON c.Id = e.IdCamaActual
+        INNER JOIN Internacion.Habitaciones h ON h.Id = c.IdHabitacionActual
+        INNER JOIN Internacion.SectoresDeInternacion sdi ON sdi.Id = h.IdSectorDeInternacion
+        INNER JOIN hce.comun.ZonasEdilicias ze ON sdi.IdZonaEdilicia = ze.Id
         WHERE e.FechaDeEgresoMedico >= DATEADD(DAY, -1, CAST(GETDATE() AS DATE))
         AND e.FechaDeEgresoMedico < DATEADD(DAY, 1, CAST(GETDATE() AS DATE))
         AND e.IdTipoEpisodio = 1
@@ -910,11 +1037,14 @@ def altas_medicas_pendientes_ajax(request):
         with connections["externa_readonly"].cursor() as cursor:
             cursor.execute(consulta)
             filas = cursor.fetchall()
+
         resultados = []
-        for episodio, paciente, fecha_egreso_medico, espera_segundos in filas:
+
+        for episodio, paciente, fecha_egreso_medico, estadia, espera_segundos in filas:
             resultados.append({
                 "episodio": int(episodio),
                 "paciente": paciente or "Sin identificar",
+                "estadia": estadia or "Sin ubicación",
                 "fecha_egreso_medico": (
                     fecha_egreso_medico.isoformat()
                     if fecha_egreso_medico
@@ -922,11 +1052,13 @@ def altas_medicas_pendientes_ajax(request):
                 ),
                 "espera_segundos": int(espera_segundos or 0),
             })
+
         return JsonResponse({
             "success": True,
             "total": len(resultados),
             "resultados": resultados,
         })
+
     except Exception as error:
         return JsonResponse({
             "success": False,
